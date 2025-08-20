@@ -1,4 +1,19 @@
 services:
+  db:
+    image: postgres:16-alpine
+    container_name: kuafora_db
+    restart: unless-stopped
+    env_file:
+      - ./env/db.env
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -h 127.0.0.1"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./db/init:/docker-entrypoint-initdb.d:ro
+    networks: [kuafora_net]
   backend:
     build:
       context: ./kuafora-mobile-app-backend
@@ -13,6 +28,8 @@ services:
       - backend_static:/app/staticfiles
       - backend_media:/app/media
     networks: [kuafora_net]
+    depends_on:
+      - db
 
   website:
     build:
@@ -28,6 +45,8 @@ services:
       - website_static:/app/staticfiles
       - website_media:/app/mediafiles
     networks: [kuafora_net]
+    depends_on:
+      - db
 
   nginx:
     image: nginx:alpine
@@ -54,6 +73,7 @@ networks:
     driver: bridge
 
 volumes:
+  postgres_data:
   backend_static:
   backend_media:
   website_static:
