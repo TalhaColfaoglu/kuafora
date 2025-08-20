@@ -1,0 +1,64 @@
+version: "3.9"
+
+services:
+  backend:
+    build:
+      context: ./kuafora-mobile-app-backend
+      dockerfile: Dockerfile.prod
+    container_name: kuafora_backend
+    restart: unless-stopped
+    env_file:
+      - ./kuafora-mobile-app-backend/.env.prod
+    expose:
+      - "8000"
+    volumes:
+      - backend_static:/app/staticfiles
+      - backend_media:/app/media
+    networks: [kuafora_net]
+
+  website:
+    build:
+      context: ./kuafora-website
+      dockerfile: Dockerfile
+    container_name: kuafora_website
+    restart: unless-stopped
+    env_file:
+      - ./kuafora-website/.env.prod
+    expose:
+      - "8001"
+    volumes:
+      - website_static:/app/staticfiles
+      - website_media:/app/mediafiles
+    networks: [kuafora_net]
+
+  nginx:
+    image: nginx:alpine
+    container_name: kuafora_nginx
+    restart: unless-stopped
+    depends_on:
+      - backend
+      - website
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - backend_static:/var/www/backend/staticfiles:ro
+      - backend_media:/var/www/backend/media:ro
+      - website_static:/var/www/website/staticfiles:ro
+      - website_media:/var/www/website/mediafiles:ro
+      - ./nginx/certbot/conf:/etc/letsencrypt
+      - ./nginx/certbot/www:/var/www/certbot
+    networks: [kuafora_net]
+
+networks:
+  kuafora_net:
+    driver: bridge
+
+volumes:
+  backend_static:
+  backend_media:
+  website_static:
+  website_media:
+
+
