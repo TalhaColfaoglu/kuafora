@@ -31,11 +31,10 @@ COPY . /app/
 # Create staticfiles and mediafiles directories
 RUN mkdir -p /app/staticfiles /app/mediafiles
 
-# Set Django settings module for production
-ENV DJANGO_SETTINGS_MODULE=config.settings.production
+ENV DJANGO_SETTINGS_MODULE=config.settings
+RUN python manage.py collectstatic --noinput || true
 
-# Collect static files
-RUN python manage.py collectstatic --noinput
+ENV DJANGO_SETTINGS_MODULE=config.settings.production
 
 # Create non-root user
 RUN groupadd -r django && useradd -r -g django django
