@@ -1,0 +1,376 @@
+{% extends 'base.html' %}
+{% block title %}Ekranlar & Akışlar — Kuafora Partner{% endblock %}
+
+
+
+{% block content %}
+<!-- Hero -->
+<section class="min-h-[60vh] flex items-center bg-white">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 text-center">
+    <div data-reveal>
+      <h1 class="font-display font-semibold text-4xl sm:text-5xl">
+        Ekranlar & Akışlar
+      </h1>
+      <p class="mt-4 text-lg text-gray-600 max-w-3xl mx-auto">
+        Kuafora Partner arayüzünün görsel anlatımı. Her ekranın nasıl çalıştığını keşfedin.
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- Model Girişi -->
+<section class="min-h-[92vh] flex items-center bg-[#F3FAF2]">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 w-full">
+    <div class="text-center mb-16" data-reveal>
+      <h2 class="font-display text-3xl sm:text-4xl font-semibold">Model Girişi 🎯</h2>
+      <p class="mt-4 text-gray-600 max-w-2xl mx-auto">
+        İşletmenize uygun modeli seçin, ana ekranınız buna göre şekillensin.
+      </p>
+    </div>
+
+    <div class="grid lg:grid-cols-2 gap-8 items-center">
+      <div data-reveal>
+        <div class="p-6 rounded-2xl bg-white border border-gray-200 shadow-sm">
+          <div class="flex items-center justify-between mb-6">
+            <h3 class="font-semibold text-lg">Model Seçimi</h3>
+            <div class="flex items-center gap-2">
+              <span class="px-2 py-1 rounded-full text-xs bg-[#4F7942] text-white">Patron</span>
+            </div>
+          </div>
+          
+          <div class="space-y-4">
+            <div class="p-4 rounded-xl border-2 border-[#4F7942] bg-[#F3FAF2]">
+              <div class="flex items-center gap-3">
+                <span class="text-xl">📶</span>
+                <div>
+                  <div class="font-medium">Sıra Modeli</div>
+                  <div class="text-sm text-gray-600">Müşteriler sıraya girer, siz çağırırsınız</div>
+                </div>
+                <div class="ml-auto">
+                  <div class="w-4 h-4 rounded-full bg-[#4F7942]"></div>
+                </div>
+              </div>
+            </div>
+            
+            <div class="p-4 rounded-xl border hover:border-gray-300 transition cursor-pointer">
+              <div class="flex items-center gap-3">
+                <span class="text-xl">📅</span>
+                <div>
+                  <div class="font-medium">Randevu Modeli</div>
+                  <div class="text-sm text-gray-600">Müşteriler randevu alır, takvim takibi</div>
+                </div>
+              </div>
+            </div>
+            
+            <div class="p-4 rounded-xl border hover:border-gray-300 transition cursor-pointer">
+              <div class="flex items-center gap-3">
+                <span class="text-xl">🗂️</span>
+                <div>
+                  <div class="font-medium">Bilgi Modeli</div>
+                  <div class="text-sm text-gray-600">Sadece bilgi paylaşımı, rezervasyon yok</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div data-reveal>
+        <div class="p-6 rounded-2xl bg-white border border-gray-200 shadow-sm">
+          <h3 class="font-semibold text-lg mb-4">Seçilen Model: Sıra</h3>
+          <div class="space-y-3">
+            <div class="p-3 rounded-xl bg-[#F3FAF2] border">
+              <div class="text-sm text-gray-600">Şu an sırada</div>
+              <div class="text-xl font-semibold text-[#4F7942]">5 müşteri</div>
+            </div>
+            <div class="p-3 rounded-xl bg-[#F3FAF2] border">
+              <div class="text-sm text-gray-600">Tahmini bekleme</div>
+              <div class="text-xl font-semibold text-[#4F7942]">18 dk</div>
+            </div>
+            <div class="flex gap-2">
+              <button class="btn-bubble text-sm px-3 py-2">Sıraya Ekle</button>
+              <button class="px-3 py-2 rounded-md border text-sm">Çağır</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Bilgi Kartları -->
+<section class="min-h-[92vh] flex items-center bg-white">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 w-full">
+    <div class="text-center mb-16" data-reveal>
+      <h2 class="font-display text-3xl sm:text-4xl font-semibold">Bilgi Kartları 📋</h2>
+      <p class="mt-4 text-gray-600 max-w-2xl mx-auto">
+        İşletme bilgileriniz düzenli kartlar halinde, kolay erişim için tasarlandı.
+      </p>
+    </div>
+
+    <div class="grid lg:grid-cols-3 gap-6">
+      <!-- İşletme Kartı -->
+      <div class="lg:col-span-3 mb-8" data-reveal>
+        <div class="p-6 rounded-2xl bg-[#F3FAF2] border border-gray-200 shadow-sm">
+          <h3 class="font-semibold text-lg mb-6">Bilgi Ekranı Görünümü</h3>
+          <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div class="p-4 rounded-xl bg-white border hover:shadow-sm transition cursor-pointer">
+              <div class="aspect-[3/1] rounded-lg bg-gray-100 mb-3 flex items-center justify-center">
+                <span class="text-2xl">🏪</span>
+              </div>
+              <div class="font-medium">Kuafora Demo Barber</div>
+              <div class="text-sm text-[#4F7942] mt-1">Detaya git →</div>
+            </div>
+            
+            <div class="p-4 rounded-xl bg-white border hover:shadow-sm transition cursor-pointer">
+              <div class="font-medium mb-2">Görünürlük</div>
+              <div class="text-xs text-gray-600 mb-3">
+                Favori: 126<br/>
+                Gün 340 • Hafta 2.1K • Ay 8.9K
+              </div>
+              <div class="text-sm text-[#4F7942]">Detaylı istatistik →</div>
+            </div>
+            
+            <div class="p-4 rounded-xl bg-white border relative">
+              <div class="font-medium mb-2">Dükkan Durumu</div>
+              <div class="mb-3">
+                <span class="px-2 py-1 rounded-full text-xs bg-green-100 text-green-800">Açık</span>
+              </div>
+              <div class="flex gap-2">
+                <button class="btn-bubble text-xs px-3 py-1">Aç/Kapat</button>
+                <button class="px-3 py-1 rounded-md border text-xs">Saatler</button>
+              </div>
+              <div class="absolute top-2 right-2 text-xs text-gray-400">Patron</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- RBAC Örneği -->
+<section class="min-h-[92vh] flex items-center bg-[#F3FAF2]">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 w-full">
+    <div class="text-center mb-16" data-reveal>
+      <h2 class="font-display text-3xl sm:text-4xl font-semibold">Rol Tabanlı Erişim (RBAC) 🔐</h2>
+      <p class="mt-4 text-gray-600 max-w-2xl mx-auto">
+        Patron ve Çalışan rolleri arasındaki farkları görün. Yetki kontrolü nasıl çalışıyor?
+      </p>
+    </div>
+
+    <div class="grid lg:grid-cols-2 gap-8">
+      <!-- Patron Görünümü -->
+      <div data-reveal>
+        <div class="p-6 rounded-2xl bg-white border border-gray-200 shadow-sm">
+          <div class="flex items-center gap-3 mb-6">
+            <span class="px-3 py-1 rounded-full text-sm bg-[#4F7942] text-white">🧑‍💼 Patron</span>
+            <span class="text-sm text-gray-600">Tam yetki</span>
+          </div>
+          
+          <h3 class="font-semibold text-lg mb-4">Hizmetler Yönetimi</h3>
+          <div class="space-y-3">
+            <div class="p-3 rounded-xl border bg-gray-50 flex items-center justify-between">
+              <div class="text-sm">
+                <div class="font-medium">Saç Kesim</div>
+                <div class="text-gray-600">30 dk • 250 TL • Ali, Ayşe</div>
+              </div>
+              <button class="px-3 py-1 rounded-md border border-[#4F7942] text-[#4F7942] hover:bg-[#4F7942] hover:text-white transition text-xs">
+                Düzenle
+              </button>
+            </div>
+            
+            <div class="p-3 rounded-xl border bg-gray-50 flex items-center justify-between">
+              <div class="text-sm">
+                <div class="font-medium">Sakal Tıraşı</div>
+                <div class="text-gray-600">20 dk • 150 TL • Ali</div>
+              </div>
+              <button class="px-3 py-1 rounded-md border border-[#4F7942] text-[#4F7942] hover:bg-[#4F7942] hover:text-white transition text-xs">
+                Düzenle
+              </button>
+            </div>
+          </div>
+          
+          <div class="mt-4 flex gap-3">
+            <button class="btn-bubble text-sm">Yeni Hizmet Ekle</button>
+            <button class="px-4 py-2 rounded-md border text-sm">Toplu Düzenle</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Çalışan Görünümü -->
+      <div data-reveal>
+        <div class="p-6 rounded-2xl bg-white border border-gray-200 shadow-sm relative">
+          <div class="flex items-center gap-3 mb-6">
+            <span class="px-3 py-1 rounded-full text-sm bg-gray-500 text-white">👥 Çalışan</span>
+            <span class="text-sm text-gray-600">Kısıtlı yetki</span>
+          </div>
+          
+          <h3 class="font-semibold text-lg mb-4">Hizmetler Yönetimi</h3>
+          <div class="space-y-3">
+            <div class="p-3 rounded-xl border bg-gray-50 flex items-center justify-between">
+              <div class="text-sm">
+                <div class="font-medium">Saç Kesim</div>
+                <div class="text-gray-600">30 dk • 250 TL • Ali, Ayşe</div>
+              </div>
+              <button class="px-3 py-1 rounded-md border border-gray-300 text-gray-400 cursor-not-allowed text-xs" disabled title="Bu işlem için Patron yetkisi gerekiyor">
+                Düzenle
+              </button>
+            </div>
+            
+            <div class="p-3 rounded-xl border bg-gray-50 flex items-center justify-between">
+              <div class="text-sm">
+                <div class="font-medium">Sakal Tıraşı</div>
+                <div class="text-gray-600">20 dk • 150 TL • Ali</div>
+              </div>
+              <button class="px-3 py-1 rounded-md border border-gray-300 text-gray-400 cursor-not-allowed text-xs" disabled title="Bu işlem için Patron yetkisi gerekiyor">
+                Düzenle
+              </button>
+            </div>
+          </div>
+          
+          <div class="mt-4 flex gap-3">
+            <button class="px-4 py-2 rounded-md bg-gray-300 text-gray-500 cursor-not-allowed text-sm" disabled title="Bu işlem için Patron yetkisi gerekiyor">
+              Yeni Hizmet Ekle
+            </button>
+            <button class="px-4 py-2 rounded-md border border-gray-300 text-gray-400 cursor-not-allowed text-sm" disabled title="Bu işlem için Patron yetkisi gerekiyor">
+              Toplu Düzenle
+            </button>
+          </div>
+          
+          <!-- Tooltip indicator -->
+          <div class="absolute top-4 right-4">
+            <div class="w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center text-xs text-gray-500" title="Çalışanlar sadece görüntüleme yapabilir">
+              ℹ️
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Ayarlar Ekranı -->
+<section class="min-h-[92vh] flex items-center bg-white">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 w-full">
+    <div class="text-center mb-16" data-reveal>
+      <h2 class="font-display text-3xl sm:text-4xl font-semibold">Ayarlar Ekranı ⚙️</h2>
+      <p class="mt-4 text-gray-600 max-w-2xl mx-auto">
+        İşletme ayarları, ekip yönetimi ve bildirim tercihleri tek ekranda.
+      </p>
+    </div>
+
+    <div class="max-w-4xl mx-auto" data-reveal>
+      <div class="p-6 rounded-2xl bg-[#F3FAF2] border border-gray-200 shadow-sm">
+        <div class="flex items-center justify-between mb-6">
+          <h3 class="font-semibold text-lg">Ayarlar</h3>
+          <div class="text-xs text-gray-500 bg-yellow-50 px-3 py-1 rounded-full border">
+            Bu alanları sadece Patron düzenleyebilir
+          </div>
+        </div>
+        
+        <!-- Tabs -->
+        <div class="flex border-b mb-6">
+          <button class="px-4 py-2 border-b-2 border-[#4F7942] text-[#4F7942] text-sm font-medium">
+            İşletme Bilgileri
+          </button>
+          <button class="px-4 py-2 text-gray-600 text-sm hover:text-gray-800">
+            Ekip & Roller
+          </button>
+          <button class="px-4 py-2 text-gray-600 text-sm hover:text-gray-800">
+            Bildirimler
+          </button>
+          <button class="px-4 py-2 text-gray-600 text-sm hover:text-gray-800">
+            Ödemeler
+          </button>
+        </div>
+        
+        <!-- İşletme Bilgileri Tab Content -->
+        <div class="grid sm:grid-cols-2 gap-6">
+          <div>
+            <label class="block text-sm font-medium mb-2">İşletme Adı</label>
+            <input type="text" value="Kuafora Demo Barber" class="w-full px-3 py-2 border rounded-md bg-white">
+          </div>
+          <div>
+            <label class="block text-sm font-medium mb-2">Telefon</label>
+            <input type="text" value="+90 555 123 4567" class="w-full px-3 py-2 border rounded-md bg-white">
+          </div>
+          <div class="sm:col-span-2">
+            <label class="block text-sm font-medium mb-2">Adres</label>
+            <textarea class="w-full px-3 py-2 border rounded-md bg-white h-20">İstanbul, Beyoğlu, Galata Mahallesi, Kuafora Sokak No:42</textarea>
+          </div>
+          <div class="sm:col-span-2">
+            <label class="block text-sm font-medium mb-2">Kapak Fotoğrafı URL</label>
+            <input type="text" placeholder="https://example.com/photo.jpg" class="w-full px-3 py-2 border rounded-md bg-white">
+          </div>
+        </div>
+        
+        <div class="mt-6 flex gap-3">
+          <button class="btn-bubble">Kaydet</button>
+          <button class="px-4 py-2 rounded-md border">İptal</button>
+        </div>
+      </div>
+      
+      <!-- SMS Notu -->
+      <div class="mt-6 p-4 rounded-xl bg-yellow-50 border border-yellow-200">
+        <div class="flex items-start gap-3">
+          <span class="text-yellow-600">⚠️</span>
+          <div class="text-sm">
+            <div class="font-medium text-yellow-800">SMS Bildirimleri</div>
+            <div class="text-yellow-700 mt-1">
+              SMS bildirimleri ek ücretlidir. Paketinize göre SMS başına 0.15-0.30 TL arası ücretlendirme yapılır.
+              Push bildirimler ve e-posta bildirimleri ücretsizdir.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="min-h-[60vh] flex items-center bg-[#F3FAF2]">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 text-center">
+    <div data-reveal>
+      <h2 class="font-display text-3xl sm:text-4xl font-semibold">
+        Bu Ekranları Kullanmaya Başlayın
+      </h2>
+      <p class="mt-4 text-gray-600 max-w-2xl mx-auto">
+        Sade, anlaşılır ve güçlü arayüz ile işletmenizi yönetmek hiç bu kadar kolay olmamıştı.
+      </p>
+      
+      <div class="mt-8 flex flex-col sm:flex-row gap-4 justify-center">
+        <a href="/partner/kuafora-partner/" class="btn-bubble">
+          Kuafora Partner'e Katıl
+        </a>
+        <a href="/partner/kuafora-partner/sss/" class="inline-flex justify-center items-center px-6 py-3 rounded-md text-[#4F7942] border border-[#4F7942]/30 hover:border-[#4F7942] transition text-base font-medium">
+          Sık Sorulan Sorular
+        </a>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+{{ block.super }}
+<script>
+  // Enhanced header island animation for partner pages
+  const navWrapper = document.querySelector('[data-nav]');
+  if (navWrapper) {
+    const baseClasses = navWrapper.className;
+    const islandClasses = 'mx-auto mt-3 max-w-7xl w-full rounded-full border border-emerald-900/10 bg-[#F3FAF2]/90 shadow-lg backdrop-blur px-6 sm:px-8 py-3 transition-all duration-300 ease-out translate-y-2';
+    
+    function updateHeader() {
+      if (window.scrollY > 120) {
+        navWrapper.className = islandClasses;
+      } else {
+        navWrapper.className = baseClasses;
+      }
+    }
+    
+    updateHeader();
+    window.addEventListener('scroll', updateHeader, { passive: true });
+  }
+</script>
+{% endblock %}

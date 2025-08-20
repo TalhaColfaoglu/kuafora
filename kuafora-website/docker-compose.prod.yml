@@ -1,0 +1,8 @@
+version: '3.8'
+
+services:
+  # Deprecated in favor of centralized root docker-compose.yml
+  # Keeping file for reference; not used in centralized deployment
+  placeholder:
+    image: alpine
+    command: ["sh", "-c", "echo 'Use root-level docker-compose.yml' && sleep 3600"]

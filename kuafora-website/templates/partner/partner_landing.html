@@ -1,0 +1,199 @@
+{% extends 'base.html' %}
+{% block title %}Kuafora Partner — İşletmenizi Dijitalde Yönetin{% endblock %}
+
+
+
+{% block content %}
+<!-- Hero Section -->
+<section class="relative min-h-[92vh] flex items-center bg-white overflow-hidden">
+  <div class="pointer-events-none absolute inset-0 opacity-[0.04] bg-[radial-gradient(circle_at_center,rgba(79,121,66,0.25)_1px,transparent_1.2px)] [background-size:32px_32px]"></div>
+  <div class="pointer-events-none absolute -top-20 -left-20 w-80 h-80 rounded-full bg-[#EAF6E9] blur-3xl opacity-50"></div>
+  <div class="pointer-events-none absolute -bottom-16 -right-16 w-96 h-96 rounded-full bg-[#EAF6E9] blur-3xl opacity-50"></div>
+
+  <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 sm:py-28 text-center">
+    <div data-reveal>
+      <h1 class="font-display font-semibold text-4xl sm:text-5xl lg:text-6xl leading-tight tracking-tight">
+        <span class="text-[#4F7942]">Kuafora Partner</span> — İşletmenizi Dijitalde Yönetin 💈
+      </h1>
+      <p class="mt-6 text-lg text-gray-600 max-w-3xl mx-auto">
+        Görünürlüğünüzü artıran, akışı düzenleyen, ekibi kolay yöneten işletme uygulaması. 
+        Türkiye'nin her köşesindeki kuaför ve güzellik salonları için tasarlandı.
+      </p>
+      
+      <div class="mt-8 flex flex-wrap justify-center gap-4 text-sm">
+        <div class="bubble-badge">
+          <span>🧑‍💼</span>
+          <span>Patron tam yetki</span>
+        </div>
+        <div class="bubble-badge">
+          <span>👥</span>
+          <span>Çalışan kısıtlı</span>
+        </div>
+        <div class="bubble-badge">
+          <span>📶</span>
+          <span>Sıra modeli</span>
+        </div>
+        <div class="bubble-badge">
+          <span>📅</span>
+          <span>Randevu modeli</span>
+        </div>
+        <div class="bubble-badge">
+          <span>🗂️</span>
+          <span>Bilgi modeli</span>
+        </div>
+      </div>
+
+      <div class="mt-10 flex flex-col sm:flex-row gap-4 justify-center" data-reveal>
+        <a href="#join" class="btn-bubble">
+          Kuafora Partner'e Katıl
+        </a>
+        <a href="/partner/kuafora-partner/ozellikler/" class="btn-bubble-secondary">
+          Özellikleri Gör
+        </a>
+      </div>
+    </div>
+
+    <div class="mt-16 relative" data-reveal>
+      <div class="aspect-[16/10] max-w-4xl mx-auto rounded-2xl bg-gradient-to-br from-[#F3FAF2] to-white border border-gray-200 shadow-lg flex items-center justify-center">
+        <div class="text-center text-gray-500">
+          <div class="w-16 h-16 mx-auto mb-4 rounded-xl bg-[#4F7942]/10 flex items-center justify-center">
+            <span class="text-2xl">💈</span>
+          </div>
+          <p class="text-sm">Kuafora Partner Arayüzü</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Quick Overview -->
+<section class="min-h-[92vh] flex items-center bg-[#F3FAF2]" id="overview">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 w-full">
+    <div class="text-center mb-16" data-reveal>
+      <h2 class="font-display text-3xl sm:text-4xl font-semibold">Neden Kuafora Partner?</h2>
+      <p class="mt-4 text-gray-600 max-w-2xl mx-auto">
+        İşletmenizin ihtiyaçlarına göre esnek modeller, kolay kullanım ve güvenilir altyapı.
+      </p>
+    </div>
+
+    <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-8">
+      <div class="text-center p-6 rounded-2xl bg-white border border-gray-200 shadow-sm card-hover" data-reveal>
+        <div class="w-12 h-12 mx-auto mb-4 rounded-xl bg-[#4F7942]/10 flex items-center justify-center">
+          <span class="text-xl">📈</span>
+        </div>
+        <h3 class="font-semibold text-lg mb-2">Görünürlük Artışı</h3>
+        <p class="text-gray-600 text-sm">
+          Kuafora uygulamasında işletmeniz daha fazla müşteriye ulaşır. 
+          Favori sayınız ve görüntülenme istatistikleriniz takip edilir.
+        </p>
+      </div>
+
+      <div class="text-center p-6 rounded-2xl bg-white border border-gray-200 shadow-sm card-hover" data-reveal>
+        <div class="w-12 h-12 mx-auto mb-4 rounded-xl bg-[#4F7942]/10 flex items-center justify-center">
+          <span class="text-xl">⚙️</span>
+        </div>
+        <h3 class="font-semibold text-lg mb-2">Esnek Modeller</h3>
+        <p class="text-gray-600 text-sm">
+          Bilgi, Sıra veya Randevu modellerinden size uygun olanı seçin. 
+          İstediğiniz zaman model değişikliği yapabilirsiniz.
+        </p>
+      </div>
+
+      <div class="text-center p-6 rounded-2xl bg-white border border-gray-200 shadow-sm card-hover" data-reveal>
+        <div class="w-12 h-12 mx-auto mb-4 rounded-xl bg-[#4F7942]/10 flex items-center justify-center">
+          <span class="text-xl">👥</span>
+        </div>
+        <h3 class="font-semibold text-lg mb-2">Ekip Yönetimi</h3>
+        <p class="text-gray-600 text-sm">
+          Patron ve Çalışan rolleri ile yetki kontrolü. 
+          Herkes kendi sorumluluklarına odaklanır.
+        </p>
+      </div>
+
+      <div class="text-center p-6 rounded-2xl bg-white border border-gray-200 shadow-sm card-hover" data-reveal>
+        <div class="w-12 h-12 mx-auto mb-4 rounded-xl bg-[#4F7942]/10 flex items-center justify-center">
+          <span class="text-xl">💰</span>
+        </div>
+        <h3 class="font-semibold text-lg mb-2">Şeffaf Ücretlendirme</h3>
+        <p class="text-gray-600 text-sm">
+          %25 ön ödeme + %3 komisyon sistemi. 
+          Müşteriler güvenli ödeme yapar, siz garantili gelir elde edersiniz.
+        </p>
+      </div>
+
+      <div class="text-center p-6 rounded-2xl bg-white border border-gray-200 shadow-sm card-hover" data-reveal>
+        <div class="w-12 h-12 mx-auto mb-4 rounded-xl bg-[#4F7942]/10 flex items-center justify-center">
+          <span class="text-xl">📱</span>
+        </div>
+        <h3 class="font-semibold text-lg mb-2">Kolay Kullanım</h3>
+        <p class="text-gray-600 text-sm">
+          Sade arayüz, hızlı işlemler. 
+          Teknolojik bilgi gerektirmez, herkes kolayca kullanabilir.
+        </p>
+      </div>
+
+      <div class="text-center p-6 rounded-2xl bg-white border border-gray-200 shadow-sm card-hover" data-reveal>
+        <div class="w-12 h-12 mx-auto mb-4 rounded-xl bg-[#4F7942]/10 flex items-center justify-center">
+          <span class="text-xl">🔒</span>
+        </div>
+        <h3 class="font-semibold text-lg mb-2">Güvenli Altyapı</h3>
+        <p class="text-gray-600 text-sm">
+          Verileriniz güvende. SMS bildirimleri, ödeme güvenliği ve 
+          müşteri bilgileri koruması sağlanır.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Call to Action -->
+<section class="min-h-[60vh] flex items-center bg-white" id="join">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 text-center">
+    <div data-reveal>
+      <h2 class="font-display text-3xl sm:text-4xl font-semibold">
+        Kuafora Partner'e Katılmaya Hazır mısınız?
+      </h2>
+      <p class="mt-4 text-gray-600 max-w-2xl mx-auto">
+        İşletmenizi dijital dünyaya taşıyın, daha fazla müşteriye ulaşın ve 
+        operasyonlarınızı kolaylaştırın.
+      </p>
+      
+      <div class="mt-8 flex flex-col sm:flex-row gap-4 justify-center">
+        <a href="/partner/kuafora-partner/ozellikler/" class="btn-bubble">
+          Detaylı Özellikleri İncele
+        </a>
+        <a href="/partner/kuafora-partner/sss/" class="btn-bubble-secondary">
+          Sık Sorulan Sorular
+        </a>
+      </div>
+
+      <div class="mt-8 text-sm text-gray-500">
+        Sorularınız için: <a href="mailto:partner@kuafora.com" class="text-[#4F7942] hover:underline">partner@kuafora.com</a>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+{{ block.super }}
+<script>
+  // Enhanced header island animation for partner pages
+  const navWrapper = document.querySelector('[data-nav]');
+  if (navWrapper) {
+    const baseClasses = navWrapper.className;
+    const islandClasses = 'mx-auto mt-3 max-w-7xl w-full rounded-full border border-emerald-900/10 bg-[#F3FAF2]/90 shadow-lg backdrop-blur px-6 sm:px-8 py-3 transition-all duration-300 ease-out translate-y-2';
+    
+    function updateHeader() {
+      if (window.scrollY > 120) {
+        navWrapper.className = islandClasses;
+      } else {
+        navWrapper.className = baseClasses;
+      }
+    }
+    
+    updateHeader();
+    window.addEventListener('scroll', updateHeader, { passive: true });
+  }
+</script>
+{% endblock %}

@@ -1,0 +1,301 @@
+{% extends 'base.html' %}
+{% block title %}Sık Sorulan Sorular — Kuafora Partner{% endblock %}
+
+
+
+{% block content %}
+<!-- Hero -->
+<section class="min-h-[60vh] flex items-center bg-white">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 text-center">
+    <div data-reveal>
+      <h1 class="font-display font-semibold text-4xl sm:text-5xl">
+        Sık Sorulan Sorular
+      </h1>
+      <p class="mt-4 text-lg text-gray-600 max-w-3xl mx-auto">
+        Kuafora Partner hakkında merak ettiğiniz her şey burada. Daha fazla bilgi için bizimle iletişime geçebilirsiniz.
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section class="min-h-[92vh] flex items-center bg-[#F3FAF2]">
+  <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-20 w-full">
+    <div class="space-y-6">
+      <!-- FAQ Item 1 -->
+      <div class="group p-6 rounded-2xl bg-white border border-gray-200 shadow-sm" data-reveal>
+        <button type="button" class="w-full text-left flex items-center justify-between" aria-expanded="false" aria-controls="faq1">
+          <h3 class="font-semibold text-lg">Kuafora Partner nedir? 🤔</h3>
+          <span class="ml-4 text-gray-400 transition group-[.expanded]:rotate-180">▾</span>
+        </button>
+        <div id="faq1" class="mt-4 text-gray-600 max-h-0 overflow-hidden transition-all duration-300 group-[.expanded]:max-h-96">
+          <p>
+            Kuafora Partner, kuaför ve güzellik salonları için tasarlanmış dijital işletme yönetim platformudur. 
+            İşletmenizin görünürlüğünü artırır, müşteri akışını düzenler ve operasyonlarınızı kolaylaştırır.
+          </p>
+          <p class="mt-3">
+            Üç farklı çalışma modeli sunar: <strong>Bilgi</strong> (sadece bilgi paylaşımı), 
+            <strong>Sıra</strong> (sıra takip sistemi), <strong>Randevu</strong> (randevu yönetimi).
+          </p>
+        </div>
+      </div>
+
+      <!-- FAQ Item 2 -->
+      <div class="group p-6 rounded-2xl bg-white border border-gray-200 shadow-sm" data-reveal>
+        <button type="button" class="w-full text-left flex items-center justify-between" aria-expanded="false" aria-controls="faq2">
+          <h3 class="font-semibold text-lg">Patron ve Çalışan rolleri arasındaki fark nedir? 👥</h3>
+          <span class="ml-4 text-gray-400 transition group-[.expanded]:rotate-180">▾</span>
+        </button>
+        <div id="faq2" class="mt-4 text-gray-600 max-h-0 overflow-hidden transition-all duration-300 group-[.expanded]:max-h-96">
+          <p>
+            <strong>Patron:</strong> Tam yetkiye sahiptir. Tüm ayarları değiştirebilir, hizmet ekleyip düzenleyebilir, 
+            dükkan durumunu açıp kapatabilir, ekip yönetimi yapabilir ve tüm istatistikleri görebilir.
+          </p>
+          <p class="mt-3">
+            <strong>Çalışan:</strong> Kısıtlı yetkiye sahiptir. Sadece kendi görev alanındaki işlemleri yapabilir. 
+            Hizmet düzenleme, ayar değiştirme gibi kritik işlemler için Patron yetkisi gerekir.
+          </p>
+          <p class="mt-3 text-sm bg-gray-50 p-3 rounded-lg">
+            💡 <strong>İpucu:</strong> Çalışan hesabı ile giriş yaptığınızda, yetkiniz olmayan butonlar gri görünür 
+            ve üzerine geldiğinizde "Bu işlem için Patron yetkisi gerekiyor" mesajı görürsünüz.
+          </p>
+        </div>
+      </div>
+
+      <!-- FAQ Item 3 -->
+      <div class="group p-6 rounded-2xl bg-white border border-gray-200 shadow-sm" data-reveal>
+        <button type="button" class="w-full text-left flex items-center justify-between" aria-expanded="false" aria-controls="faq3">
+          <h3 class="font-semibold text-lg">Hangi modelle başlamalıyım? 🎯</h3>
+          <span class="ml-4 text-gray-400 transition group-[.expanded]:rotate-180">▾</span>
+        </button>
+        <div id="faq3" class="mt-4 text-gray-600 max-h-0 overflow-hidden transition-all duration-300 group-[.expanded]:max-h-96">
+          <p>
+            Model seçimi işletmenizin çalışma tarzına bağlıdır:
+          </p>
+          <ul class="mt-3 space-y-2 list-disc list-inside">
+            <li><strong>Bilgi Modeli:</strong> Sadece işletmenizi tanıtmak istiyorsanız. Rezervasyon almıyorsunuz.</li>
+            <li><strong>Sıra Modeli:</strong> Müşteriler sıraya giriyor, siz çağırıyorsunuz. Geleneksel berber tarzı.</li>
+            <li><strong>Randevu Modeli:</strong> Belirli saatlerde randevu alıyorsunuz. Planlı çalışma düzeni.</li>
+          </ul>
+          <p class="mt-3 text-sm bg-blue-50 p-3 rounded-lg">
+            🔄 <strong>Esnek geçiş:</strong> İstediğiniz zaman model değiştirebilirsiniz. 
+            Örneğin hafta içi Randevu, hafta sonu Sıra modeli kullanabilirsiniz.
+          </p>
+        </div>
+      </div>
+
+      <!-- FAQ Item 4 -->
+      <div class="group p-6 rounded-2xl bg-white border border-gray-200 shadow-sm" data-reveal>
+        <button type="button" class="w-full text-left flex items-center justify-between" aria-expanded="false" aria-controls="faq4">
+          <h3 class="font-semibold text-lg">Bilgi ekranındaki kartlar ne işe yarar? 📋</h3>
+          <span class="ml-4 text-gray-400 transition group-[.expanded]:rotate-180">▾</span>
+        </button>
+        <div id="faq4" class="mt-4 text-gray-600 max-h-0 overflow-hidden transition-all duration-300 group-[.expanded]:max-h-96">
+          <p>Bilgi ekranında dört ana kart bulunur:</p>
+          <div class="mt-3 space-y-3">
+            <div class="p-3 bg-gray-50 rounded-lg">
+              <strong>🏪 İşletme Kartı:</strong> Kapak fotoğrafınız ve temel bilgiler. Detay sayfasına yönlendirir.
+            </div>
+            <div class="p-3 bg-gray-50 rounded-lg">
+              <strong>📈 Görünürlük Kartı:</strong> Favori sayınız ve görüntülenme istatistikleri. İstatistik sayfasına yönlendirir.
+            </div>
+            <div class="p-3 bg-gray-50 rounded-lg">
+              <strong>🔄 Durum Kartı:</strong> Dükkanınızın açık/kapalı durumu. Sadece Patron değiştirebilir.
+            </div>
+            <div class="p-3 bg-gray-50 rounded-lg">
+              <strong>✂️ Hizmetler Kartı:</strong> Popüler hizmetlerinizin listesi. Hizmetler sayfasına yönlendirir.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- FAQ Item 5 -->
+      <div class="group p-6 rounded-2xl bg-white border border-gray-200 shadow-sm" data-reveal>
+        <button type="button" class="w-full text-left flex items-center justify-between" aria-expanded="false" aria-controls="faq5">
+          <h3 class="font-semibold text-lg">SMS bildirimleri ücretli mi? 💬</h3>
+          <span class="ml-4 text-gray-400 transition group-[.expanded]:rotate-180">▾</span>
+        </button>
+        <div id="faq5" class="mt-4 text-gray-600 max-h-0 overflow-hidden transition-all duration-300 group-[.expanded]:max-h-96">
+          <p>
+            Evet, SMS bildirimleri ek ücretlidir. Paketinize göre SMS başına <strong>0.15-0.30 TL</strong> 
+            arası ücretlendirme yapılır.
+          </p>
+          <div class="mt-3 p-3 bg-green-50 rounded-lg">
+            <strong>✅ Ücretsiz alternatifler:</strong>
+            <ul class="mt-2 list-disc list-inside">
+              <li>Push bildirimleri (mobil uygulama)</li>
+              <li>E-posta bildirimleri</li>
+              <li>Uygulama içi bildirimler</li>
+            </ul>
+          </div>
+          <p class="mt-3 text-sm">
+            SMS'leri randevu hatırlatıcıları ve kritik durumlar için kullanmanızı öneriyoruz. 
+            Günlük bildirimler için ücretsiz alternatifleri tercih edebilirsiniz.
+          </p>
+        </div>
+      </div>
+
+      <!-- FAQ Item 6 -->
+      <div class="group p-6 rounded-2xl bg-white border border-gray-200 shadow-sm" data-reveal>
+        <button type="button" class="w-full text-left flex items-center justify-between" aria-expanded="false" aria-controls="faq6">
+          <h3 class="font-semibold text-lg">%25 ön ödeme ve %3 komisyon nasıl çalışır? 💰</h3>
+          <span class="ml-4 text-gray-400 transition group-[.expanded]:rotate-180">▾</span>
+        </button>
+        <div id="faq6" class="mt-4 text-gray-600 max-h-0 overflow-hidden transition-all duration-300 group-[.expanded]:max-h-96">
+          <p>
+            Kuafora'nın şeffaf ücretlendirme sistemi iki aşamalıdır:
+          </p>
+          <div class="mt-3 space-y-3">
+            <div class="p-4 bg-blue-50 rounded-lg">
+              <strong>💳 %25 Ön Ödeme:</strong>
+              <p class="mt-1">Müşteri randevu alırken hizmet ücretinin %25'ini öder. Bu hem garanti hem de no-show koruma sağlar.</p>
+              <p class="mt-2 text-sm"><em>Örnek:</em> 200 TL'lik hizmet → Müşteri 50 TL ön ödeme yapar</p>
+            </div>
+            <div class="p-4 bg-green-50 rounded-lg">
+              <strong>🏪 %3 Komisyon:</strong>
+              <p class="mt-1">Hizmet tamamlandıktan sonra toplam ücretin %3'ü Kuafora'ya komisyon olarak ayrılır.</p>
+              <p class="mt-2 text-sm"><em>Örnek:</em> 200 TL'lik hizmet → 6 TL komisyon, 194 TL size kalır</p>
+            </div>
+          </div>
+          <p class="mt-3 text-sm bg-yellow-50 p-3 rounded-lg">
+            ⚡ <strong>Hızlı ödeme:</strong> Komisyon düşüldükten sonra kalan tutar 1-2 iş günü içinde hesabınıza yatar.
+          </p>
+        </div>
+      </div>
+
+      <!-- FAQ Item 7 -->
+      <div class="group p-6 rounded-2xl bg-white border border-gray-200 shadow-sm" data-reveal>
+        <button type="button" class="w-full text-left flex items-center justify-between" aria-expanded="false" aria-controls="faq7">
+          <h3 class="font-semibold text-lg">Teknik bilgi gerektiriyor mu? 🤖</h3>
+          <span class="ml-4 text-gray-400 transition group-[.expanded]:rotate-180">▾</span>
+        </button>
+        <div id="faq7" class="mt-4 text-gray-600 max-h-0 overflow-hidden transition-all duration-300 group-[.expanded]:max-h-96">
+          <p>
+            Hayır! Kuafora Partner sade ve anlaşılır arayüzü ile herkes tarafından kolayca kullanılabilir.
+          </p>
+          <ul class="mt-3 space-y-2 list-disc list-inside">
+            <li>Tek tıkla işlemler</li>
+            <li>Görsel ipuçları ve yönlendirmeler</li>
+            <li>Türkçe arayüz ve destek</li>
+            <li>Mobil uyumlu tasarım</li>
+            <li>7/24 müşteri desteği</li>
+          </ul>
+          <p class="mt-3 text-sm bg-gray-50 p-3 rounded-lg">
+            📞 <strong>Destek:</strong> Kurulum ve kullanım konusunda ücretsiz telefon desteği alabilirsiniz.
+          </p>
+        </div>
+      </div>
+
+      <!-- FAQ Item 8 -->
+      <div class="group p-6 rounded-2xl bg-white border border-gray-200 shadow-sm" data-reveal>
+        <button type="button" class="w-full text-left flex items-center justify-between" aria-expanded="false" aria-controls="faq8">
+          <h3 class="font-semibold text-lg">Müşteri verilerim güvende mi? 🔒</h3>
+          <span class="ml-4 text-gray-400 transition group-[.expanded]:rotate-180">▾</span>
+        </button>
+        <div id="faq8" class="mt-4 text-gray-600 max-h-0 overflow-hidden transition-all duration-300 group-[.expanded]:max-h-96">
+          <p>
+            Evet, tüm verileriniz güvenli altyapımızda korunur:
+          </p>
+          <ul class="mt-3 space-y-2 list-disc list-inside">
+            <li>SSL şifreleme ile güvenli veri aktarımı</li>
+            <li>KVKK uyumlu veri işleme</li>
+            <li>Düzenli güvenlik güncellemeleri</li>
+            <li>Yedekleme ve kurtarma sistemleri</li>
+            <li>Rol tabanlı erişim kontrolü</li>
+          </ul>
+          <p class="mt-3 text-sm bg-green-50 p-3 rounded-lg">
+            🛡️ <strong>Gizlilik:</strong> Verileriniz hiçbir şekilde üçüncü taraflarla paylaşılmaz.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- İletişim -->
+<section class="min-h-[60vh] flex items-center bg-white">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 text-center">
+    <div data-reveal>
+      <h2 class="font-display text-3xl sm:text-4xl font-semibold">
+        Başka Sorularınız Var mı?
+      </h2>
+      <p class="mt-4 text-gray-600 max-w-2xl mx-auto">
+        Kuafora Partner ekibi sorularınızı yanıtlamak için burada. 
+        İletişime geçin, size yardımcı olalım.
+      </p>
+      
+      <div class="mt-8 flex flex-col sm:flex-row gap-4 justify-center">
+        <a href="mailto:partner@kuafora.com" class="btn-bubble">
+          📧 E-posta Gönder
+        </a>
+        <a href="tel:+905551234567" class="btn-bubble-secondary">
+          📞 Hemen Ara
+        </a>
+      </div>
+
+      <div class="mt-8 grid sm:grid-cols-3 gap-6 max-w-2xl mx-auto text-sm">
+        <div class="p-4 rounded-xl bg-gray-50">
+          <div class="font-medium">📧 E-posta</div>
+          <div class="text-gray-600 mt-1">partner@kuafora.com</div>
+        </div>
+        <div class="p-4 rounded-xl bg-gray-50">
+          <div class="font-medium">📞 Telefon</div>
+          <div class="text-gray-600 mt-1">+90 555 123 4567</div>
+        </div>
+        <div class="p-4 rounded-xl bg-gray-50">
+          <div class="font-medium">🕐 Destek Saatleri</div>
+          <div class="text-gray-600 mt-1">09:00 - 18:00</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+{{ block.super }}
+<script>
+  // Enhanced header island animation for partner pages
+  const navWrapper = document.querySelector('[data-nav]');
+  if (navWrapper) {
+    const baseClasses = navWrapper.className;
+    const islandClasses = 'mx-auto mt-3 max-w-7xl w-full rounded-full border border-emerald-900/10 bg-[#F3FAF2]/90 shadow-lg backdrop-blur px-6 sm:px-8 py-3 transition-all duration-300 ease-out translate-y-2';
+    
+    function updateHeader() {
+      if (window.scrollY > 120) {
+        navWrapper.className = islandClasses;
+      } else {
+        navWrapper.className = baseClasses;
+      }
+    }
+    
+    updateHeader();
+    window.addEventListener('scroll', updateHeader, { passive: true });
+  }
+
+  // FAQ expand/collapse functionality
+  document.querySelectorAll('[aria-expanded]').forEach(button => {
+    button.addEventListener('click', () => {
+      const expanded = button.getAttribute('aria-expanded') === 'true';
+      const targetId = button.getAttribute('aria-controls');
+      const target = document.getElementById(targetId);
+      const container = button.closest('.group');
+      
+      if (expanded) {
+        button.setAttribute('aria-expanded', 'false');
+        container.classList.remove('expanded');
+      } else {
+        // Close all other FAQs
+        document.querySelectorAll('[aria-expanded="true"]').forEach(otherButton => {
+          otherButton.setAttribute('aria-expanded', 'false');
+          otherButton.closest('.group').classList.remove('expanded');
+        });
+        
+        // Open this FAQ
+        button.setAttribute('aria-expanded', 'true');
+        container.classList.add('expanded');
+      }
+    });
+  });
+</script>
+{% endblock %}

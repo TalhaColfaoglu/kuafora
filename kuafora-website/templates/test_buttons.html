@@ -1,0 +1,91 @@
+{% extends 'base.html' %}
+{% block title %}Button Test - Kuafora{% endblock %}
+
+{% block content %}
+<section class="min-h-screen bg-gray-50 py-20">
+  <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+    <h1 class="text-4xl font-bold text-center mb-12">Button Gallery</h1>
+    
+    <!-- Primary Buttons -->
+    <div class="mb-12">
+      <h2 class="text-2xl font-semibold mb-6">Primary Buttons (.btn-bubble)</h2>
+      <div class="flex flex-wrap gap-4">
+        <button class="btn-bubble">Partner Ol</button>
+        <a href="#" class="btn-bubble">Kuaför Olarak Başvur</a>
+        <button class="btn-bubble">Hemen Başla</button>
+        <a href="#" class="btn-bubble">Detaylı Özellikleri İncele</a>
+      </div>
+    </div>
+    
+    <!-- Secondary Buttons -->
+    <div class="mb-12">
+      <h2 class="text-2xl font-semibold mb-6">Secondary Buttons (.btn-bubble-secondary)</h2>
+      <div class="flex flex-wrap gap-4">
+        <button class="btn-bubble-secondary">Özellikleri Gör</button>
+        <a href="#" class="btn-bubble-secondary">Destek ile İletişim</a>
+        <button class="btn-bubble-secondary">Sık Sorulan Sorular</button>
+        <a href="#" class="btn-bubble-secondary">Ekranları İncele</a>
+      </div>
+    </div>
+    
+    <!-- Compact Buttons -->
+    <div class="mb-12">
+      <h2 class="text-2xl font-semibold mb-6">Compact Buttons (.btn-primary & .btn-secondary)</h2>
+      <div class="flex flex-wrap gap-4">
+        <button class="btn-primary">Başla</button>
+        <button class="btn-secondary">İptal</button>
+        <a href="#" class="btn-primary">Kaydet</a>
+        <a href="#" class="btn-secondary">Geri</a>
+      </div>
+    </div>
+    
+    <!-- Button States -->
+    <div class="mb-12">
+      <h2 class="text-2xl font-semibold mb-6">Button States</h2>
+      <div class="space-y-4">
+        <div class="flex gap-4">
+          <button class="btn-bubble">Normal</button>
+          <button class="btn-bubble" disabled style="opacity: 0.5; cursor: not-allowed;">Disabled</button>
+        </div>
+        <div class="flex gap-4">
+          <button class="btn-bubble-secondary">Normal</button>
+          <button class="btn-bubble-secondary" disabled style="opacity: 0.5; cursor: not-allowed;">Disabled</button>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Different Backgrounds -->
+    <div class="mb-12">
+      <h2 class="text-2xl font-semibold mb-6">On Different Backgrounds</h2>
+      
+      <!-- White Background -->
+      <div class="bg-white p-8 rounded-lg mb-4">
+        <h3 class="text-lg font-medium mb-4">White Background</h3>
+        <div class="flex gap-4">
+          <button class="btn-bubble">Partner Ol</button>
+          <button class="btn-bubble-secondary">Özellikleri Gör</button>
+        </div>
+      </div>
+      
+      <!-- Green Background -->
+      <div class="bg-[#F3FAF2] p-8 rounded-lg mb-4">
+        <h3 class="text-lg font-medium mb-4">Light Green Background</h3>
+        <div class="flex gap-4">
+          <button class="btn-bubble">Partner Ol</button>
+          <button class="btn-bubble-secondary">Özellikleri Gör</button>
+        </div>
+      </div>
+      
+      <!-- Dark Background -->
+      <div class="bg-gray-800 p-8 rounded-lg">
+        <h3 class="text-lg font-medium mb-4 text-white">Dark Background</h3>
+        <div class="flex gap-4">
+          <button class="btn-bubble">Partner Ol</button>
+          <button class="btn-bubble-secondary">Özellikleri Gör</button>
+        </div>
+      </div>
+    </div>
+    
+  </div>
+</section>
+{% endblock %}

@@ -1,0 +1,321 @@
+{% extends 'base.html' %}
+{% block title %}Özellikler — Kuafora Partner{% endblock %}
+
+
+
+{% block content %}
+<!-- Hero -->
+<section class="min-h-[60vh] flex items-center bg-white">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 text-center">
+    <div data-reveal>
+      <h1 class="font-display font-semibold text-4xl sm:text-5xl">
+        Kuafora Partner Özellikleri
+      </h1>
+      <p class="mt-4 text-lg text-gray-600 max-w-3xl mx-auto">
+        İşletmenizin ihtiyaçlarına göre tasarlanmış esnek modeller ve güçlü özellikler.
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- Model Odaklı Ana Ekran -->
+<section class="min-h-[92vh] flex items-center bg-[#F3FAF2]">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 w-full">
+    <div class="text-center mb-16" data-reveal>
+      <h2 class="font-display text-3xl sm:text-4xl font-semibold">Model Odaklı Ana Ekran 🎯</h2>
+      <p class="mt-4 text-gray-600 max-w-2xl mx-auto">
+        Çalışma modelinize göre ana ekranınız şekillenir. Her model farklı bir deneyim sunar.
+      </p>
+    </div>
+
+    <div class="grid lg:grid-cols-3 gap-8">
+      <div class="p-6 rounded-2xl bg-white border border-gray-200 shadow-sm card-hover" data-reveal>
+        <div class="w-12 h-12 mb-4 rounded-xl bg-[#4F7942]/10 flex items-center justify-center">
+          <span class="text-xl">📶</span>
+        </div>
+        <h3 class="font-semibold text-lg mb-3">Sıra Modeli</h3>
+        <p class="text-gray-600 text-sm mb-4">
+          Sıra aktifse girişte <strong>Sıra Özeti</strong> görürsünüz:
+        </p>
+        <ul class="text-sm text-gray-700 space-y-2">
+          <li>• Şu an sırada kaç müşteri var</li>
+          <li>• Tahmini bekleme süresi</li>
+          <li>• Son alınan müşteri saati</li>
+          <li>• Hızlı eylem butonları</li>
+        </ul>
+      </div>
+
+      <div class="p-6 rounded-2xl bg-white border border-gray-200 shadow-sm card-hover" data-reveal>
+        <div class="w-12 h-12 mb-4 rounded-xl bg-[#4F7942]/10 flex items-center justify-center">
+          <span class="text-xl">📅</span>
+        </div>
+        <h3 class="font-semibold text-lg mb-3">Randevu Modeli</h3>
+        <p class="text-gray-600 text-sm mb-4">
+          Randevu aktifse girişte <strong>Bugünün Takvimi</strong> görürsünüz:
+        </p>
+        <ul class="text-sm text-gray-700 space-y-2">
+          <li>• Günlük randevu programı</li>
+          <li>• Personel bazında filtreleme</li>
+          <li>• Boş saat dilimlerini görme</li>
+          <li>• Yeni randevu oluşturma</li>
+        </ul>
+      </div>
+
+      <div class="p-6 rounded-2xl bg-white border border-gray-200 shadow-sm card-hover" data-reveal>
+        <div class="w-12 h-12 mb-4 rounded-xl bg-[#4F7942]/10 flex items-center justify-center">
+          <span class="text-xl">🗂️</span>
+        </div>
+        <h3 class="font-semibold text-lg mb-3">Bilgi Modeli</h3>
+        <p class="text-gray-600 text-sm mb-4">
+          Bilgi aktifse <strong>model ekranı yoktur</strong>, doğrudan Bilgi sayfasından başlarsınız:
+        </p>
+        <ul class="text-sm text-gray-700 space-y-2">
+          <li>• İşletme kartı ve detayları</li>
+          <li>• Görünürlük istatistikleri</li>
+          <li>• Hizmet listesi ve düzenleme</li>
+          <li>• Durum kontrolü (Açık/Kapalı)</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Bilgi Ekranı Kartları -->
+<section class="min-h-[92vh] flex items-center bg-white">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 w-full">
+    <div class="text-center mb-16" data-reveal>
+      <h2 class="font-display text-3xl sm:text-4xl font-semibold">Bilgi Ekranı Kartları 📋</h2>
+      <p class="mt-4 text-gray-600 max-w-2xl mx-auto">
+        İşletmenizin tüm önemli bilgileri tek ekranda, kolay erişilebilir kartlar halinde.
+      </p>
+    </div>
+
+    <div class="grid sm:grid-cols-2 gap-8">
+      <div class="p-6 rounded-2xl bg-[#F3FAF2] border border-gray-200 shadow-sm" data-reveal>
+        <div class="w-12 h-12 mb-4 rounded-xl bg-[#4F7942]/10 flex items-center justify-center">
+          <span class="text-xl">🏪</span>
+        </div>
+        <h3 class="font-semibold text-lg mb-3">İşletme Kartı</h3>
+        <p class="text-gray-600 text-sm mb-4">
+          Kapak fotoğrafı, işletme adı ve temel bilgiler. 
+          <strong>"Detaya git"</strong> butonuyla daha fazla bilgi sayfasına yönlendirir.
+        </p>
+        <div class="p-3 rounded-xl bg-white border text-xs text-gray-500">
+          Örnek: Kuafora Demo Barber → Detay sayfası
+        </div>
+      </div>
+
+      <div class="p-6 rounded-2xl bg-[#F3FAF2] border border-gray-200 shadow-sm" data-reveal>
+        <div class="w-12 h-12 mb-4 rounded-xl bg-[#4F7942]/10 flex items-center justify-center">
+          <span class="text-xl">📈</span>
+        </div>
+        <h3 class="font-semibold text-lg mb-3">Görünürlük Kartı</h3>
+        <p class="text-gray-600 text-sm mb-4">
+          Favori sayısı, günlük/haftalık/aylık görüntülenme verileri. 
+          <strong>"Detaylı istatistik"</strong> butonuyla İstatistik sayfasına yönlendirir.
+        </p>
+        <div class="p-3 rounded-xl bg-white border text-xs text-gray-500">
+          Favori: 126 • Gün 340 • Hafta 2.1K • Ay 8.9K
+        </div>
+      </div>
+
+      <div class="p-6 rounded-2xl bg-[#F3FAF2] border border-gray-200 shadow-sm" data-reveal>
+        <div class="w-12 h-12 mb-4 rounded-xl bg-[#4F7942]/10 flex items-center justify-center">
+          <span class="text-xl">🔄</span>
+        </div>
+        <h3 class="font-semibold text-lg mb-3">Durum Kartı</h3>
+        <p class="text-gray-600 text-sm mb-4">
+          Dükkan durumu (Açık/Kapalı) kontrolü. 
+          <strong>Sadece Patron</strong> bu durumu değiştirebilir. Çalışanlar için pasif.
+        </p>
+        <div class="p-3 rounded-xl bg-white border text-xs text-gray-500">
+          Aç/Kapat butonu + Çalışma Saatleri düzenleme
+        </div>
+      </div>
+
+      <div class="p-6 rounded-2xl bg-[#F3FAF2] border border-gray-200 shadow-sm" data-reveal>
+        <div class="w-12 h-12 mb-4 rounded-xl bg-[#4F7942]/10 flex items-center justify-center">
+          <span class="text-xl">✂️</span>
+        </div>
+        <h3 class="font-semibold text-lg mb-3">Hizmetler Kartı</h3>
+        <p class="text-gray-600 text-sm mb-4">
+          Popüler hizmetlerin listesi (ad, süre, fiyat). 
+          <strong>"Detaya git"</strong> butonuyla Hizmetler sayfasına yönlendirir.
+        </p>
+        <div class="p-3 rounded-xl bg-white border text-xs text-gray-500">
+          Saç Kesim • 30 dk • 250 TL
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Sıra Akışı -->
+<section class="min-h-[92vh] flex items-center bg-[#F3FAF2]">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 w-full">
+    <div class="text-center mb-16" data-reveal>
+      <h2 class="font-display text-3xl sm:text-4xl font-semibold">Sıra Akışı 📶</h2>
+      <p class="mt-4 text-gray-600 max-w-2xl mx-auto">
+        Anlık sıra takibi, müşteri yönetimi ve bekleme süreleri hesaplama.
+      </p>
+    </div>
+
+    <div class="grid lg:grid-cols-2 gap-8">
+      <div class="p-6 rounded-2xl bg-white border border-gray-200 shadow-sm" data-reveal>
+        <h3 class="font-semibold text-lg mb-4">Sıra Panosu</h3>
+        <div class="space-y-3 mb-6">
+          <div class="p-3 rounded-xl border bg-gray-50 text-sm">
+            #1 • Müşteri A • Saç Kesim • 25 dk
+          </div>
+          <div class="p-3 rounded-xl border bg-gray-50 text-sm">
+            #2 • Müşteri B • Sakal • 15 dk
+          </div>
+          <div class="p-3 rounded-xl border bg-gray-50 text-sm">
+            #3 • Müşteri C • Saç+Sakal • 40 dk
+          </div>
+        </div>
+        <div class="flex flex-wrap gap-2 text-xs">
+          <button class="btn-bubble text-xs px-3 py-1">Çağır</button>
+          <button class="px-3 py-1 rounded-md border">Ertele</button>
+          <button class="px-3 py-1 rounded-md border">İptal</button>
+        </div>
+      </div>
+
+      <div class="p-6 rounded-2xl bg-white border border-gray-200 shadow-sm" data-reveal>
+        <h3 class="font-semibold text-lg mb-4">Anlık Bilgiler</h3>
+        <div class="space-y-4">
+          <div class="p-4 rounded-xl bg-[#F3FAF2] border">
+            <div class="text-sm text-gray-600">Şu an sırada</div>
+            <div class="text-2xl font-semibold text-[#4F7942]">7 müşteri</div>
+          </div>
+          <div class="p-4 rounded-xl bg-[#F3FAF2] border">
+            <div class="text-sm text-gray-600">Tahmini bekleme</div>
+            <div class="text-2xl font-semibold text-[#4F7942]">32 dk</div>
+          </div>
+          <div class="p-4 rounded-xl bg-[#F3FAF2] border">
+            <div class="text-sm text-gray-600">Son alınan</div>
+            <div class="text-2xl font-semibold text-[#4F7942]">14:05</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Randevu Akışı -->
+<section class="min-h-[92vh] flex items-center bg-white">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 w-full">
+    <div class="text-center mb-16" data-reveal>
+      <h2 class="font-display text-3xl sm:text-4xl font-semibold">Randevu Akışı 📅</h2>
+      <p class="mt-4 text-gray-600 max-w-2xl mx-auto">
+        Günlük takvim görünümü, personel filtreleme ve ödeme sistemleri.
+      </p>
+    </div>
+
+    <div class="grid lg:grid-cols-3 gap-8">
+      <div class="lg:col-span-2 p-6 rounded-2xl bg-[#F3FAF2] border border-gray-200 shadow-sm" data-reveal>
+        <h3 class="font-semibold text-lg mb-4">Günlük Takvim</h3>
+        <div class="flex flex-wrap gap-2 mb-4 text-sm">
+          <select class="px-3 py-2 border rounded-md bg-white">
+            <option>Personel: Tümü</option>
+          </select>
+          <select class="px-3 py-2 border rounded-md bg-white">
+            <option>Hizmet: Tümü</option>
+          </select>
+          <select class="px-3 py-2 border rounded-md bg-white">
+            <option>Durum: Tümü</option>
+          </select>
+        </div>
+        <div class="grid sm:grid-cols-2 gap-3">
+          <div class="p-3 rounded-xl bg-white border">
+            <div class="text-xs text-gray-500">09:00 - 10:00</div>
+            <div class="font-medium">Müşteri A</div>
+            <div class="text-xs text-gray-600">Saç Kesim • Personel: Ali</div>
+          </div>
+          <div class="p-3 rounded-xl bg-white border">
+            <div class="text-xs text-gray-500">10:00 - 10:30</div>
+            <div class="font-medium">Müşteri B</div>
+            <div class="text-xs text-gray-600">Sakal • Personel: Ayşe</div>
+          </div>
+          <div class="p-3 rounded-xl bg-white border border-dashed border-gray-300">
+            <div class="text-xs text-gray-400">10:30 - 11:00</div>
+            <div class="text-sm text-gray-400">Boş Slot</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="p-6 rounded-2xl bg-[#F3FAF2] border border-gray-200 shadow-sm" data-reveal>
+        <h3 class="font-semibold text-lg mb-4">Ödeme Sistemi</h3>
+        <div class="space-y-4 text-sm">
+          <div class="p-4 rounded-xl bg-white border">
+            <div class="font-medium text-[#4F7942] mb-2">%25 Ön Ödeme</div>
+            <p class="text-gray-600">
+              Müşteriler randevu alırken hizmet ücretinin %25'ini öder. 
+              Bu garanti olarak işlev görür.
+            </p>
+          </div>
+          <div class="p-4 rounded-xl bg-white border">
+            <div class="font-medium text-[#4F7942] mb-2">%3 Komisyon</div>
+            <p class="text-gray-600">
+              Tamamlanan her randevudan Kuafora %3 komisyon alır. 
+              Şeffaf ve adil ücretlendirme.
+            </p>
+          </div>
+          <div class="p-4 rounded-xl bg-white border">
+            <div class="font-medium text-[#4F7942] mb-2">Hatırlatıcılar</div>
+            <p class="text-gray-600">
+              SMS ve push bildirimler ile müşteriler randevularını unutmaz.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="min-h-[60vh] flex items-center bg-[#F3FAF2]">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 text-center">
+    <div data-reveal>
+      <h2 class="font-display text-3xl sm:text-4xl font-semibold">
+        Bu Özellikleri Denemeye Hazır mısınız?
+      </h2>
+      <p class="mt-4 text-gray-600 max-w-2xl mx-auto">
+        Kuafora Partner ile işletmenizi daha verimli yönetin ve müşteri memnuniyetini artırın.
+      </p>
+      
+      <div class="mt-8 flex flex-col sm:flex-row gap-4 justify-center">
+        <a href="/partner/kuafora-partner/ekranlar/" class="btn-bubble">
+          Ekranları İncele
+        </a>
+        <a href="/partner/kuafora-partner/sss/" class="btn-bubble-secondary">
+          Sık Sorulan Sorular
+        </a>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+{{ block.super }}
+<script>
+  // Enhanced header island animation for partner pages
+  const navWrapper = document.querySelector('[data-nav]');
+  if (navWrapper) {
+    const baseClasses = navWrapper.className;
+    const islandClasses = 'mx-auto mt-3 max-w-7xl w-full rounded-full border border-emerald-900/10 bg-[#F3FAF2]/90 shadow-lg backdrop-blur px-6 sm:px-8 py-3 transition-all duration-300 ease-out translate-y-2';
+    
+    function updateHeader() {
+      if (window.scrollY > 120) {
+        navWrapper.className = islandClasses;
+      } else {
+        navWrapper.className = baseClasses;
+      }
+    }
+    
+    updateHeader();
+    window.addEventListener('scroll', updateHeader, { passive: true });
+  }
+</script>
+{% endblock %}

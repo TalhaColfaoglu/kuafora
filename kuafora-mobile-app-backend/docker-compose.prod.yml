@@ -1,0 +1,7 @@
+version: "3.9"
+
+services:
+  # Deprecated: use root-level docker-compose.yml
+  placeholder:
+    image: alpine
+    command: ["sh", "-c", "echo 'Use root-level docker-compose.yml' && sleep 3600"]

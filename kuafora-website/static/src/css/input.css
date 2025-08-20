@@ -1,0 +1,21 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Base typography */
+@layer base {
+  :root {
+    --ayder: #4F7942;
+  }
+  h1, h2, h3, h4 { font-feature-settings: "kern"; }
+}
+
+/* Components */
+@layer components {
+  .btn-primary {
+    @apply inline-flex items-center justify-center px-5 py-3 rounded-md bg-[#4F7942] text-white hover:bg-[#42673a] transition;
+  }
+  .card {
+    @apply p-6 rounded-xl border border-gray-200 hover:shadow-sm transition bg-white;
+  }
+}

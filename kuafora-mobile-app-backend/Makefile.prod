@@ -1,0 +1,47 @@
+SHELL := /bin/bash
+
+# Production commands
+build-prod:
+	docker-compose -f docker-compose.prod.yml build --no-cache
+
+up-prod:
+	docker-compose -f docker-compose.prod.yml up -d
+
+down-prod:
+	docker-compose -f docker-compose.prod.yml down
+
+logs-prod:
+	docker-compose -f docker-compose.prod.yml logs -f --tail=200
+
+restart-prod:
+	docker-compose -f docker-compose.prod.yml restart
+
+# SSL certificate setup
+ssl-init:
+	./deploy/scripts/init-letsencrypt.sh
+
+ssl-renew:
+	docker-compose -f docker-compose.prod.yml exec certbot certbot renew
+	docker-compose -f docker-compose.prod.yml exec nginx nginx -s reload
+
+# Database operations
+migrate-prod:
+	docker-compose -f docker-compose.prod.yml exec web python manage.py migrate
+
+collectstatic-prod:
+	docker-compose -f docker-compose.prod.yml exec web python manage.py collectstatic --noinput
+
+superuser-prod:
+	docker-compose -f docker-compose.prod.yml exec web python manage.py createsuperuser
+
+# Backup database
+backup-db:
+	docker-compose -f docker-compose.prod.yml exec db pg_dump -U $(shell grep POSTGRES_USER .env.prod | cut -d '=' -f2) $(shell grep POSTGRES_DB .env.prod | cut -d '=' -f2) > backup_$(shell date +%Y%m%d_%H%M%S).sql
+
+# Deploy
+deploy:
+	./deploy/scripts/deploy.sh
+
+# Health check
+health:
+	curl -f http://localhost/health/ || curl -f https://$(shell grep DOMAIN .env.prod | cut -d '=' -f2)/health/
