@@ -1,0 +1,7 @@
+# Env files
+env/backend.env
+env/website.env
+
+# Local certs
+nginx/certbot/
+

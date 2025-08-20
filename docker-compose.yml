@@ -1,5 +1,3 @@
-version: "3.9"
-
 services:
   backend:
     build:
@@ -8,7 +6,7 @@ services:
     container_name: kuafora_backend
     restart: unless-stopped
     env_file:
-      - ./kuafora-mobile-app-backend/.env.prod
+      - ./env/backend.env
     expose:
       - "8000"
     volumes:
@@ -23,7 +21,7 @@ services:
     container_name: kuafora_website
     restart: unless-stopped
     env_file:
-      - ./kuafora-website/.env.prod
+      - ./env/website.env
     expose:
       - "8001"
     volumes:
