@@ -29,7 +29,7 @@ RUN pip install --no-cache-dir --upgrade pip \
 COPY . /app/
 
 # Create staticfiles and mediafiles directories
-RUN mkdir -p /app/staticfiles /app/mediafiles
+RUN mkdir -p /app/staticfiles /app/mediafiles /app/logs
 
 ENV DJANGO_SETTINGS_MODULE=config.settings
 RUN python manage.py collectstatic --noinput || true
