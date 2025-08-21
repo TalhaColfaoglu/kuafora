@@ -1,4 +1,23 @@
-# Use Python 3.10 slim image
+##########
+# Stage 1: Build static assets with Node (Tailwind)
+##########
+FROM node:18-alpine AS assets
+
+WORKDIR /build
+
+# Install node deps
+COPY package.json package-lock.json* ./
+RUN npm ci --no-audit --no-fund || npm install
+
+# Copy project for asset build
+COPY . .
+
+# Build Tailwind to static/dist/styles.css
+RUN npm run build
+
+##########
+# Stage 2: Python runtime
+##########
 FROM python:3.10-slim
 
 # Set environment variables
@@ -27,6 +46,9 @@ RUN pip install --no-cache-dir --upgrade pip \
 
 # Copy project
 COPY . /app/
+
+# Copy built assets from assets stage
+COPY --from=assets /build/static/dist /app/static/dist
 
 # Create staticfiles and mediafiles directories
 RUN mkdir -p /app/staticfiles /app/mediafiles /app/logs
