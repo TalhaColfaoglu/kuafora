@@ -36,6 +36,8 @@ class BarbershopSerializer(serializers.ModelSerializer):
             "images",
             "is_verified",
             "description",
+            "latitude",
+            "longitude",
             "created_at",
             "updated_at",
             "rating_avg",

@@ -59,3 +59,18 @@ class User(AbstractBaseUser, PermissionsMixin):
         return self.email
 
 
+class UserAddress(models.Model):
+    user = models.ForeignKey("User", on_delete=models.CASCADE, related_name="addresses")
+    label = models.CharField(max_length=50)
+    address_line = models.CharField(max_length=255)
+    city = models.CharField(max_length=100, blank=True)
+    district = models.CharField(max_length=100, blank=True)
+    latitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
+    longitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
+    is_default = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self) -> str:  # pragma: no cover - trivial
+        return f"{self.user.email} - {self.label}"
+

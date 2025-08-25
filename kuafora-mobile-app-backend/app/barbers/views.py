@@ -4,6 +4,7 @@ from django.db.models import Prefetch, Q
 from rest_framework import viewsets, mixins, permissions
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from django.utils import timezone
 
 from .models import (
     Barbershop,
@@ -68,6 +69,43 @@ class BarbershopViewSet(viewsets.ReadOnlyModelViewSet):
         reviews = Review.objects.filter(barbershop_id=pk).select_related("user")
         serializer = ReviewSerializer(reviews, many=True)
         return Response(serializer.data)
+
+    @action(detail=True, methods=["get"], url_path="status")
+    def status(self, request, pk=None):
+        # Compute open/closed based on today's schedules
+        barbershop = Barbershop.objects.filter(pk=pk).first()
+        if not barbershop:
+            return Response({"detail": "Not found"}, status=404)
+        now = timezone.localtime()
+        weekday_map = {0: "Mon", 1: "Tue", 2: "Wed", 3: "Thu", 4: "Fri", 5: "Sat", 6: "Sun"}
+        today_code = weekday_map[now.weekday()]
+        schedules = (
+            WorkSchedule.objects
+            .filter(staff__barbershop_id=pk, day_of_week=today_code)
+            .values("start_time", "end_time")
+        )
+        is_open_now = False
+        opens_at = None
+        closes_at = None
+        if schedules:
+            for s in schedules:
+                start_dt = timezone.make_aware(timezone.datetime.combine(now.date(), s["start_time"]))
+                end_dt = timezone.make_aware(timezone.datetime.combine(now.date(), s["end_time"]))
+                if start_dt <= now <= end_dt:
+                    is_open_now = True
+                    opens_at = s["start_time"]
+                    closes_at = s["end_time"]
+                    break
+            if not is_open_now:
+                # next opening today
+                next_slots = sorted([s for s in schedules if s["start_time"] > now.time()], key=lambda x: x["start_time"])  # type: ignore
+                if next_slots:
+                    opens_at = next_slots[0]["start_time"]
+        return Response({
+            "is_open_now": is_open_now,
+            "opens_at": opens_at,
+            "closes_at": closes_at,
+        })
 
 
 class FavoriteViewSet(mixins.ListModelMixin, mixins.CreateModelMixin, mixins.DestroyModelMixin, viewsets.GenericViewSet):

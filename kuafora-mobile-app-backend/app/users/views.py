@@ -4,7 +4,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.tokens import default_token_generator
 from django.utils.encoding import force_bytes, force_str
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
-from rest_framework import generics, permissions, status
+from rest_framework import generics, permissions, status, viewsets
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 
@@ -15,7 +15,9 @@ from .serializers import (
     ChangePasswordSerializer,
     EmailSerializer,
     ResetPasswordSerializer,
+    UserAddressSerializer,
 )
+from .models import UserAddress
 
 User = get_user_model()
 
@@ -121,5 +123,23 @@ class ResetPasswordView(generics.GenericAPIView):
         user.set_password(serializer.validated_data["new_password"])
         user.save()
         return Response({"detail": "Password reset successful"})
+
+
+class UserAddressViewSet(viewsets.ModelViewSet):
+    serializer_class = UserAddressSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        return UserAddress.objects.filter(user=self.request.user)
+
+    def perform_create(self, serializer):
+        if serializer.validated_data.get("is_default"):
+            UserAddress.objects.filter(user=self.request.user, is_default=True).update(is_default=False)
+        serializer.save(user=self.request.user)
+
+    def perform_update(self, serializer):
+        instance = serializer.save()
+        if instance.is_default:
+            UserAddress.objects.filter(user=self.request.user).exclude(pk=instance.pk).update(is_default=False)
 
 

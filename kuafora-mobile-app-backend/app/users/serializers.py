@@ -3,7 +3,7 @@ from __future__ import annotations
 from django.contrib.auth import authenticate, password_validation
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
-from .models import User
+from .models import User, UserAddress
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -85,5 +85,23 @@ class ResetPasswordSerializer(serializers.Serializer):
     def validate_new_password(self, value: str) -> str:
         password_validation.validate_password(value)
         return value
+
+
+class UserAddressSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = UserAddress
+        fields = (
+            "id",
+            "label",
+            "address_line",
+            "city",
+            "district",
+            "latitude",
+            "longitude",
+            "is_default",
+            "created_at",
+            "updated_at",
+        )
+        read_only_fields = ("created_at", "updated_at")
 
 
