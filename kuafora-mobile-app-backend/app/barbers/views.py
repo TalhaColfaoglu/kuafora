@@ -24,6 +24,7 @@ from .serializers import (
 )
 from .filters import BarbershopFilter
 from .permissions import IsShopAdmin
+from django.conf import settings
 
 
 class BarbershopViewSet(viewsets.ReadOnlyModelViewSet):
@@ -106,6 +107,9 @@ class BarbershopViewSet(viewsets.ReadOnlyModelViewSet):
             "opens_at": opens_at,
             "closes_at": closes_at,
         })
+
+
+"""Test-only viewset removed"""
 
 
 class FavoriteViewSet(mixins.ListModelMixin, mixins.CreateModelMixin, mixins.DestroyModelMixin, viewsets.GenericViewSet):

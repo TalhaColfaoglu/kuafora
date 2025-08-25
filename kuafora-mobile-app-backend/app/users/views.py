@@ -125,6 +125,16 @@ class ResetPasswordView(generics.GenericAPIView):
         return Response({"detail": "Password reset successful"})
 
 
+class CheckEmailView(generics.GenericAPIView):
+    serializer_class = EmailSerializer
+
+    def post(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        exists = User.objects.filter(email=serializer.validated_data["email"]).exists()
+        return Response({"exists": exists})
+
+
 class UserAddressViewSet(viewsets.ModelViewSet):
     serializer_class = UserAddressSerializer
     permission_classes = [permissions.IsAuthenticated]
