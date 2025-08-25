@@ -14,6 +14,7 @@ from .serializers import (
     UserSerializer,
     ChangePasswordSerializer,
     EmailSerializer,
+    PhoneSerializer,
     ResetPasswordSerializer,
     UserAddressSerializer,
 )
@@ -132,6 +133,17 @@ class CheckEmailView(generics.GenericAPIView):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         exists = User.objects.filter(email=serializer.validated_data["email"]).exists()
+        return Response({"exists": exists})
+
+
+class CheckPhoneView(generics.GenericAPIView):
+    serializer_class = PhoneSerializer
+
+    def post(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        phone = serializer.validated_data["phone"]
+        exists = User.objects.filter(phone=phone).exists()
         return Response({"exists": exists})
 
 

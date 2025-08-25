@@ -12,6 +12,7 @@ from .views import (
     ResetPasswordView,
     UserAddressViewSet,
     CheckEmailView,
+    CheckPhoneView,
 )
 
 router = DefaultRouter()
@@ -21,6 +22,7 @@ urlpatterns = [
     path("register", RegisterView.as_view(), name="auth-register"),
     path("login", LoginView.as_view(), name="auth-login"),
     path("check-email", CheckEmailView.as_view(), name="auth-check-email"),
+    path("check-phone", CheckPhoneView.as_view(), name="auth-check-phone"),
     path("logout", LogoutView.as_view(), name="auth-logout"),
     path("me", MeView.as_view(), name="auth-me"),
     path("change-password", ChangePasswordView.as_view(), name="auth-change-password"),

@@ -77,6 +77,10 @@ class EmailSerializer(serializers.Serializer):
     email = serializers.EmailField()
 
 
+class PhoneSerializer(serializers.Serializer):
+    phone = serializers.CharField()
+
+
 class ResetPasswordSerializer(serializers.Serializer):
     uid = serializers.CharField()
     token = serializers.CharField()
