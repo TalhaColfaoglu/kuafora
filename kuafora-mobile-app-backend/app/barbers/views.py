@@ -183,7 +183,7 @@ class PartnerBarbershopViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
 
     def perform_create(self, serializer):
-        barbershop = serializer.save()
+        barbershop = serializer.save(is_verified=True)
         # Ensure creator is admin staff of this barbershop
         from .models import Staff
         from django.contrib.auth import get_user_model
