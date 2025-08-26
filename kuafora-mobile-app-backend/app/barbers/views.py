@@ -13,6 +13,7 @@ from .models import (
     Review,
     Service,
     Favorite,
+    LastViewed,
 )
 from .serializers import (
     BarbershopSerializer,
@@ -21,6 +22,7 @@ from .serializers import (
     ReviewSerializer,
     ServiceSerializer,
     FavoriteSerializer,
+    LastViewedSerializer,
     InviteStaffSerializer,
     StaffHoursSerializer,
 )
@@ -123,6 +125,28 @@ class FavoriteViewSet(mixins.ListModelMixin, mixins.CreateModelMixin, mixins.Des
 
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
+class LastViewedViewSet(mixins.ListModelMixin, mixins.CreateModelMixin, viewsets.GenericViewSet):
+    serializer_class = LastViewedSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        # return last 7 viewed for current user, most recent first
+        return LastViewed.objects.filter(user=self.request.user).order_by('-created_at')[:7]
+
+    def perform_create(self, serializer):
+        # upsert behavior: update timestamp if exists, trim to last 7
+        obj, created = LastViewed.objects.update_or_create(
+            user=self.request.user,
+            barbershop_id=self.request.data.get('barbershop'),
+            defaults={}
+        )
+        # ensure at most 7 entries
+        qs = LastViewed.objects.filter(user=self.request.user).order_by('-created_at')
+        ids = list(qs.values_list('id', flat=True))
+        if len(ids) > 7:
+            LastViewed.objects.filter(id__in=ids[7:]).delete()
+        return
+
 
 
 class ReviewViewSet(mixins.CreateModelMixin, mixins.UpdateModelMixin, mixins.DestroyModelMixin, viewsets.GenericViewSet):

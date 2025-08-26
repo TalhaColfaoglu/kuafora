@@ -8,11 +8,13 @@ from .views import (
     PartnerServiceViewSet,
     PartnerStaffViewSet,
     PartnerWorkScheduleViewSet,
+    LastViewedViewSet,
 )
 
 router = DefaultRouter()
 router.register(r"barbershops", BarbershopViewSet, basename="barbershop")
 router.register(r"favorites", FavoriteViewSet, basename="favorite")
+router.register(r"last-viewed", LastViewedViewSet, basename="last-viewed")
 router.register(r"reviews", ReviewViewSet, basename="review")
 
 router.register(r"partner/barbershops", PartnerBarbershopViewSet, basename="partner-barbershop")
