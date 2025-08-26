@@ -21,6 +21,8 @@ from .serializers import (
     ReviewSerializer,
     ServiceSerializer,
     FavoriteSerializer,
+    InviteStaffSerializer,
+    StaffHoursSerializer,
 )
 from .filters import BarbershopFilter
 from .permissions import IsShopAdmin
@@ -143,6 +145,11 @@ class PartnerBarbershopViewSet(viewsets.ModelViewSet):
         user = self.request.user
         return Barbershop.objects.filter(staff__user=user, staff__is_admin=True).distinct()
 
+    def get_permissions(self):
+        if self.action == 'create':
+            return [permissions.IsAuthenticated()]
+        return super().get_permissions()
+
     @action(detail=True, methods=["patch"], url_path="status")
     def status(self, request, pk=None):
         instance = self.get_object()
@@ -152,6 +159,24 @@ class PartnerBarbershopViewSet(viewsets.ModelViewSet):
             instance.save(update_fields=["is_verified"])
         serializer = self.get_serializer(instance)
         return Response(serializer.data)
+
+    def perform_create(self, serializer):
+        barbershop = serializer.save()
+        # Ensure creator is admin staff of this barbershop
+        from .models import Staff
+        from django.contrib.auth import get_user_model
+        user = self.request.user
+        Staff.objects.get_or_create(barbershop=barbershop, user=user, defaults={"email": getattr(user, 'email', ''), "is_admin": True})
+
+    @action(detail=True, methods=["post"], url_path="images")
+    def upload_image(self, request, pk=None):
+        from .models import BarbershopImage
+        bs = self.get_object()
+        image = request.FILES.get('image')
+        if not image:
+            return Response({'detail': 'No image'}, status=400)
+        BarbershopImage.objects.create(barbershop=bs, image=image)
+        return Response({'detail': 'ok'})
 
 
 class PartnerServiceViewSet(viewsets.ModelViewSet):
@@ -171,6 +196,24 @@ class PartnerStaffViewSet(viewsets.ModelViewSet):
         user = self.request.user
         return Staff.objects.filter(barbershop__staff__user=user, barbershop__staff__is_admin=True).select_related("barbershop", "user")
 
+    @action(detail=False, methods=["post"], url_path="invite")
+    def invite(self, request):
+        data = InviteStaffSerializer(data=request.data)
+        data.is_valid(raise_exception=True)
+        email = data.validated_data["email"]
+        is_admin = data.validated_data.get("is_admin", False)
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        user = User.objects.filter(email=email).first()
+        if not user:
+            return Response({"detail": "User not found"}, status=404)
+        # Attach to first admin barbershop of inviter
+        admin_staff = Staff.objects.filter(user=request.user, is_admin=True).select_related("barbershop").first()
+        if not admin_staff:
+            return Response({"detail": "No admin barbershop"}, status=400)
+        Staff.objects.get_or_create(barbershop=admin_staff.barbershop, user=user, defaults={"email": user.email, "is_admin": is_admin})
+        return Response({"detail": "Invited/attached"})
+
 
 class PartnerWorkScheduleViewSet(viewsets.ModelViewSet):
     serializer_class = WorkScheduleSerializer
@@ -179,5 +222,20 @@ class PartnerWorkScheduleViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         user = self.request.user
         return WorkSchedule.objects.filter(staff__barbershop__staff__user=user, staff__barbershop__staff__is_admin=True).select_related("staff")
+
+    @action(detail=False, methods=["post"], url_path="set-hours")
+    def set_hours(self, request):
+        staff_id = request.data.get("staff_id")
+        hours = request.data.get("hours", [])
+        try:
+            staff = Staff.objects.get(id=staff_id, barbershop__staff__user=request.user, barbershop__staff__is_admin=True)
+        except Staff.DoesNotExist:
+            return Response({"detail": "Staff not found or no permission"}, status=404)
+        WorkSchedule.objects.filter(staff=staff).delete()
+        serializer = StaffHoursSerializer(data=hours, many=True)
+        serializer.is_valid(raise_exception=True)
+        for h in serializer.validated_data:
+            WorkSchedule.objects.create(staff=staff, **h)
+        return Response({"detail": "Updated"})
 
 

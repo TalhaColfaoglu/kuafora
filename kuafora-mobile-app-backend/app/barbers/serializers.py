@@ -89,6 +89,18 @@ class FavoriteSerializer(serializers.ModelSerializer):
         read_only_fields = ("created_at",)
 
 
+class InviteStaffSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    is_admin = serializers.BooleanField(default=False)
+
+
+class StaffHoursSerializer(serializers.Serializer):
+    day_of_week = serializers.ChoiceField(choices=WorkSchedule.Weekday.choices)
+    start_time = serializers.TimeField()
+    end_time = serializers.TimeField()
+    break_time = serializers.IntegerField(required=False, default=0)
+
+
 
 # Test serializer removed
 
