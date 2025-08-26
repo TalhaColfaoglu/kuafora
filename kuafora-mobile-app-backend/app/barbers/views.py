@@ -178,6 +178,16 @@ class PartnerBarbershopViewSet(viewsets.ModelViewSet):
         BarbershopImage.objects.create(barbershop=bs, image=image)
         return Response({'detail': 'ok'})
 
+    @action(detail=True, methods=["post"], url_path="main-image")
+    def set_main_image(self, request, pk=None):
+        bs = self.get_object()
+        image = request.FILES.get('image')
+        if not image:
+            return Response({'detail': 'No image'}, status=400)
+        bs.main_image = image
+        bs.save(update_fields=["main_image"])
+        return Response({'detail': 'ok'})
+
 
 class PartnerServiceViewSet(viewsets.ModelViewSet):
     serializer_class = ServiceSerializer
