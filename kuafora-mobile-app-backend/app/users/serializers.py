@@ -7,12 +7,16 @@ from .models import User, UserAddress
 
 
 class UserSerializer(serializers.ModelSerializer):
+    first_name = serializers.SerializerMethodField()
+    last_name = serializers.SerializerMethodField()
     class Meta:
         model = User
         fields = (
             "id",
             "image",
             "full_name",
+            "first_name",
+            "last_name",
             "email",
             "phone",
             "gender",
@@ -24,13 +28,23 @@ class UserSerializer(serializers.ModelSerializer):
         )
         read_only_fields = ("is_active", "is_staff", "is_superuser", "created_at", "updated_at")
 
+    def get_first_name(self, obj):
+        parts = (obj.full_name or "").split()
+        return parts[0] if parts else ""
+
+    def get_last_name(self, obj):
+        parts = (obj.full_name or "").split()
+        return " ".join(parts[1:]) if len(parts) > 1 else ""
+
 
 class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, min_length=8)
+    first_name = serializers.CharField(write_only=True, required=False, allow_blank=True)
+    last_name = serializers.CharField(write_only=True, required=False, allow_blank=True)
 
     class Meta:
         model = User
-        fields = ("full_name", "email", "password", "gender", "phone")
+        fields = ("full_name", "first_name", "last_name", "email", "password", "gender", "phone")
 
     def validate_password(self, value: str) -> str:
         password_validation.validate_password(value)
@@ -38,6 +52,10 @@ class RegisterSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         password = validated_data.pop("password")
+        first = validated_data.pop("first_name", "").strip()
+        last = validated_data.pop("last_name", "").strip()
+        if not validated_data.get("full_name"):
+            validated_data["full_name"] = (first + " " + last).strip()
         user = User.objects.create_user(**validated_data)
         user.set_password(password)
         user.save()
