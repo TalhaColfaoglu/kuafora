@@ -7,6 +7,12 @@ class IsShopAdmin(BasePermission):
     def has_permission(self, request, view):
         if request.method in SAFE_METHODS:
             return True
+        # Allow creating a new barbershop without admin privilege.
+        # The creator will be attached as admin in PartnerBarbershopViewSet.perform_create.
+        action = getattr(view, 'action', None)
+        view_name = view.__class__.__name__
+        if view_name == 'PartnerBarbershopViewSet' and action == 'create':
+            return request.user and request.user.is_authenticated
         user = request.user
         if not user or not user.is_authenticated:
             return False
