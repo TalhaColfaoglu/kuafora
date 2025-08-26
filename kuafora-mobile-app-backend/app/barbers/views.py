@@ -138,17 +138,15 @@ class ReviewViewSet(mixins.CreateModelMixin, mixins.UpdateModelMixin, mixins.Des
 
 class PartnerBarbershopViewSet(viewsets.ModelViewSet):
     serializer_class = BarbershopSerializer
-    permission_classes = [permissions.IsAuthenticated, IsShopAdmin]
+    # Allow any authenticated user; queryset restriction + perform_create will enforce admin ownership
+    permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
         # Partner can manage barbershops where they have admin staff
         user = self.request.user
         return Barbershop.objects.filter(staff__user=user, staff__is_admin=True).distinct()
 
-    def get_permissions(self):
-        if self.action == 'create':
-            return [permissions.IsAuthenticated()]
-        return super().get_permissions()
+    # No custom permissions; queryset is already restricted to admin-owned shops
 
     @action(detail=True, methods=["patch"], url_path="status")
     def status(self, request, pk=None):
