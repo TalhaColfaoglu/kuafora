@@ -37,6 +37,18 @@ class UserSerializer(serializers.ModelSerializer):
         return " ".join(parts[1:]) if len(parts) > 1 else ""
 
 
+def _normalize_phone(value: str) -> str:
+    if value is None:
+        return ""
+    # Keep leading '+' and digits only
+    value = value.strip().replace(" ", "")
+    if value.startswith("+"):
+        prefix = "+"
+        rest = "".join(ch for ch in value[1:] if ch.isdigit())
+        return prefix + rest
+    return "+" + "".join(ch for ch in value if ch.isdigit())
+
+
 class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, min_length=8)
     first_name = serializers.CharField(write_only=True, required=False, allow_blank=True)
@@ -56,6 +68,24 @@ class RegisterSerializer(serializers.ModelSerializer):
         last = validated_data.pop("last_name", "").strip()
         if not validated_data.get("full_name"):
             validated_data["full_name"] = (first + " " + last).strip()
+        # Normalize and validate phone
+        phone = validated_data.get("phone", "")
+        phone = _normalize_phone(phone)
+        validated_data["phone"] = phone
+        if phone:
+            # Enforce uniqueness at serializer level (DB may contain blanks)
+            if User.objects.filter(phone=phone).exists():
+                raise serializers.ValidationError({"phone": _("Phone number already in use")})
+            # Basic format: +<countrycode><local10>
+            if not phone.startswith("+") or not phone[1:].isdigit():
+                raise serializers.ValidationError({"phone": _("Invalid phone format")})
+            # Require at least country code + 10 digits
+            if len(phone) < 12:  # e.g., +90 + 10 digits => length >= 13, allow other codes >=12
+                raise serializers.ValidationError({"phone": _("Phone must include country code and 10 digits")})
+        # Gender constraint
+        gender = validated_data.get("gender", "").strip()
+        if gender and gender not in {choice[0] for choice in User.Gender.choices}:
+            raise serializers.ValidationError({"gender": _("Invalid gender")})
         user = User.objects.create_user(**validated_data)
         user.set_password(password)
         user.save()
@@ -97,6 +127,14 @@ class EmailSerializer(serializers.Serializer):
 
 class PhoneSerializer(serializers.Serializer):
     phone = serializers.CharField()
+
+    def validate_phone(self, value: str) -> str:
+        phone = _normalize_phone(value)
+        if not phone.startswith("+") or not phone[1:].isdigit():
+            raise serializers.ValidationError(_("Invalid phone format"))
+        if len(phone) < 12:
+            raise serializers.ValidationError(_("Phone must include country code and 10 digits"))
+        return phone
 
 
 class ResetPasswordSerializer(serializers.Serializer):
