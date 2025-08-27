@@ -47,8 +47,9 @@ RUN pip install --no-cache-dir --upgrade pip \
 # Copy project
 COPY . /app/
 
-# Copy built assets from assets stage
-COPY --from=assets /build/static/dist/styles.css /app/static/styles.css
+# Copy built assets from assets stage (match template path)
+RUN mkdir -p /app/static/dist
+COPY --from=assets /build/static/dist/styles.css /app/static/dist/styles.css
 
 # Create staticfiles and mediafiles directories
 RUN mkdir -p /app/staticfiles /app/mediafiles /app/logs
