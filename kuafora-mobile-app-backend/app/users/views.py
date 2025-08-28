@@ -7,18 +7,22 @@ from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from rest_framework import generics, permissions, status, viewsets
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
+from django.db.models import Count
 
 from .serializers import (
     RegisterSerializer,
     LoginSerializer,
     UserSerializer,
+    UserUpdateSerializer,
     ChangePasswordSerializer,
     EmailSerializer,
     PhoneSerializer,
     ResetPasswordSerializer,
     UserAddressSerializer,
+    FavoriteSerializer,
+    LastViewedSerializer,
 )
-from .models import UserAddress
+from .models import UserAddress, Favorite, LastViewed
 
 User = get_user_model()
 
@@ -57,6 +61,14 @@ class LogoutView(generics.GenericAPIView):
 
 class MeView(generics.RetrieveUpdateAPIView):
     serializer_class = UserSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_object(self):
+        return self.request.user
+
+
+class UserUpdateView(generics.UpdateAPIView):
+    serializer_class = UserUpdateSerializer
     permission_classes = [permissions.IsAuthenticated]
 
     def get_object(self):
@@ -163,5 +175,59 @@ class UserAddressViewSet(viewsets.ModelViewSet):
         instance = serializer.save()
         if instance.is_default:
             UserAddress.objects.filter(user=self.request.user).exclude(pk=instance.pk).update(is_default=False)
+
+
+class FavoriteViewSet(viewsets.ModelViewSet):
+    serializer_class = FavoriteSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        return Favorite.objects.filter(user=self.request.user)
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
+    def perform_destroy(self, instance):
+        instance.delete()
+
+
+class LastViewedViewSet(viewsets.ModelViewSet):
+    serializer_class = LastViewedSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        return LastViewed.objects.filter(user=self.request.user)[:7]
+
+    def perform_create(self, serializer):
+        # Remove old entries if more than 7
+        user_last_viewed = LastViewed.objects.filter(user=self.request.user)
+        if user_last_viewed.count() >= 7:
+            oldest_entry = user_last_viewed.order_by('viewed_at').first()
+            if oldest_entry:
+                oldest_entry.delete()
+        
+        # Update existing entry or create new one
+        barbershop = serializer.validated_data['barbershop']
+        last_viewed, created = LastViewed.objects.get_or_create(
+            user=self.request.user,
+            barbershop=barbershop,
+            defaults={'viewed_at': serializer.validated_data.get('viewed_at')}
+        )
+        if not created:
+            last_viewed.save()  # Update viewed_at timestamp
+        return last_viewed
+
+
+class BarbershopStatsView(generics.GenericAPIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, barbershop_id):
+        favorites_count = Favorite.objects.filter(barbershop_id=barbershop_id).count()
+        views_count = LastViewed.objects.filter(barbershop_id=barbershop_id).count()
+        
+        return Response({
+            'favorites_count': favorites_count,
+            'views_count': views_count,
+        })
 
 
