@@ -12,7 +12,6 @@ from .models import (
     WorkSchedule,
     Review,
     Service,
-    Favorite,
     LastViewed,
 )
 from .serializers import (
@@ -21,7 +20,6 @@ from .serializers import (
     WorkScheduleSerializer,
     ReviewSerializer,
     ServiceSerializer,
-    FavoriteSerializer,
     LastViewedSerializer,
     InviteStaffSerializer,
     StaffHoursSerializer,
@@ -116,15 +114,6 @@ class BarbershopViewSet(viewsets.ReadOnlyModelViewSet):
 """Test-only viewset removed"""
 
 
-class FavoriteViewSet(mixins.ListModelMixin, mixins.CreateModelMixin, mixins.DestroyModelMixin, viewsets.GenericViewSet):
-    serializer_class = FavoriteSerializer
-    permission_classes = [permissions.IsAuthenticated]
-
-    def get_queryset(self):
-        return Favorite.objects.filter(user=self.request.user).select_related("barbershop")
-
-    def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
 class LastViewedViewSet(mixins.ListModelMixin, mixins.CreateModelMixin, viewsets.GenericViewSet):
     serializer_class = LastViewedSerializer
     permission_classes = [permissions.IsAuthenticated]

@@ -19,10 +19,10 @@ from .serializers import (
     PhoneSerializer,
     ResetPasswordSerializer,
     UserAddressSerializer,
-    FavoriteSerializer,
     LastViewedSerializer,
 )
-from .models import UserAddress, Favorite, LastViewed
+from .models import UserAddress, LastViewed
+from app.barbers.models import Barbershop
 
 User = get_user_model()
 
@@ -215,7 +215,10 @@ class BarbershopStatsView(generics.GenericAPIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request, barbershop_id):
-        favorites_count = Favorite.objects.filter(barbershop_id=barbershop_id).count()
+        favorites_count = (
+            Barbershop.objects.filter(id=barbershop_id).values_list('favorites_count', flat=True).first()
+            or 0
+        )
         views_count = LastViewed.objects.filter(barbershop_id=barbershop_id).count()
         
         return Response({

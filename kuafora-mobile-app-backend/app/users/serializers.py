@@ -6,6 +6,7 @@ from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 from .models import User, UserAddress
 from app.barbers.models import Favorite, LastViewed
+from django.db.models import F
 
 
 class RegisterSerializer(serializers.ModelSerializer):
@@ -85,7 +86,7 @@ class UserUpdateSerializer(serializers.ModelSerializer):
                 ids.append(add_id)
                 instance.favorites_ids = ids
                 instance.save(update_fields=["favorites_ids"])
-                Barbershop.objects.filter(id=add_id).update(favorites_count=models.F('favorites_count') + 1)
+                Barbershop.objects.filter(id=add_id).update(favorites_count=F('favorites_count') + 1)
 
         remove_id = validated_data.get("remove_favorite_barbershop")
         if remove_id is not None:
@@ -94,7 +95,7 @@ class UserUpdateSerializer(serializers.ModelSerializer):
                 ids.remove(remove_id)
                 instance.favorites_ids = ids
                 instance.save(update_fields=["favorites_ids"])
-                Barbershop.objects.filter(id=remove_id).update(favorites_count=models.F('favorites_count') - 1)
+                Barbershop.objects.filter(id=remove_id).update(favorites_count=F('favorites_count') - 1)
 
         return instance
 

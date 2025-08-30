@@ -9,7 +9,6 @@ from .models import (
     WorkSchedule,
     Review,
     Service,
-    Favorite,
     LastViewed,
 )
 
@@ -81,13 +80,6 @@ class ServiceSerializer(serializers.ModelSerializer):
     class Meta:
         model = Service
         fields = ("id", "barbershop", "category", "name", "price", "duration", "is_active")
-
-
-class FavoriteSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Favorite
-        fields = ("id", "user", "barbershop", "created_at")
-        read_only_fields = ("created_at",)
 
 
 class LastViewedSerializer(serializers.ModelSerializer):
