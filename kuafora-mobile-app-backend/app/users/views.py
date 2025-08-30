@@ -48,6 +48,7 @@ class LoginView(generics.GenericAPIView):
         })
 
 
+@extend_schema(exclude=True)
 class LogoutView(generics.GenericAPIView):
     permission_classes = [permissions.IsAuthenticated]
     serializer_class = LogoutSerializer
@@ -168,6 +169,7 @@ class CheckPhoneView(generics.GenericAPIView):
         return Response({"exists": exists})
 
 
+@extend_schema(exclude=True)
 class UserAddressViewSet(viewsets.ModelViewSet):
     serializer_class = UserAddressSerializer
     permission_classes = [permissions.IsAuthenticated]
@@ -194,6 +196,7 @@ class UserAddressViewSet(viewsets.ModelViewSet):
 """Favorites yönetimini kullanıcı profiline taşıdık; ayrı endpoint gerekli değil"""
 
 
+@extend_schema(exclude=True)
 class BarbershopStatsView(generics.GenericAPIView):
     permission_classes = [permissions.IsAuthenticated]
     serializer_class = BarbershopStatsSerializer
