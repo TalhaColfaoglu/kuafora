@@ -65,8 +65,8 @@ class User(AbstractBaseUser, PermissionsMixin):
 
 class UserAddress(models.Model):
     user = models.ForeignKey("User", on_delete=models.CASCADE, related_name="addresses")
-    label = models.CharField(max_length=50)
-    address_line = models.CharField(max_length=255)
+    label = models.CharField(max_length=50, blank=True, default="")
+    address_line = models.CharField(max_length=255, blank=True, default="")
     city = models.CharField(max_length=100, blank=True)
     district = models.CharField(max_length=100, blank=True)
     latitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)

@@ -94,10 +94,10 @@ class Service(models.Model):
 class LastViewed(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="last_viewed")
     barbershop = models.ForeignKey(Barbershop, on_delete=models.CASCADE, related_name="viewed_by")
-    created_at = models.DateTimeField(auto_now_add=True)
+    viewed_at = models.DateTimeField(auto_now_add=True)  # renamed to match migrations
 
     class Meta:
         unique_together = ("user", "barbershop")
-        indexes = [models.Index(fields=["user", "-created_at"])]
+        indexes = [models.Index(fields=["user", "-viewed_at"])]
 
 

@@ -85,8 +85,8 @@ class ServiceSerializer(serializers.ModelSerializer):
 class LastViewedSerializer(serializers.ModelSerializer):
     class Meta:
         model = LastViewed
-        fields = ("id", "user", "barbershop", "created_at")
-        read_only_fields = ("created_at",)
+        fields = ("id", "user", "barbershop", "viewed_at")
+        read_only_fields = ("viewed_at",)
 
 
 class InviteStaffSerializer(serializers.Serializer):
