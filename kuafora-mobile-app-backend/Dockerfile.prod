@@ -6,11 +6,13 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-RUN apt-get update \
+# Daha dayanıklı apt (retry + ca-certificates)
+RUN apt-get update -o Acquire::Retries=3 \
     && apt-get install -y --no-install-recommends \
         build-essential \
         libpq-dev \
         curl \
+        ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt /app/
@@ -30,5 +32,4 @@ RUN chown -R django:django /app
 USER django
 
 EXPOSE 8000
-
 ENTRYPOINT ["/app/entrypoint.prod.sh"]
