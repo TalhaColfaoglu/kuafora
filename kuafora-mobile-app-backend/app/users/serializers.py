@@ -4,7 +4,8 @@ from django.contrib.auth import authenticate
 from django.contrib.auth.password_validation import validate_password
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
-from .models import User, UserAddress, Favorite, LastViewed
+from .models import User, UserAddress
+from app.barbers.models import Favorite, LastViewed
 
 
 class RegisterSerializer(serializers.ModelSerializer):
