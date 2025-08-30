@@ -13,14 +13,11 @@ from .views import (
     CheckEmailView,
     CheckPhoneView,
     UserAddressViewSet,
-    FavoriteViewSet,
-    LastViewedViewSet,
     BarbershopStatsView,
 )
 
 router = DefaultRouter()
 router.register(r'addresses', UserAddressViewSet, basename='user-address')
-router.register(r'last-viewed', LastViewedViewSet, basename='last-viewed')
 
 urlpatterns = [
     path('', include(router.urls)),
@@ -37,5 +34,3 @@ urlpatterns = [
     path('check-phone/', CheckPhoneView.as_view(), name='check-phone'),
     path('barbershop-stats/<int:barbershop_id>/', BarbershopStatsView.as_view(), name='barbershop-stats'),
 ]
-
-
