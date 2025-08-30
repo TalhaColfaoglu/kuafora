@@ -13,6 +13,7 @@ from .models import (
     Review,
     Service,
     LastViewed,
+    
 )
 from .serializers import (
     BarbershopSerializer,
