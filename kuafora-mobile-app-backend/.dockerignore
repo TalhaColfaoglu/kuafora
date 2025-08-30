@@ -1,0 +1,30 @@
+# VCS
+.git
+.gitignore
+
+# Python caches
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.pytest_cache/
+.mypy_cache/
+.venv/
+venv/
+
+# Env files
+.env
+.env.*
+
+# Logs & temp
+*.log
+*.sqlite3
+.DS_Store
+
+# Large runtime dirs (served via volumes, not needed in image)
+media/
+staticfiles/
+certbot/
+
+# Tests
+tests/
