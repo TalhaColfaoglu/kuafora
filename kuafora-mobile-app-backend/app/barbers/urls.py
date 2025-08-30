@@ -2,7 +2,6 @@ from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from .views import (
     BarbershopViewSet,
-    FavoriteViewSet,
     ReviewViewSet,
     PartnerBarbershopViewSet,
     PartnerServiceViewSet,
@@ -13,7 +12,6 @@ from .views import (
 
 router = DefaultRouter()
 router.register(r"barbershops", BarbershopViewSet, basename="barbershop")
-router.register(r"favorites", FavoriteViewSet, basename="favorite")
 router.register(r"last-viewed", LastViewedViewSet, basename="last-viewed")
 router.register(r"reviews", ReviewViewSet, basename="review")
 

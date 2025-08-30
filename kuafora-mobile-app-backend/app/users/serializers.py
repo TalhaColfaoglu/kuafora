@@ -51,16 +51,14 @@ class LoginSerializer(serializers.Serializer):
 
 
 class UserSerializer(serializers.ModelSerializer):
-    favorites = serializers.SerializerMethodField()
+    favorites = serializers.ListField(child=serializers.IntegerField(), source='favorites_ids', read_only=True)
 
     class Meta:
         model = User
         fields = ("id", "email", "full_name", "phone", "gender", "date_joined", "favorites")
         read_only_fields = ("id", "date_joined", "favorites")
 
-    def get_favorites(self, obj):
-        # Return favorite barbershops with useful info
-        return FavoriteSerializer(obj.favorites.all(), many=True).data
+    
 
 
 class UserUpdateSerializer(serializers.ModelSerializer):
@@ -78,14 +76,25 @@ class UserUpdateSerializer(serializers.ModelSerializer):
             instance.full_name = full_name
             instance.save(update_fields=["full_name"])
 
-        # Favorite mutations
+        # Favorite mutations on JSON list plus counters
+        from app.barbers.models import Barbershop
         add_id = validated_data.get("add_favorite_barbershop")
         if add_id is not None:
-            Favorite.objects.get_or_create(user=instance, barbershop_id=add_id)
+            ids = list(instance.favorites_ids or [])
+            if add_id not in ids:
+                ids.append(add_id)
+                instance.favorites_ids = ids
+                instance.save(update_fields=["favorites_ids"])
+                Barbershop.objects.filter(id=add_id).update(favorites_count=models.F('favorites_count') + 1)
 
         remove_id = validated_data.get("remove_favorite_barbershop")
         if remove_id is not None:
-            Favorite.objects.filter(user=instance, barbershop_id=remove_id).delete()
+            ids = list(instance.favorites_ids or [])
+            if remove_id in ids:
+                ids.remove(remove_id)
+                instance.favorites_ids = ids
+                instance.save(update_fields=["favorites_ids"])
+                Barbershop.objects.filter(id=remove_id).update(favorites_count=models.F('favorites_count') - 1)
 
         return instance
 
