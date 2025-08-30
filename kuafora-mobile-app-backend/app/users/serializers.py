@@ -50,16 +50,43 @@ class LoginSerializer(serializers.Serializer):
 
 
 class UserSerializer(serializers.ModelSerializer):
+    favorites = serializers.SerializerMethodField()
+
     class Meta:
         model = User
-        fields = ("id", "email", "full_name", "phone", "gender", "date_joined")
-        read_only_fields = ("id", "date_joined")
+        fields = ("id", "email", "full_name", "phone", "gender", "date_joined", "favorites")
+        read_only_fields = ("id", "date_joined", "favorites")
+
+    def get_favorites(self, obj):
+        # Return favorite barbershops with useful info
+        return FavoriteSerializer(obj.favorites.all(), many=True).data
 
 
 class UserUpdateSerializer(serializers.ModelSerializer):
+    add_favorite_barbershop = serializers.IntegerField(required=False)
+    remove_favorite_barbershop = serializers.IntegerField(required=False)
+
     class Meta:
         model = User
-        fields = ("full_name",)
+        fields = ("full_name", "add_favorite_barbershop", "remove_favorite_barbershop")
+
+    def update(self, instance, validated_data):
+        # Update basic fields
+        full_name = validated_data.get("full_name")
+        if full_name is not None:
+            instance.full_name = full_name
+            instance.save(update_fields=["full_name"])
+
+        # Favorite mutations
+        add_id = validated_data.get("add_favorite_barbershop")
+        if add_id is not None:
+            Favorite.objects.get_or_create(user=instance, barbershop_id=add_id)
+
+        remove_id = validated_data.get("remove_favorite_barbershop")
+        if remove_id is not None:
+            Favorite.objects.filter(user=instance, barbershop_id=remove_id).delete()
+
+        return instance
 
 
 class ChangePasswordSerializer(serializers.Serializer):

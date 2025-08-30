@@ -20,7 +20,6 @@ from .views import (
 
 router = DefaultRouter()
 router.register(r'addresses', UserAddressViewSet, basename='user-address')
-router.register(r'favorites', FavoriteViewSet, basename='favorite')
 router.register(r'last-viewed', LastViewedViewSet, basename='last-viewed')
 
 urlpatterns = [

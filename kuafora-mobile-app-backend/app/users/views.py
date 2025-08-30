@@ -177,18 +177,7 @@ class UserAddressViewSet(viewsets.ModelViewSet):
             UserAddress.objects.filter(user=self.request.user).exclude(pk=instance.pk).update(is_default=False)
 
 
-class FavoriteViewSet(viewsets.ModelViewSet):
-    serializer_class = FavoriteSerializer
-    permission_classes = [permissions.IsAuthenticated]
-
-    def get_queryset(self):
-        return Favorite.objects.filter(user=self.request.user)
-
-    def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
-
-    def perform_destroy(self, instance):
-        instance.delete()
+# Favorites yönetimini kullanıcı profiline taşıdık; ayrı endpoint gerekli değil
 
 
 class LastViewedViewSet(viewsets.ModelViewSet):
