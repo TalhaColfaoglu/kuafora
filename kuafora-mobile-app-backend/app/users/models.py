@@ -78,29 +78,5 @@ class UserAddress(models.Model):
     def __str__(self) -> str:  # pragma: no cover - trivial
         return f"{self.user.email} - {self.label}"
 
-
-class Favorite(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='favorites')
-    barbershop = models.ForeignKey('barbers.Barbershop', on_delete=models.CASCADE, related_name='favorited_by')
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        unique_together = ['user', 'barbershop']
-        ordering = ['-created_at']
-
-    def __str__(self):
-        return f"{self.user.email} - {self.barbershop.name}"
-
-
-class LastViewed(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='last_viewed')
-    barbershop = models.ForeignKey('barbers.Barbershop', on_delete=models.CASCADE, related_name='viewed_by')
-    viewed_at = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        unique_together = ['user', 'barbershop']
-        ordering = ['-viewed_at']
-
-    def __str__(self):
-        return f"{self.user.email} - {self.barbershop.name} - {self.viewed_at}"
+    
 

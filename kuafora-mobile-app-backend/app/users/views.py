@@ -19,11 +19,10 @@ from .serializers import (
     PhoneSerializer,
     ResetPasswordSerializer,
     UserAddressSerializer,
-    LastViewedSerializer,
     
 )
-from .models import UserAddress, LastViewed
-from app.barbers.models import Barbershop
+from .models import UserAddress
+from app.barbers.models import Barbershop, LastViewed
 
 User = get_user_model()
 
@@ -182,34 +181,7 @@ class UserAddressViewSet(viewsets.ModelViewSet):
             UserAddress.objects.filter(user=self.request.user).exclude(pk=instance.pk).update(is_default=False)
 
 
-# Favorites yönetimini kullanıcı profiline taşıdık; ayrı endpoint gerekli değil
-
-
-class LastViewedViewSet(viewsets.ModelViewSet):
-    serializer_class = LastViewedSerializer
-    permission_classes = [permissions.IsAuthenticated]
-
-    def get_queryset(self):
-        return LastViewed.objects.filter(user=self.request.user)[:7]
-
-    def perform_create(self, serializer):
-        # Remove old entries if more than 7
-        user_last_viewed = LastViewed.objects.filter(user=self.request.user)
-        if user_last_viewed.count() >= 7:
-            oldest_entry = user_last_viewed.order_by('viewed_at').first()
-            if oldest_entry:
-                oldest_entry.delete()
-        
-        # Update existing entry or create new one
-        barbershop = serializer.validated_data['barbershop']
-        last_viewed, created = LastViewed.objects.get_or_create(
-            user=self.request.user,
-            barbershop=barbershop,
-            defaults={'viewed_at': serializer.validated_data.get('viewed_at')}
-        )
-        if not created:
-            last_viewed.save()  # Update viewed_at timestamp
-        return last_viewed
+"""Favorites yönetimini kullanıcı profiline taşıdık; ayrı endpoint gerekli değil"""
 
 
 class BarbershopStatsView(generics.GenericAPIView):

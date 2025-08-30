@@ -7,7 +7,6 @@ from .models import (
     WorkSchedule,
     Review,
     Service,
-    Favorite,
 )
 
 
@@ -55,8 +54,6 @@ class ServiceAdmin(admin.ModelAdmin):
     search_fields = ("name", "category")
 
 
-@admin.register(Favorite)
-class FavoriteAdmin(admin.ModelAdmin):
-    list_display = ("user", "barbershop", "created_at")
+"""Favorite admin kaydı kaldırıldı."""
 
 
