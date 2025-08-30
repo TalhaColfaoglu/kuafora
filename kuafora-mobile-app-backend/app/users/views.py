@@ -8,6 +8,7 @@ from rest_framework import generics, permissions, status, viewsets
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.db.models import Count
+from drf_spectacular.utils import extend_schema, OpenApiResponse
 
 from .serializers import (
     RegisterSerializer,
@@ -51,6 +52,7 @@ class LogoutView(generics.GenericAPIView):
     permission_classes = [permissions.IsAuthenticated]
     serializer_class = LogoutSerializer
 
+    @extend_schema(request=LogoutSerializer, responses={205: OpenApiResponse(description="Logged out")})
     def post(self, request, *args, **kwargs):
         refresh_token = request.data.get("refresh")
         if refresh_token:
@@ -169,6 +171,8 @@ class CheckPhoneView(generics.GenericAPIView):
 class UserAddressViewSet(viewsets.ModelViewSet):
     serializer_class = UserAddressSerializer
     permission_classes = [permissions.IsAuthenticated]
+    # Safe default queryset for schema generation
+    queryset = UserAddress.objects.none()
 
     def get_queryset(self):
         # Swagger/spectacular introspection sırasında anon kullanıcı olabilir
@@ -194,6 +198,7 @@ class BarbershopStatsView(generics.GenericAPIView):
     permission_classes = [permissions.IsAuthenticated]
     serializer_class = BarbershopStatsSerializer
 
+    @extend_schema(responses=BarbershopStatsSerializer)
     def get(self, request, barbershop_id):
         favorites_count = (
             Barbershop.objects.filter(id=barbershop_id).values_list('favorites_count', flat=True).first()
