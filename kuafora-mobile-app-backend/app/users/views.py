@@ -19,6 +19,8 @@ from .serializers import (
     PhoneSerializer,
     ResetPasswordSerializer,
     UserAddressSerializer,
+    LogoutSerializer,
+    BarbershopStatsSerializer,
     
 )
 from .models import UserAddress
@@ -47,6 +49,7 @@ class LoginView(generics.GenericAPIView):
 
 class LogoutView(generics.GenericAPIView):
     permission_classes = [permissions.IsAuthenticated]
+    serializer_class = LogoutSerializer
 
     def post(self, request, *args, **kwargs):
         refresh_token = request.data.get("refresh")
@@ -168,6 +171,9 @@ class UserAddressViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
+        # Swagger/spectacular introspection sırasında anon kullanıcı olabilir
+        if getattr(self, "swagger_fake_view", False):  # type: ignore[attr-defined]
+            return UserAddress.objects.none()
         return UserAddress.objects.filter(user=self.request.user)
 
     def perform_create(self, serializer):
@@ -186,6 +192,7 @@ class UserAddressViewSet(viewsets.ModelViewSet):
 
 class BarbershopStatsView(generics.GenericAPIView):
     permission_classes = [permissions.IsAuthenticated]
+    serializer_class = BarbershopStatsSerializer
 
     def get(self, request, barbershop_id):
         favorites_count = (
@@ -194,9 +201,6 @@ class BarbershopStatsView(generics.GenericAPIView):
         )
         views_count = LastViewed.objects.filter(barbershop_id=barbershop_id).count()
         
-        return Response({
-            'favorites_count': favorites_count,
-            'views_count': views_count,
-        })
+        return Response({'favorites_count': favorites_count, 'views_count': views_count})
 
 

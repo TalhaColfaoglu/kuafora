@@ -139,6 +139,15 @@ class UserAddressSerializer(serializers.ModelSerializer):
         read_only_fields = ("id", "created_at", "updated_at")
 
 
+class LogoutSerializer(serializers.Serializer):
+    refresh = serializers.CharField(required=False, allow_blank=True)
+
+
+class BarbershopStatsSerializer(serializers.Serializer):
+    favorites_count = serializers.IntegerField()
+    views_count = serializers.IntegerField()
+
+
     
 
 
