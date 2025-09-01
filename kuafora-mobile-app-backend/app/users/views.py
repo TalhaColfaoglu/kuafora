@@ -6,6 +6,7 @@ from django.utils.encoding import force_bytes, force_str
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from rest_framework import generics, permissions, status, viewsets
 from rest_framework.response import Response
+from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.db.models import Count
 from drf_spectacular.utils import extend_schema, OpenApiResponse
@@ -75,6 +76,63 @@ class MeView(generics.RetrieveUpdateAPIView):
 
     def get_object(self):
         return self.request.user
+
+
+class ProfilePhotoUploadView(generics.GenericAPIView):
+    permission_classes = [permissions.IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser]
+
+    @extend_schema(
+        request={
+            'multipart/form-data': {
+                'type': 'object',
+                'properties': {
+                    'image': {
+                        'type': 'string',
+                        'format': 'binary',
+                        'description': 'Profile photo image file'
+                    }
+                }
+            }
+        },
+        responses={
+            200: OpenApiResponse(description="Profile photo updated successfully"),
+            400: OpenApiResponse(description="Invalid image file")
+        }
+    )
+    def post(self, request, *args, **kwargs):
+        if 'image' not in request.FILES:
+            return Response(
+                {"detail": "No image file provided"}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        image_file = request.FILES['image']
+        
+        # Validate file type
+        allowed_types = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif']
+        if image_file.content_type not in allowed_types:
+            return Response(
+                {"detail": "Invalid file type. Only JPEG, PNG and GIF are allowed."}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Validate file size (max 5MB)
+        if image_file.size > 5 * 1024 * 1024:
+            return Response(
+                {"detail": "File size too large. Maximum 5MB allowed."}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Update user's profile photo
+        user = request.user
+        user.image = image_file
+        user.save()
+        
+        return Response({
+            "detail": "Profile photo updated successfully",
+            "image_url": user.image.url if user.image else None
+        })
 
 
 class UserUpdateView(generics.UpdateAPIView):
