@@ -69,8 +69,6 @@ class UserAddress(models.Model):
     address_line = models.CharField(max_length=255, blank=True, default="")
     city = models.CharField(max_length=100, blank=True)
     district = models.CharField(max_length=100, blank=True)
-    latitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
-    longitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
     is_default = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

@@ -20,8 +20,6 @@ class Barbershop(models.Model):
     main_image = models.ImageField(upload_to="barbershops/main/", null=True, blank=True)
     is_verified = models.BooleanField(default=False)
     description = models.TextField(blank=True)
-    latitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
-    longitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
