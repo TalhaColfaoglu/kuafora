@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from rest_framework import serializers
 from .models import (
+    Favorite,
+    
     Barbershop,
     BarbershopImage,
     Staff,
@@ -103,4 +105,36 @@ class StaffHoursSerializer(serializers.Serializer):
 
 
 # Test serializer removed
+
+
+class FavoriteSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Favorite
+        fields = ("id", "barbershop", "created_at")
+
+
+class BarbershopWithFavoriteSerializer(serializers.ModelSerializer):
+    is_favorited = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = Barbershop
+        fields = ("id", "name", "address", "is_favorited", "favorites_count")
+    
+    def get_is_favorited(self, obj):
+        request = self.context.get("request")
+        if request and request.user.is_authenticated:
+            from .models import Favorite
+            return Favorite.objects.filter(user=request.user, barbershop=obj).exists()
+        return False
+
+
+class BarbershopDetailSerializer(BarbershopSerializer):
+    is_favorited = serializers.SerializerMethodField()
+    
+    def get_is_favorited(self, obj):
+        request = self.context.get("request")
+        if request and request.user.is_authenticated:
+            from .models import Favorite
+            return Favorite.objects.filter(user=request.user, barbershop=obj).exists()
+        return False
 

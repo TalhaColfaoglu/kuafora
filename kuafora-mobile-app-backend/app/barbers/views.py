@@ -7,6 +7,8 @@ from rest_framework.response import Response
 from django.utils import timezone
 
 from .models import (
+    Favorite,
+    
     Barbershop,
     Staff,
     WorkSchedule,
@@ -16,6 +18,8 @@ from .models import (
     
 )
 from .serializers import (
+    BarbershopWithFavoriteSerializer,
+    
     BarbershopSerializer,
     StaffSerializer,
     WorkScheduleSerializer,
@@ -260,4 +264,59 @@ class PartnerWorkScheduleViewSet(viewsets.ModelViewSet):
             WorkSchedule.objects.create(staff=staff, **h)
         return Response({"detail": "Updated"})
 
+
+
+class FavoriteListView(generics.ListAPIView):
+    from rest_framework import generics
+    from .serializers import BarbershopWithFavoriteSerializer
+    from .models import Favorite
+    
+    serializer_class = BarbershopWithFavoriteSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def get_queryset(self):
+        return Barbershop.objects.filter(
+            favorited_by__user=self.request.user
+        ).order_by("-favorited_by__created_at")
+
+
+class FavoriteToggleView(generics.GenericAPIView):
+    from rest_framework import generics
+    from .models import Favorite
+    
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def post(self, request, barbershop_id):
+        try:
+            barbershop = Barbershop.objects.get(id=barbershop_id)
+        except Barbershop.DoesNotExist:
+            return Response({"error": "Barbershop not found"}, status=404)
+        
+        favorite, created = Favorite.objects.get_or_create(
+            user=request.user,
+            barbershop=barbershop
+        )
+        
+        if not created:
+            favorite.delete()
+            favorited = False
+        else:
+            favorited = True
+        
+        # Update favorites_count
+        favorites_count = barbershop.favorited_by.count()
+        barbershop.favorites_count = favorites_count
+        barbershop.save(update_fields=["favorites_count"])
+        
+        return Response({
+            "favorited": favorited,
+            "favorites_count": favorites_count
+        })
+
+
+    def get_serializer_class(self):
+        if self.action == "retrieve":
+            from .serializers import BarbershopDetailSerializer
+            return BarbershopDetailSerializer
+        return super().get_serializer_class()
 

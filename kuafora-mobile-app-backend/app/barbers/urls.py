@@ -1,6 +1,9 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from .views import (
+    FavoriteListView,
+    FavoriteToggleView,
+    
     BarbershopViewSet,
     ReviewViewSet,
     PartnerBarbershopViewSet,
@@ -25,3 +28,5 @@ urlpatterns = [
 ]
 
 
+    path("favorites/", FavoriteListView.as_view(), name="favorites-list"),
+    path("favorites/toggle/<int:barbershop_id>/", FavoriteToggleView.as_view(), name="favorites-toggle"),

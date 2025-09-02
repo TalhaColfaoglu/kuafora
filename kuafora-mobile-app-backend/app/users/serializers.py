@@ -56,48 +56,13 @@ class UserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ("id", "email", "full_name", "phone", "gender", "favorites", "image")
-        read_only_fields = ("id", "favorites", "image") 
+        fields = ("id", "email", "full_name", "phone", "gender", "image")
+        read_only_fields = ("id", "image") 
 
     
 
 
 class UserUpdateSerializer(serializers.ModelSerializer):
-    add_favorite_barbershop = serializers.IntegerField(required=False)
-    remove_favorite_barbershop = serializers.IntegerField(required=False)
-
-    class Meta:
-        model = User
-        fields = ("full_name", "add_favorite_barbershop", "remove_favorite_barbershop")
-
-    def update(self, instance, validated_data):
-        # Update basic fields
-        full_name = validated_data.get("full_name")
-        if full_name is not None:
-            instance.full_name = full_name
-            instance.save(update_fields=["full_name"])
-
-        # Favorite mutations on JSON list plus counters
-        from app.barbers.models import Barbershop
-        add_id = validated_data.get("add_favorite_barbershop")
-        if add_id is not None:
-            ids = list(instance.favorites_ids or [])
-            if add_id not in ids:
-                ids.append(add_id)
-                instance.favorites_ids = ids
-                instance.save(update_fields=["favorites_ids"])
-                Barbershop.objects.filter(id=add_id).update(favorites_count=F('favorites_count') + 1)
-
-        remove_id = validated_data.get("remove_favorite_barbershop")
-        if remove_id is not None:
-            ids = list(instance.favorites_ids or [])
-            if remove_id in ids:
-                ids.remove(remove_id)
-                instance.favorites_ids = ids
-                instance.save(update_fields=["favorites_ids"])
-                Barbershop.objects.filter(id=remove_id).update(favorites_count=F('favorites_count') - 1)
-
-        return instance
 
 
 class ChangePasswordSerializer(serializers.Serializer):

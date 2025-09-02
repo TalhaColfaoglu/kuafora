@@ -86,7 +86,20 @@ class Service(models.Model):
     is_active = models.BooleanField(default=True)
 
 
-"""Favorite modeli kaldırıldı: Favoriler kullanıcı profilindeki JSON listesiyle yönetiliyor."""
+class Favorite(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="favorites")
+    barbershop = models.ForeignKey(Barbershop, on_delete=models.CASCADE, related_name="favorited_by")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ("user", "barbershop")
+        indexes = [models.Index(fields=["user", "-created_at"])]
+
+    def __str__(self) -> str:
+        return f"{self.user.email} -> {self.barbershop.name}"
+
+
+
 
 
 class LastViewed(models.Model):
