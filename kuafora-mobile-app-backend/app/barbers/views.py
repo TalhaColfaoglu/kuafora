@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from django.db.models import Prefetch, Q
-from rest_framework import viewsets, mixins, permissions
+from rest_framework import viewsets, mixins, permissions, generics
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.utils import timezone
@@ -53,6 +53,13 @@ class BarbershopViewSet(viewsets.ReadOnlyModelViewSet):
             elif getattr(user, "gender", None) == "female":
                 qs = qs.filter(Q(gender="female") | Q(gender="unisex"))
         return qs
+
+    def get_serializer_class(self):
+        # Use detail serializer for retrieve to include is_favorited
+        if getattr(self, "action", None) == "retrieve":
+            from .serializers import BarbershopDetailSerializer
+            return BarbershopDetailSerializer
+        return super().get_serializer_class()
 
     @action(detail=True, methods=["get"], url_path="services")
     def services(self, request, pk=None):
@@ -267,10 +274,6 @@ class PartnerWorkScheduleViewSet(viewsets.ModelViewSet):
 
 
 class FavoriteListView(generics.ListAPIView):
-    from rest_framework import generics
-    from .serializers import BarbershopWithFavoriteSerializer
-    from .models import Favorite
-    
     serializer_class = BarbershopWithFavoriteSerializer
     permission_classes = [permissions.IsAuthenticated]
     
@@ -281,9 +284,6 @@ class FavoriteListView(generics.ListAPIView):
 
 
 class FavoriteToggleView(generics.GenericAPIView):
-    from rest_framework import generics
-    from .models import Favorite
-    
     permission_classes = [permissions.IsAuthenticated]
     
     def post(self, request, barbershop_id):
@@ -308,15 +308,5 @@ class FavoriteToggleView(generics.GenericAPIView):
         barbershop.favorites_count = favorites_count
         barbershop.save(update_fields=["favorites_count"])
         
-        return Response({
-            "favorited": favorited,
-            "favorites_count": favorites_count
-        })
-
-
-    def get_serializer_class(self):
-        if self.action == "retrieve":
-            from .serializers import BarbershopDetailSerializer
-            return BarbershopDetailSerializer
-        return super().get_serializer_class()
+        return Response({"favorited": favorited, "favorites_count": favorites_count})
 

@@ -3,7 +3,6 @@ from rest_framework.routers import DefaultRouter
 from .views import (
     FavoriteListView,
     FavoriteToggleView,
-    
     BarbershopViewSet,
     ReviewViewSet,
     PartnerBarbershopViewSet,
@@ -25,8 +24,6 @@ router.register(r"partner/working-hours", PartnerWorkScheduleViewSet, basename="
 
 urlpatterns = [
     path("", include(router.urls)),
-]
-
-
     path("favorites/", FavoriteListView.as_view(), name="favorites-list"),
     path("favorites/toggle/<int:barbershop_id>/", FavoriteToggleView.as_view(), name="favorites-toggle"),
+]
