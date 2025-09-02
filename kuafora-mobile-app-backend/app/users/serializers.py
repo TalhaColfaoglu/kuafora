@@ -52,11 +52,12 @@ class LoginSerializer(serializers.Serializer):
 
 class UserSerializer(serializers.ModelSerializer):
     favorites = serializers.ListField(child=serializers.IntegerField(), source='favorites_ids', read_only=True)
+    image = serializers.ImageField(read_only=True)
 
     class Meta:
         model = User
-        fields = ("id", "email", "full_name", "phone", "gender", "favorites")
-        read_only_fields = ("id", "favorites") 
+        fields = ("id", "email", "full_name", "phone", "gender", "favorites", "image")
+        read_only_fields = ("id", "favorites", "image") 
 
     
 

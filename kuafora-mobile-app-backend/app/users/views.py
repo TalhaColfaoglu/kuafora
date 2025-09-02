@@ -10,6 +10,7 @@ from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.db.models import Count
 from drf_spectacular.utils import extend_schema, OpenApiResponse
+from django.conf import settings
 
 from .serializers import (
     RegisterSerializer,
@@ -97,42 +98,75 @@ class ProfilePhotoUploadView(generics.GenericAPIView):
         },
         responses={
             200: OpenApiResponse(description="Profile photo updated successfully"),
-            400: OpenApiResponse(description="Invalid image file")
+            400: OpenApiResponse(description="Invalid image file"),
+            500: OpenApiResponse(description="Server error")
         }
     )
     def post(self, request, *args, **kwargs):
-        if 'image' not in request.FILES:
+        try:
+            if 'image' not in request.FILES:
+                return Response(
+                    {"detail": "No image file provided"}, 
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            image_file = request.FILES['image']
+            
+            # Validate file type
+            allowed_types = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif']
+            if image_file.content_type not in allowed_types:
+                return Response(
+                    {"detail": "Invalid file type. Only JPEG, PNG and GIF are allowed."}, 
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            # Validate file size (max 5MB)
+            if image_file.size > 5 * 1024 * 1024:
+                return Response(
+                    {"detail": "File size too large. Maximum 5MB allowed."}, 
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            # Ensure media directory exists
+            import os
+            media_root = os.path.join(settings.MEDIA_ROOT, 'users', 'images')
+            os.makedirs(media_root, exist_ok=True)
+            
+            # Ensure the directory is writable
+            if not os.access(media_root, os.W_OK):
+                return Response(
+                    {"detail": "Media directory is not writable"}, 
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                )
+            
+            # Log directory info for debugging
+            print(f"Media root: {settings.MEDIA_ROOT}")
+            print(f"Users images dir: {media_root}")
+            print(f"Directory exists: {os.path.exists(media_root)}")
+            print(f"Directory writable: {os.access(media_root, os.W_OK)}")
+            
+            # Update user's profile photo
+            user = request.user
+            user.image = image_file
+            user.save()
+            
+            # Log success info
+            print(f"User {user.id} profile photo updated successfully")
+            print(f"Image path: {user.image.path if user.image else 'None'}")
+            print(f"Image URL: {user.image.url if user.image else 'None'}")
+            
+            return Response({
+                "detail": "Profile photo updated successfully",
+                "image_url": user.image.url if user.image else None
+            })
+        except Exception as e:
+            print(f"Profile photo upload error: {e}")
+            import traceback
+            traceback.print_exc()
             return Response(
-                {"detail": "No image file provided"}, 
-                status=status.HTTP_400_BAD_REQUEST
+                {"detail": f"Upload failed: {str(e)}", "error_type": str(type(e).__name__)}, 
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
-        
-        image_file = request.FILES['image']
-        
-        # Validate file type
-        allowed_types = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif']
-        if image_file.content_type not in allowed_types:
-            return Response(
-                {"detail": "Invalid file type. Only JPEG, PNG and GIF are allowed."}, 
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        
-        # Validate file size (max 5MB)
-        if image_file.size > 5 * 1024 * 1024:
-            return Response(
-                {"detail": "File size too large. Maximum 5MB allowed."}, 
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        
-        # Update user's profile photo
-        user = request.user
-        user.image = image_file
-        user.save()
-        
-        return Response({
-            "detail": "Profile photo updated successfully",
-            "image_url": user.image.url if user.image else None
-        })
 
 
 class UserUpdateView(generics.UpdateAPIView):
