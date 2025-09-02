@@ -38,8 +38,6 @@ class BarbershopSerializer(serializers.ModelSerializer):
             "images",
             "is_verified",
             "description",
-            "latitude",
-            "longitude",
             "created_at",
             "updated_at",
             "rating_avg",
@@ -130,7 +128,10 @@ class BarbershopWithFavoriteSerializer(serializers.ModelSerializer):
 
 class BarbershopDetailSerializer(BarbershopSerializer):
     is_favorited = serializers.SerializerMethodField()
-    
+
+    class Meta(BarbershopSerializer.Meta):
+        fields = BarbershopSerializer.Meta.fields + ("is_favorited",)
+
     def get_is_favorited(self, obj):
         request = self.context.get("request")
         if request and request.user.is_authenticated:
