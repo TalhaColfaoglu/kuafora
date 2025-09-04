@@ -132,7 +132,7 @@ class LastViewedViewSet(mixins.ListModelMixin, mixins.CreateModelMixin, viewsets
 
     def get_queryset(self):
         # return last 7 viewed for current user, most recent first
-        return LastViewed.objects.filter(user=self.request.user).order_by('-created_at')[:7]
+        return LastViewed.objects.filter(user=self.request.user).order_by('-viewed_at')[:7]
 
     def perform_create(self, serializer):
         # upsert behavior: update timestamp if exists, trim to last 7
@@ -142,7 +142,7 @@ class LastViewedViewSet(mixins.ListModelMixin, mixins.CreateModelMixin, viewsets
             defaults={}
         )
         # ensure at most 7 entries
-        qs = LastViewed.objects.filter(user=self.request.user).order_by('-created_at')
+        qs = LastViewed.objects.filter(user=self.request.user).order_by('-viewed_at')
         ids = list(qs.values_list('id', flat=True))
         if len(ids) > 7:
             LastViewed.objects.filter(id__in=ids[7:]).delete()
