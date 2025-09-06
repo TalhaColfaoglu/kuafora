@@ -19,7 +19,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('barbers', '0003_lastviewed'),
-        ('users', '0003_alter_lastviewed_unique_together_and_more'),
+        ('users', '0002_useraddress_favorite_lastviewed'),
     ]
 
     operations = [
