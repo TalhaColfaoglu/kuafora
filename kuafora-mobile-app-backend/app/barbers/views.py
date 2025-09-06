@@ -80,6 +80,78 @@ class BarbershopViewSet(viewsets.ReadOnlyModelViewSet):
         serializer = WorkScheduleSerializer(schedules, many=True)
         return Response(serializer.data)
 
+    @action(detail=True, methods=["get", "post"], url_path="reviews")
+    def reviews(self, request, pk=None):
+        # POST → upsert
+        if request.method == "POST":
+            shop = Barbershop.objects.filter(id=pk).first()
+            if not shop:
+                return Response({"detail": "Barbershop not found"}, status=status.HTTP_404_NOT_FOUND)
+            if not request.user or not request.user.is_authenticated:
+                return Response({"detail": "Authentication required"}, status=status.HTTP_401_UNAUTHORIZED)
+
+            try:
+                rating = int(request.data.get("rating"))
+            except (TypeError, ValueError):
+                rating = None
+            if rating is None or rating < 1 or rating > 5:
+                return Response({"rating": ["1 ile 5 arasında olmalı."]}, status=400)
+
+            comment = (request.data.get("comment") or "").strip()
+            is_anonymous = bool(request.data.get("is_anonymous", False))
+
+            obj, created = Review.objects.update_or_create(
+                user=request.user,
+                barbershop=shop,
+                defaults={"rating": rating, "comment": comment, "is_anonymous": is_anonymous},
+            )
+
+            data = ReviewSerializer(obj).data
+            shop.refresh_from_db(fields=[
+                "rating_avg","total_reviews","star_1_count","star_2_count","star_3_count","star_4_count","star_5_count"
+            ])
+            meta = {
+                "rating_avg": shop.rating_avg,
+                "total_reviews": shop.total_reviews,
+                "star_counts": {1: shop.star_1_count, 2: shop.star_2_count, 3: shop.star_3_count, 4: shop.star_4_count, 5: shop.star_5_count},
+            }
+            return Response({"review": data, "meta": meta}, status=201 if created else 200)
+
+        # GET → list with filters/pagination
+        qs = Review.objects.filter(barbershop_id=pk).select_related("user")
+        stars = request.query_params.get("stars")
+        if stars and stars.isdigit():
+            qs = qs.filter(rating=int(stars))
+        order = request.query_params.get("order", "recent")
+        if order == "random":
+            qs = qs.order_by("?")
+        else:
+            qs = qs.order_by("-created_at")
+
+        try:
+            page = int(request.query_params.get("page", 1))
+            page_size = int(request.query_params.get("page_size", 10))
+        except ValueError:
+            page, page_size = 1, 10
+        start = (page - 1) * page_size
+        end = start + page_size
+        items = qs[start:end]
+
+        serializer = ReviewSerializer(items, many=True)
+        shop = Barbershop.objects.filter(id=pk).first()
+        meta = {
+            "total": qs.count(),
+            "rating_avg": getattr(shop, "rating_avg", 0),
+            "total_reviews": getattr(shop, "total_reviews", 0),
+            "star_counts": {
+                1: getattr(shop, "star_1_count", 0),
+                2: getattr(shop, "star_2_count", 0),
+                3: getattr(shop, "star_3_count", 0),
+                4: getattr(shop, "star_4_count", 0),
+                5: getattr(shop, "star_5_count", 0),
+            },
+        }
+        return Response({"items": serializer.data, "meta": meta})
     # reviews action kaldırıldı; public liste ve upsert artık ayrı endpointlerde
 
     @action(detail=True, methods=["get"], url_path="status")
