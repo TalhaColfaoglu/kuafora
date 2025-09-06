@@ -72,11 +72,13 @@ class WorkScheduleSerializer(serializers.ModelSerializer):
 
 class ReviewSerializer(serializers.ModelSerializer):
     user_display_name = serializers.SerializerMethodField()
+    user_full_name = serializers.SerializerMethodField()
+    barbershop_name = serializers.SerializerMethodField()
 
     class Meta:
         model = Review
-        fields = ("id", "user", "barbershop", "rating", "comment", "is_anonymous", "created_at", "updated_at", "user_display_name")
-        read_only_fields = ("created_at", "updated_at", "user", "barbershop", "user_display_name")
+        fields = ("id", "user", "barbershop", "rating", "comment", "is_anonymous", "created_at", "updated_at", "user_display_name", "user_full_name", "barbershop_name")
+        read_only_fields = ("created_at", "updated_at", "user", "barbershop", "user_display_name", "user_full_name", "barbershop_name")
 
     def get_user_display_name(self, obj):
         if obj.is_anonymous:
@@ -86,6 +88,20 @@ class ReviewSerializer(serializers.ModelSerializer):
             return "****"
         name = getattr(u, "full_name", None) or getattr(u, "first_name", None) or getattr(u, "email", None) or "Kullanıcı"
         return name
+
+    def get_user_full_name(self, obj):
+        # Asla anonimleştirme uygulama; gerçek görünür ad (UI karar verir)
+        u = getattr(obj, "user", None)
+        if not u:
+            return "Kullanıcı"
+        name = getattr(u, "full_name", None) or f"{getattr(u, 'first_name', '')} {getattr(u, 'last_name', '')}".strip()
+        if not name:
+            name = getattr(u, "email", None) or "Kullanıcı"
+        return name
+
+    def get_barbershop_name(self, obj):
+        bs = getattr(obj, "barbershop", None)
+        return getattr(bs, "name", None)
 
 
 class ServiceSerializer(serializers.ModelSerializer):

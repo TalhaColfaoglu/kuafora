@@ -139,12 +139,6 @@ class BarbershopViewSet(viewsets.ReadOnlyModelViewSet):
 
         serializer = ReviewSerializer(items, many=True)
         shop = Barbershop.objects.filter(id=pk).first()
-        # current user's own review (for edit CTA)
-        my_review = None
-        if request.user and request.user.is_authenticated:
-            mine = Review.objects.filter(user=request.user, barbershop_id=pk).first()
-            if mine:
-                my_review = ReviewSerializer(mine).data
         meta = {
             "total": qs.count(),
             "rating_avg": getattr(shop, "rating_avg", 0),
@@ -156,7 +150,6 @@ class BarbershopViewSet(viewsets.ReadOnlyModelViewSet):
                 4: getattr(shop, "star_4_count", 0),
                 5: getattr(shop, "star_5_count", 0),
             },
-            "my_review": my_review,
         }
         return Response({"items": serializer.data, "meta": meta})
 
@@ -231,6 +224,13 @@ class ReviewViewSet(mixins.CreateModelMixin, mixins.UpdateModelMixin, mixins.Des
 
     def get_queryset(self):
         return Review.objects.filter(user=self.request.user)
+
+    @action(detail=False, methods=["get"], url_path="my")
+    def my(self, request):
+        """Kullanıcının tüm yorumları (barbershop bilgisiyle)."""
+        qs = self.get_queryset().select_related("barbershop")
+        serializer = self.get_serializer(qs, many=True)
+        return Response(serializer.data)
 
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
@@ -360,17 +360,10 @@ class ReviewHighlightsApi(generics.GenericAPIView):
             pool = Review.objects.filter(barbershop=shop).order_by("?")
         items = list(pool[:3])
         data = ReviewSerializer(items, many=True).data
-        # include current user's review info for CTA
-        my_review = None
-        if request.user and request.user.is_authenticated:
-            mine = Review.objects.filter(user=request.user, barbershop=shop).first()
-            if mine:
-                my_review = ReviewSerializer(mine).data
         meta = {
             "rating_avg": shop.rating_avg,
             "total_reviews": shop.total_reviews,
             "star_counts": {1: shop.star_1_count, 2: shop.star_2_count, 3: shop.star_3_count, 4: shop.star_4_count, 5: shop.star_5_count},
-            "my_review": my_review,
         }
         return Response({"items": data, "meta": meta})
 
