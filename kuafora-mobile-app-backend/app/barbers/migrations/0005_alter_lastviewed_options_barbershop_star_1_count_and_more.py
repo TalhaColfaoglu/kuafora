@@ -61,12 +61,4 @@ class Migration(migrations.Migration):
             name='review',
             unique_together={('user', 'barbershop')},
         ),
-        migrations.AddIndex(
-            model_name='favorite',
-            index=models.Index(fields=['user', '-created_at'], name='barbers_fav_user_id_3bb9b3_idx'),
-        ),
-        migrations.AddIndex(
-            model_name='lastviewed',
-            index=models.Index(fields=['user', '-viewed_at'], name='barbers_las_user_id_c4f2a8_idx'),
-        ),
     ]
