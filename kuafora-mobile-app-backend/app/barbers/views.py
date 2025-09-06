@@ -80,10 +80,45 @@ class BarbershopViewSet(viewsets.ReadOnlyModelViewSet):
         serializer = WorkScheduleSerializer(schedules, many=True)
         return Response(serializer.data)
 
-    @action(detail=True, methods=["get"], url_path="reviews")
+    @action(detail=True, methods=["get", "post"], url_path="reviews")
     def reviews(self, request, pk=None):
+        # POST → upsert
+        if request.method == "POST":
+            shop = Barbershop.objects.filter(id=pk).first()
+            if not shop:
+                return Response({"detail": "Barbershop not found"}, status=status.HTTP_404_NOT_FOUND)
+            if not request.user or not request.user.is_authenticated:
+                return Response({"detail": "Authentication required"}, status=status.HTTP_401_UNAUTHORIZED)
+
+            try:
+                rating = int(request.data.get("rating"))
+            except (TypeError, ValueError):
+                rating = None
+            if rating is None or rating < 1 or rating > 5:
+                return Response({"rating": ["1 ile 5 arasında olmalı."]}, status=400)
+
+            comment = (request.data.get("comment") or "").strip()
+            is_anonymous = bool(request.data.get("is_anonymous", False))
+
+            obj, created = Review.objects.update_or_create(
+                user=request.user,
+                barbershop=shop,
+                defaults={"rating": rating, "comment": comment, "is_anonymous": is_anonymous},
+            )
+
+            data = ReviewSerializer(obj).data
+            shop.refresh_from_db(fields=[
+                "rating_avg","total_reviews","star_1_count","star_2_count","star_3_count","star_4_count","star_5_count"
+            ])
+            meta = {
+                "rating_avg": shop.rating_avg,
+                "total_reviews": shop.total_reviews,
+                "star_counts": {1: shop.star_1_count, 2: shop.star_2_count, 3: shop.star_3_count, 4: shop.star_4_count, 5: shop.star_5_count},
+            }
+            return Response({"review": data, "meta": meta}, status=201 if created else 200)
+
+        # GET → list with filters/pagination
         qs = Review.objects.filter(barbershop_id=pk).select_related("user")
-        # filters
         stars = request.query_params.get("stars")
         if stars and stars.isdigit():
             qs = qs.filter(rating=int(stars))
@@ -93,7 +128,6 @@ class BarbershopViewSet(viewsets.ReadOnlyModelViewSet):
         else:
             qs = qs.order_by("-created_at")
 
-        # pagination
         try:
             page = int(request.query_params.get("page", 1))
             page_size = int(request.query_params.get("page_size", 10))
