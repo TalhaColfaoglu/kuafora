@@ -368,6 +368,48 @@ class ReviewHighlightsApi(generics.GenericAPIView):
         return Response({"items": data, "meta": meta})
 
 
+class BarbershopReviewsListApi(generics.GenericAPIView):
+    """Public list endpoint for all reviews of a barbershop with pagination and filters."""
+    def get(self, request, barber_id):
+        shop = Barbershop.objects.filter(id=barber_id).first()
+        if not shop:
+            return Response({"detail": "Barbershop not found"}, status=404)
+
+        qs = Review.objects.filter(barbershop=shop).select_related("user")
+        stars = request.query_params.get("stars")
+        if stars and stars.isdigit():
+            qs = qs.filter(rating=int(stars))
+        order = request.query_params.get("order", "recent")
+        if order == "random":
+            qs = qs.order_by("?")
+        else:
+            qs = qs.order_by("-created_at")
+
+        try:
+            page = int(request.query_params.get("page", 1))
+            page_size = int(request.query_params.get("page_size", 10))
+        except ValueError:
+            page, page_size = 1, 10
+        start = (page - 1) * page_size
+        end = start + page_size
+        items = qs[start:end]
+
+        serializer = ReviewSerializer(items, many=True)
+        meta = {
+            "total": qs.count(),
+            "rating_avg": shop.rating_avg,
+            "total_reviews": shop.total_reviews,
+            "star_counts": {
+                1: shop.star_1_count,
+                2: shop.star_2_count,
+                3: shop.star_3_count,
+                4: shop.star_4_count,
+                5: shop.star_5_count,
+            },
+        }
+        return Response({"items": serializer.data, "meta": meta})
+
+
 class PartnerStaffViewSet(viewsets.ModelViewSet):
     serializer_class = StaffSerializer
     permission_classes = [permissions.IsAuthenticated, IsShopAdmin]

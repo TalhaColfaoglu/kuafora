@@ -7,6 +7,7 @@ from .views import (
     ReviewViewSet,
     ReviewUpsertApi,
     ReviewHighlightsApi,
+    BarbershopReviewsListApi,
     PartnerBarbershopViewSet,
     PartnerServiceViewSet,
     PartnerStaffViewSet,
@@ -28,6 +29,7 @@ urlpatterns = [
     # Upsert endpointi ayrı path'e alındı ki GET /barbershops/{id}/reviews/ ViewSet'e düşsün
     path("barbershops/<int:barber_id>/reviews/upsert/", ReviewUpsertApi.as_view(), name="barber-review-upsert"),
     path("barbershops/<int:barber_id>/reviews/highlights/", ReviewHighlightsApi.as_view(), name="barber-review-highlights"),
+    path("barbershops/<int:barber_id>/reviews/", BarbershopReviewsListApi.as_view(), name="barber-review-list"),
     path("", include(router.urls)),
     path("favorites/", FavoriteListView.as_view(), name="favorites-list"),
     path("favorites/toggle/<int:barbershop_id>/", FavoriteToggleView.as_view(), name="favorites-toggle"),
