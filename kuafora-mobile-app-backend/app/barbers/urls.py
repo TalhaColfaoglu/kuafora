@@ -24,10 +24,11 @@ router.register(r"partner/services", PartnerServiceViewSet, basename="partner-se
 router.register(r"partner/staff", PartnerStaffViewSet, basename="partner-staff")
 router.register(r"partner/working-hours", PartnerWorkScheduleViewSet, basename="partner-work-schedule")
 
+# ÖNCE explicit yollar: router'dan önce tanımla ki POST /barbershops/{id}/reviews/ doğru handler'a düşsün
 urlpatterns = [
+    path("barbershops/<int:barber_id>/reviews/", ReviewUpsertApi.as_view(), name="barber-review-upsert"),
+    path("barbershops/<int:barber_id>/reviews/highlights/", ReviewHighlightsApi.as_view(), name="barber-review-highlights"),
     path("", include(router.urls)),
     path("favorites/", FavoriteListView.as_view(), name="favorites-list"),
     path("favorites/toggle/<int:barbershop_id>/", FavoriteToggleView.as_view(), name="favorites-toggle"),
-    path("barbershops/<int:barber_id>/reviews/", ReviewUpsertApi.as_view(), name="barber-review-upsert"),
-    path("barbershops/<int:barber_id>/reviews/highlights/", ReviewHighlightsApi.as_view(), name="barber-review-highlights"),
 ]
