@@ -42,6 +42,7 @@ class BarbershopSerializer(serializers.ModelSerializer):
             "updated_at",
             "rating_avg",
             "total_reviews",
+            "star_1_count","star_2_count","star_3_count","star_4_count","star_5_count",
             "views_weekly",
             "favorites_count",
         )
@@ -70,10 +71,21 @@ class WorkScheduleSerializer(serializers.ModelSerializer):
 
 
 class ReviewSerializer(serializers.ModelSerializer):
+    user_display_name = serializers.SerializerMethodField()
+
     class Meta:
         model = Review
-        fields = ("id", "user", "barbershop", "rating", "comment", "created_at")
-        read_only_fields = ("created_at",)
+        fields = ("id", "user", "barbershop", "rating", "comment", "is_anonymous", "created_at", "updated_at", "user_display_name")
+        read_only_fields = ("created_at", "updated_at", "user", "barbershop", "user_display_name")
+
+    def get_user_display_name(self, obj):
+        if obj.is_anonymous:
+            return "****"
+        u = getattr(obj, "user", None)
+        if not u:
+            return "****"
+        name = getattr(u, "full_name", None) or getattr(u, "first_name", None) or getattr(u, "email", None) or "Kullanıcı"
+        return name
 
 
 class ServiceSerializer(serializers.ModelSerializer):

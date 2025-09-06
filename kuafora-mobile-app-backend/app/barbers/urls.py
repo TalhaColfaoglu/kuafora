@@ -5,6 +5,8 @@ from .views import (
     FavoriteToggleView,
     BarbershopViewSet,
     ReviewViewSet,
+    ReviewUpsertApi,
+    ReviewHighlightsApi,
     PartnerBarbershopViewSet,
     PartnerServiceViewSet,
     PartnerStaffViewSet,
@@ -26,4 +28,6 @@ urlpatterns = [
     path("", include(router.urls)),
     path("favorites/", FavoriteListView.as_view(), name="favorites-list"),
     path("favorites/toggle/<int:barbershop_id>/", FavoriteToggleView.as_view(), name="favorites-toggle"),
+    path("barbershops/<int:barber_id>/reviews/", ReviewUpsertApi.as_view(), name="barber-review-upsert"),
+    path("barbershops/<int:barber_id>/reviews/highlights/", ReviewHighlightsApi.as_view(), name="barber-review-highlights"),
 ]

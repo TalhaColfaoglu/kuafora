@@ -25,6 +25,12 @@ class Barbershop(models.Model):
 
     rating_avg = models.FloatField(default=0, editable=False)
     total_reviews = models.PositiveIntegerField(default=0, editable=False)
+    # denormalized star buckets
+    star_1_count = models.PositiveIntegerField(default=0, editable=False)
+    star_2_count = models.PositiveIntegerField(default=0, editable=False)
+    star_3_count = models.PositiveIntegerField(default=0, editable=False)
+    star_4_count = models.PositiveIntegerField(default=0, editable=False)
+    star_5_count = models.PositiveIntegerField(default=0, editable=False)
     views_weekly = models.PositiveIntegerField(default=0, editable=False)
     favorites_count = models.PositiveIntegerField(default=0, editable=False)
 
@@ -72,9 +78,14 @@ class WorkSchedule(models.Model):
 class Review(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="reviews")
     barbershop = models.ForeignKey(Barbershop, on_delete=models.CASCADE, related_name="reviews")
-    rating = models.IntegerField(validators=[MinValueValidator(0), MaxValueValidator(5)])
+    rating = models.IntegerField(validators=[MinValueValidator(1), MaxValueValidator(5)])
     comment = models.TextField(blank=True)
+    is_anonymous = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ("user", "barbershop")
 
 
 class Service(models.Model):

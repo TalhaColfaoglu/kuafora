@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 from django.db.models import Prefetch, Q
-from rest_framework import viewsets, mixins, permissions, generics
+from rest_framework import viewsets, mixins, permissions, generics, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from rest_framework.throttling import UserRateThrottle
 from django.utils import timezone
 
 from .models import (
@@ -21,9 +22,9 @@ from .serializers import (
     BarbershopWithFavoriteSerializer,
     
     BarbershopSerializer,
+    ReviewSerializer,
     StaffSerializer,
     WorkScheduleSerializer,
-    ReviewSerializer,
     ServiceSerializer,
     LastViewedSerializer,
     InviteStaffSerializer,
@@ -81,9 +82,42 @@ class BarbershopViewSet(viewsets.ReadOnlyModelViewSet):
 
     @action(detail=True, methods=["get"], url_path="reviews")
     def reviews(self, request, pk=None):
-        reviews = Review.objects.filter(barbershop_id=pk).select_related("user")
-        serializer = ReviewSerializer(reviews, many=True)
-        return Response(serializer.data)
+        qs = Review.objects.filter(barbershop_id=pk).select_related("user")
+        # filters
+        stars = request.query_params.get("stars")
+        if stars and stars.isdigit():
+            qs = qs.filter(rating=int(stars))
+        order = request.query_params.get("order", "recent")
+        if order == "random":
+            qs = qs.order_by("?")
+        else:
+            qs = qs.order_by("-created_at")
+
+        # pagination
+        try:
+            page = int(request.query_params.get("page", 1))
+            page_size = int(request.query_params.get("page_size", 10))
+        except ValueError:
+            page, page_size = 1, 10
+        start = (page - 1) * page_size
+        end = start + page_size
+        items = qs[start:end]
+
+        serializer = ReviewSerializer(items, many=True)
+        shop = Barbershop.objects.filter(id=pk).first()
+        meta = {
+            "total": qs.count(),
+            "rating_avg": getattr(shop, "rating_avg", 0),
+            "total_reviews": getattr(shop, "total_reviews", 0),
+            "star_counts": {
+                1: getattr(shop, "star_1_count", 0),
+                2: getattr(shop, "star_2_count", 0),
+                3: getattr(shop, "star_3_count", 0),
+                4: getattr(shop, "star_4_count", 0),
+                5: getattr(shop, "star_5_count", 0),
+            },
+        }
+        return Response({"items": serializer.data, "meta": meta})
 
     @action(detail=True, methods=["get"], url_path="status")
     def status(self, request, pk=None):
@@ -219,6 +253,78 @@ class PartnerServiceViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         user = self.request.user
         return Service.objects.filter(barbershop__staff__user=user, barbershop__staff__is_admin=True).select_related("barbershop")
+
+
+class ReviewThrottle(UserRateThrottle):
+    rate = "10/min"
+
+
+class ReviewUpsertApi(generics.GenericAPIView):
+    permission_classes = [permissions.IsAuthenticated]
+    throttle_classes = [ReviewThrottle]
+
+    def post(self, request, barber_id):
+        shop = Barbershop.objects.filter(id=barber_id).first()
+        if not shop:
+            return Response({"detail": "Barbershop not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        payload = {
+            "rating": request.data.get("rating"),
+            "comment": request.data.get("comment", ""),
+            "is_anonymous": bool(request.data.get("is_anonymous", False)),
+        }
+        try:
+            rating = int(payload["rating"]) if payload["rating"] is not None else None
+        except (TypeError, ValueError):
+            rating = None
+        if rating is None or rating < 1 or rating > 5:
+            return Response({"rating": ["1 ile 5 arasında olmalı."]}, status=400)
+
+        # upsert by (user, barbershop)
+        obj, created = Review.objects.update_or_create(
+            user=request.user,
+            barbershop=shop,
+            defaults={
+                "rating": rating,
+                "comment": payload["comment"],
+                "is_anonymous": payload["is_anonymous"],
+            },
+        )
+
+        data = ReviewSerializer(obj).data
+        # snapshot meta
+        shop.refresh_from_db(fields=[
+            "rating_avg","total_reviews","star_1_count","star_2_count","star_3_count","star_4_count","star_5_count"
+        ])
+        meta = {
+            "rating_avg": shop.rating_avg,
+            "total_reviews": shop.total_reviews,
+            "star_counts": {
+                1: shop.star_1_count, 2: shop.star_2_count, 3: shop.star_3_count, 4: shop.star_4_count, 5: shop.star_5_count
+            },
+        }
+        return Response({"review": data, "meta": meta}, status=201 if created else 200)
+
+
+class ReviewHighlightsApi(generics.GenericAPIView):
+    def get(self, request, barber_id):
+        shop = Barbershop.objects.filter(id=barber_id).first()
+        if not shop:
+            return Response({"detail": "Barbershop not found"}, status=404)
+        qs = Review.objects.filter(barbershop=shop).order_by("?")
+        # öncelik: yorumlu
+        commented = list(qs.exclude(comment="").values_list("id", flat=True)[:50])
+        pool = Review.objects.filter(id__in=commented)
+        if pool.count() < 3:
+            pool = Review.objects.filter(barbershop=shop).order_by("?")
+        items = list(pool[:3])
+        data = ReviewSerializer(items, many=True).data
+        meta = {
+            "rating_avg": shop.rating_avg,
+            "total_reviews": shop.total_reviews,
+            "star_counts": {1: shop.star_1_count, 2: shop.star_2_count, 3: shop.star_3_count, 4: shop.star_4_count, 5: shop.star_5_count},
+        }
+        return Response({"items": data, "meta": meta})
 
 
 class PartnerStaffViewSet(viewsets.ModelViewSet):
