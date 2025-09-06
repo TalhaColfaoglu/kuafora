@@ -10,8 +10,6 @@ CREATE TABLE IF NOT EXISTS barbers_favorite (
 );
 CREATE UNIQUE INDEX IF NOT EXISTS barbers_favorite_user_barbershop_uniq
     ON barbers_favorite (user_id, barbershop_id);
-CREATE INDEX IF NOT EXISTS barbers_fav_user_id_3bb9b3_idx
-    ON barbers_favorite (user_id, created_at DESC);
 '''
 
 
