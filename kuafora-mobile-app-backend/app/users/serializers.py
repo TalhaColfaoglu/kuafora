@@ -25,8 +25,15 @@ class RegisterSerializer(serializers.ModelSerializer):
         password = validated_data.pop("password")
         first = validated_data.pop("first_name", "").strip()
         last = validated_data.pop("last_name", "").strip()
+        def _normalize(n: str) -> str:
+            # İlk harf büyük, kalan küçük olacak şekilde normalize et
+            # Çoklu boşlukları da tek boşluğa indir.
+            return " ".join([p[:1].upper() + p[1:].lower() if p else "" for p in n.split()]).strip()
+
         if not validated_data.get("full_name"):
-            validated_data["full_name"] = (first + " " + last).strip()
+            validated_data["full_name"] = _normalize((first + " " + last).strip())
+        else:
+            validated_data["full_name"] = _normalize(validated_data.get("full_name", ""))
         user = User.objects.create_user(**validated_data)
         user.set_password(password)
         user.save()
@@ -65,6 +72,12 @@ class UserUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ("full_name", "phone", "gender")
+
+    def validate_full_name(self, value: str) -> str:
+        value = (value or "").strip()
+        if not value:
+            return value
+        return " ".join([p[:1].upper() + p[1:].lower() if p else "" for p in value.split()]).strip()
 
 class ChangePasswordSerializer(serializers.Serializer):
     old_password = serializers.CharField(required=True)
