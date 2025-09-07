@@ -27,7 +27,7 @@ from .serializers import (
     
 )
 from .models import UserAddress
-from app.barbers.models import Barbershop, LastViewed
+from app.barbers.models import Barbershop, LastViewed, ViewEvent
 
 User = get_user_model()
 
@@ -299,8 +299,11 @@ class BarbershopStatsView(generics.GenericAPIView):
             Barbershop.objects.filter(id=barbershop_id).values_list('favorites_count', flat=True).first()
             or 0
         )
-        views_count = LastViewed.objects.filter(barbershop_id=barbershop_id).count()
+        # Toplam görüntülenme: ViewEvent sayısı, Unique: farklı kullanıcı sayısı
+        views_qs = ViewEvent.objects.filter(barbershop_id=barbershop_id)
+        views_count = views_qs.count()
+        unique_views_count = views_qs.values('user').distinct().count()
         
-        return Response({'favorites_count': favorites_count, 'views_count': views_count})
+        return Response({'favorites_count': favorites_count, 'views_count': views_count, 'unique_views_count': unique_views_count})
 
 

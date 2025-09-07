@@ -125,3 +125,17 @@ class LastViewed(models.Model):
         indexes = [models.Index(fields=["user", "-viewed_at"])]
 
 
+class ViewEvent(models.Model):
+    """Her BarberDetailScreen ziyaretini ayrı kayıt eden etkinlik tablosu.
+    Toplam görüntülenme ve unique kişi sayısı bu tablodan hesaplanır.
+    """
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="barbershop_view_events")
+    barbershop = models.ForeignKey(Barbershop, on_delete=models.CASCADE, related_name="view_events")
+    viewed_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=["barbershop", "-viewed_at"]),
+            models.Index(fields=["barbershop", "user"]),
+        ]
+

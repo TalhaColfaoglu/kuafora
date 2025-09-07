@@ -16,6 +16,7 @@ from .models import (
     Review,
     Service,
     LastViewed,
+    ViewEvent,
     
 )
 from .serializers import (
@@ -204,12 +205,24 @@ class LastViewedViewSet(mixins.ListModelMixin, mixins.CreateModelMixin, viewsets
         return LastViewed.objects.filter(user=self.request.user).order_by('-viewed_at')[:7]
 
     def perform_create(self, serializer):
-        # upsert behavior: update timestamp if exists, trim to last 7
+        # upsert behavior: update-or-create LastViewed and trim to last 7
         obj, created = LastViewed.objects.update_or_create(
             user=self.request.user,
             barbershop_id=self.request.data.get('barbershop'),
             defaults={}
         )
+        # Tekrar görüntülemede zaman damgasını güncelle
+        if not created:
+            try:
+                obj.viewed_at = timezone.now()
+                obj.save(update_fields=["viewed_at"])
+            except Exception:
+                pass
+        # Her giriş için ViewEvent ekleyerek toplam görüntülenmeyi arttır
+        try:
+            ViewEvent.objects.create(user=self.request.user, barbershop_id=self.request.data.get('barbershop'))
+        except Exception:
+            pass
         # ensure at most 7 entries
         qs = LastViewed.objects.filter(user=self.request.user).order_by('-viewed_at')
         ids = list(qs.values_list('id', flat=True))
