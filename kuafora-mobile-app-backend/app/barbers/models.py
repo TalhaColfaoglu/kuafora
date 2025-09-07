@@ -18,6 +18,8 @@ class Barbershop(models.Model):
     district = models.CharField(max_length=100)
     phone_number = models.CharField(max_length=20)
     main_image = models.ImageField(upload_to="barbershops/main/", null=True, blank=True)
+    latitude = models.FloatField(null=True, blank=True)
+    longitude = models.FloatField(null=True, blank=True)
     is_verified = models.BooleanField(default=False)
     description = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)

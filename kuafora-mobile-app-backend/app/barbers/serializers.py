@@ -31,6 +31,7 @@ class BarbershopSerializer(serializers.ModelSerializer):
             "name",
             "gender",
             "address",
+            "latitude","longitude",
             "city",
             "district",
             "phone_number",
@@ -111,10 +112,11 @@ class ServiceSerializer(serializers.ModelSerializer):
 
 
 class LastViewedSerializer(serializers.ModelSerializer):
+    barbershop = BarbershopSerializer(read_only=True)
     class Meta:
         model = LastViewed
         fields = ("id", "user", "barbershop", "viewed_at")
-        read_only_fields = ("viewed_at",)
+        read_only_fields = ("user", "viewed_at")
 
 
 class InviteStaffSerializer(serializers.Serializer):
