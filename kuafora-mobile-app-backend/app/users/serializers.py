@@ -71,7 +71,7 @@ class UserSerializer(serializers.ModelSerializer):
 class UserUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ("full_name", "phone", "gender")
+        fields = ("full_name", "gender")
 
     def validate_full_name(self, value: str) -> str:
         value = (value or "").strip()
@@ -115,7 +115,7 @@ class ResetPasswordSerializer(serializers.Serializer):
 class UserAddressSerializer(serializers.ModelSerializer):
     class Meta:
         model = UserAddress
-        fields = ("id", "city", "district", "latitude", "longitude", "is_default", "created_at", "updated_at")
+        fields = ("id", "city", "district", "is_default", "created_at", "updated_at")
         read_only_fields = ("id", "created_at", "updated_at")
 
 

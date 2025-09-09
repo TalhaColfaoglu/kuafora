@@ -78,6 +78,14 @@ class MeView(generics.RetrieveUpdateAPIView):
     def get_object(self):
         return self.request.user
 
+    def update(self, request, *args, **kwargs):
+        # Sadece full_name ve gender güncellenebilir; email/phone immutable
+        mutable = request.data.copy()
+        mutable.pop("email", None)
+        mutable.pop("phone", None)
+        request._full_data = mutable  # type: ignore
+        return super().update(request, *args, **kwargs)
+
 
 class ProfilePhotoUploadView(generics.GenericAPIView):
     permission_classes = [permissions.IsAuthenticated]

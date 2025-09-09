@@ -261,6 +261,17 @@ class PartnerBarbershopViewSet(viewsets.ModelViewSet):
         return Barbershop.objects.filter(staff__user=user, staff__is_admin=True).distinct()
 
     # No custom permissions; queryset is already restricted to admin-owned shops
+    def update(self, request, *args, **kwargs):
+        # Admin kuaför ise salon bilgilerini kısmi güncelleyebilir (override)
+        partial = kwargs.pop('partial', True)
+        instance = self.get_object()
+        # Sadece belirli alanlar güncellenebilir
+        allowed = {"name", "address", "description", "phone_number", "latitude", "longitude", "city", "district"}
+        data = {k: v for k, v in request.data.items() if k in allowed}
+        serializer = self.get_serializer(instance, data=data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+        return Response(serializer.data)
 
     @action(detail=True, methods=["patch"], url_path="status")
     def status(self, request, pk=None):
