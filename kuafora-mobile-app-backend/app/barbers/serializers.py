@@ -58,11 +58,18 @@ class StaffCatalogSerializer(serializers.ModelSerializer):
 
 class StaffSerializer(serializers.ModelSerializer):
     catalog = StaffCatalogSerializer(many=True, read_only=True)
+    user_full_name = serializers.SerializerMethodField()
 
     class Meta:
         model = Staff
-        fields = ("id", "barbershop", "user", "photo", "email", "certificate", "is_admin", "catalog", "total_reviews")
+        fields = ("id", "barbershop", "user", "photo", "email", "certificate", "is_admin", "catalog", "total_reviews", "user_full_name")
         read_only_fields = ("total_reviews",)
+
+    def get_user_full_name(self, obj):
+        u = getattr(obj, "user", None)
+        if not u:
+            return ""
+        return getattr(u, "full_name", None) or f"{getattr(u, 'first_name', '')} {getattr(u, 'last_name', '')}".strip() or getattr(u, 'email', '')
 
 
 class WorkScheduleSerializer(serializers.ModelSerializer):
@@ -122,6 +129,7 @@ class LastViewedSerializer(serializers.ModelSerializer):
 class InviteStaffSerializer(serializers.Serializer):
     email = serializers.EmailField()
     is_admin = serializers.BooleanField(default=False)
+    barbershop = serializers.IntegerField(required=False)
 
 
 class StaffHoursSerializer(serializers.Serializer):

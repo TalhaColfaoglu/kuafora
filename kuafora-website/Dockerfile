@@ -49,13 +49,11 @@ COPY . /app/
 
 # Copy built assets from assets stage (match template path)
 RUN mkdir -p /app/static/dist
-COPY --from=assets /build/static/dist/styles.css /app/static/dist/styles.css
+# Copy full dist to avoid missing manifest entries
+COPY --from=assets /build/static/dist /app/static/dist
 
 # Create staticfiles and mediafiles directories
 RUN mkdir -p /app/staticfiles /app/mediafiles /app/logs
-
-ENV DJANGO_SETTINGS_MODULE=config.settings
-RUN python manage.py collectstatic --noinput || true
 
 ENV DJANGO_SETTINGS_MODULE=config.settings.production
 
@@ -75,5 +73,7 @@ EXPOSE 8001
 HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:8001/health/ || exit 1
 
-# Start gunicorn on port 8001
-CMD ["gunicorn", "--bind", "0.0.0.0:8001", "--workers", "3", "--worker-class", "gevent", "--worker-connections", "1000", "--max-requests", "1000", "--max-requests-jitter", "100", "--timeout", "30", "--keep-alive", "5", "config.wsgi:application"]
+# Entrypoint: collectstatic at container startup then run gunicorn
+COPY entrypoint.sh /app/entrypoint.sh
+RUN chmod +x /app/entrypoint.sh
+ENTRYPOINT ["/app/entrypoint.sh"]

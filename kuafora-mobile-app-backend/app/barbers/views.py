@@ -291,6 +291,13 @@ class PartnerBarbershopViewSet(viewsets.ModelViewSet):
         user = self.request.user
         Staff.objects.get_or_create(barbershop=barbershop, user=user, defaults={"email": getattr(user, 'email', ''), "is_admin": True})
 
+    @action(detail=False, methods=["get"], url_path="my", permission_classes=[permissions.IsAuthenticated])
+    def my_shops(self, request):
+        """Kullanıcının personel olduğu (admin veya normal) tüm dükkanlar"""
+        qs = Barbershop.objects.filter(staff__user=request.user).distinct()
+        serializer = self.get_serializer(qs, many=True)
+        return Response(serializer.data)
+
     @action(detail=True, methods=["post"], url_path="images")
     def upload_image(self, request, pk=None):
         from .models import BarbershopImage
@@ -443,23 +450,73 @@ class PartnerStaffViewSet(viewsets.ModelViewSet):
         user = self.request.user
         return Staff.objects.filter(barbershop__staff__user=user, barbershop__staff__is_admin=True).select_related("barbershop", "user")
 
+    @action(detail=False, methods=["get"], url_path="my-shops")
+    def my_shops(self, request):
+        qs = Staff.objects.filter(user=request.user).select_related("barbershop")
+        from .serializers import BarbershopSerializer
+        shops = [s.barbershop for s in qs if s.barbershop_id]
+        data = BarbershopSerializer(shops, many=True).data
+        return Response(data)
+
     @action(detail=False, methods=["post"], url_path="invite")
     def invite(self, request):
         data = InviteStaffSerializer(data=request.data)
         data.is_valid(raise_exception=True)
         email = data.validated_data["email"]
         is_admin = data.validated_data.get("is_admin", False)
+        target_barbershop_id = data.validated_data.get("barbershop")
         from django.contrib.auth import get_user_model
         User = get_user_model()
         user = User.objects.filter(email=email).first()
         if not user:
-            return Response({"detail": "User not found"}, status=404)
-        # Attach to first admin barbershop of inviter
-        admin_staff = Staff.objects.filter(user=request.user, is_admin=True).select_related("barbershop").first()
+            # Kullanıcı yoksa oluştur (parola sıfırlama akışıyla değiştirebilir)
+            user = User.objects.create_user(email=email, password=User.objects.make_random_password())
+        # Attach to admin's chosen or first barbershop
+        admin_staff_qs = Staff.objects.filter(user=request.user, is_admin=True).select_related("barbershop")
+        if target_barbershop_id:
+            admin_staff = admin_staff_qs.filter(barbershop_id=target_barbershop_id).first()
+        else:
+            admin_staff = admin_staff_qs.first()
         if not admin_staff:
             return Response({"detail": "No admin barbershop"}, status=400)
+        # Aynı kullanıcı birden fazla dükkanda personel olamaz
+        exists_any = Staff.objects.filter(user=user).exclude(barbershop=admin_staff.barbershop).exists()
+        if exists_any:
+            return Response({"detail": "User already attached to another barbershop"}, status=400)
+        # Aynı dükkanda zaten varsa tekrarlama
+        already = Staff.objects.filter(user=user, barbershop=admin_staff.barbershop).exists()
+        if already:
+            return Response({"detail": "User already a staff of this barbershop"}, status=409)
         Staff.objects.get_or_create(barbershop=admin_staff.barbershop, user=user, defaults={"email": user.email, "is_admin": is_admin})
         return Response({"detail": "Invited/attached"})
+
+    @action(detail=False, methods=["post"], url_path="attach")
+    def attach(self, request):
+        data = InviteStaffSerializer(data=request.data)
+        data.is_valid(raise_exception=True)
+        email = data.validated_data["email"]
+        is_admin = data.validated_data.get("is_admin", False)
+        target_barbershop_id = data.validated_data.get("barbershop")
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        user = User.objects.filter(email=email).first()
+        if not user:
+            user = User.objects.create_user(email=email, password=User.objects.make_random_password())
+        admin_staff_qs = Staff.objects.filter(user=request.user, is_admin=True).select_related("barbershop")
+        if target_barbershop_id:
+            admin_staff = admin_staff_qs.filter(barbershop_id=target_barbershop_id).first()
+        else:
+            admin_staff = admin_staff_qs.first()
+        if not admin_staff:
+            return Response({"detail": "No admin barbershop"}, status=400)
+        exists_any = Staff.objects.filter(user=user).exclude(barbershop=admin_staff.barbershop).exists()
+        if exists_any:
+            return Response({"detail": "User already attached to another barbershop"}, status=400)
+        already = Staff.objects.filter(user=user, barbershop=admin_staff.barbershop).exists()
+        if already:
+            return Response({"detail": "User already a staff of this barbershop"}, status=409)
+        staff = Staff.objects.create(barbershop=admin_staff.barbershop, user=user, email=user.email, is_admin=is_admin)
+        return Response(StaffSerializer(staff).data, status=201)
 
 
 class PartnerWorkScheduleViewSet(viewsets.ModelViewSet):
