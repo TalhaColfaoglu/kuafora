@@ -13,8 +13,16 @@ from .models import (
     Barbershop,
     Staff,
     WorkSchedule,
+    ShopWorkingHours,
+    StaffWorkingHours,
+    Override,
+    SpecialMessage,
+    MessageViewLog,
+    CalendarAuditLog,
     Review,
+    ReviewReply,
     Service,
+    ServiceCategory,
     LastViewed,
     ViewEvent,
     
@@ -24,12 +32,23 @@ from .serializers import (
     
     BarbershopSerializer,
     ReviewSerializer,
+    ReviewReplySerializer,
     StaffSerializer,
     WorkScheduleSerializer,
     ServiceSerializer,
+    ServiceCategorySerializer,
     LastViewedSerializer,
     InviteStaffSerializer,
     StaffHoursSerializer,
+    ShopWorkingHoursSerializer,
+    StaffWorkingHoursSerializer,
+    OverrideSerializer,
+    SpecialMessageSerializer,
+    MessageViewLogSerializer,
+    CalendarAuditLogSerializer,
+    CalendarStatusSerializer,
+    StaffCalendarStatusSerializer,
+    WeeklyCalendarSerializer,
 )
 from .filters import BarbershopFilter
 from .permissions import IsShopAdmin
@@ -611,4 +630,514 @@ class FavoriteToggleView(generics.GenericAPIView):
         barbershop.save(update_fields=["favorites_count"])
         
         return Response({"favorited": favorited, "favorites_count": favorites_count})
+
+
+class PartnerServiceCategoryViewSet(viewsets.ModelViewSet):
+    serializer_class = ServiceCategorySerializer
+    permission_classes = [permissions.IsAuthenticated, IsShopAdmin]
+
+    def get_queryset(self):
+        user = self.request.user
+        return ServiceCategory.objects.filter(barbershop__staff__user=user, barbershop__staff__is_admin=True)
+
+    def perform_create(self, serializer):
+        # Admin staff'ın barbershop'ını al
+        admin_staff = Staff.objects.get(user=self.request.user, is_admin=True)
+        serializer.save(barbershop=admin_staff.barbershop)
+
+
+class PartnerServiceViewSet(viewsets.ModelViewSet):
+    serializer_class = ServiceSerializer
+    permission_classes = [permissions.IsAuthenticated, IsShopAdmin]
+
+    def get_queryset(self):
+        user = self.request.user
+        return Service.objects.filter(barbershop__staff__user=user, barbershop__staff__is_admin=True).select_related('category')
+
+    def perform_create(self, serializer):
+        # Admin staff'ın barbershop'ını al
+        admin_staff = Staff.objects.get(user=self.request.user, is_admin=True)
+        serializer.save(barbershop=admin_staff.barbershop)
+
+    @action(detail=False, methods=["get"], url_path="tree")
+    def tree(self, request):
+        """Kategoriler ve altındaki hizmetleri ağaç yapısında döndür"""
+        user = request.user
+        barbershop_id = request.query_params.get('barbershop')
+        
+        if not barbershop_id:
+            return Response({"detail": "barbershop parameter required"}, status=400)
+        
+        # Admin staff'ın barbershop'ını kontrol et
+        try:
+            admin_staff = Staff.objects.get(user=user, is_admin=True, barbershop_id=barbershop_id)
+        except Staff.DoesNotExist:
+            return Response({"detail": "No permission for this barbershop"}, status=403)
+        
+        categories = ServiceCategory.objects.filter(barbershop_id=barbershop_id).prefetch_related('services')
+        result = []
+        
+        for category in categories:
+            category_data = {
+                'id': category.id,
+                'name': category.name,
+                'services': ServiceSerializer(category.services.filter(is_active=True), many=True).data
+            }
+            result.append(category_data)
+        
+        return Response(result)
+
+
+class ReviewReplyViewSet(viewsets.ModelViewSet):
+    serializer_class = ReviewReplySerializer
+    permission_classes = [permissions.IsAuthenticated, IsShopAdmin]
+
+    def get_queryset(self):
+        user = self.request.user
+        return ReviewReply.objects.filter(review__barbershop__staff__user=user, review__barbershop__staff__is_admin=True)
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
+    @action(detail=False, methods=["post"], url_path="reply-to-review")
+    def reply_to_review(self, request):
+        """Bir review'a cevap ver"""
+        review_id = request.data.get('review_id')
+        text = request.data.get('text')
+        
+        if not review_id or not text:
+            return Response({"detail": "review_id and text required"}, status=400)
+        
+        try:
+            review = Review.objects.get(id=review_id)
+        except Review.DoesNotExist:
+            return Response({"detail": "Review not found"}, status=404)
+        
+        # Admin staff'ın bu barbershop'ta yetkisi var mı kontrol et
+        try:
+            admin_staff = Staff.objects.get(user=request.user, is_admin=True, barbershop=review.barbershop)
+        except Staff.DoesNotExist:
+            return Response({"detail": "No permission to reply to this review"}, status=403)
+        
+        # Zaten cevap vermiş mi kontrol et
+        if ReviewReply.objects.filter(review=review, user=request.user).exists():
+            return Response({"detail": "Already replied to this review"}, status=400)
+        
+        reply = ReviewReply.objects.create(review=review, user=request.user, text=text)
+        return Response(ReviewReplySerializer(reply).data, status=201)
+
+
+# Takvim ve Mesaj Yönetimi ViewSet'leri
+class PartnerShopWorkingHoursViewSet(viewsets.ModelViewSet):
+    serializer_class = ShopWorkingHoursSerializer
+    permission_classes = [permissions.IsAuthenticated, IsShopAdmin]
+
+    def get_queryset(self):
+        user = self.request.user
+        return ShopWorkingHours.objects.filter(barbershop__staff__user=user, barbershop__staff__is_admin=True)
+
+    def perform_create(self, serializer):
+        admin_staff = Staff.objects.get(user=self.request.user, is_admin=True)
+        serializer.save(barbershop=admin_staff.barbershop)
+        self._log_action('create', 'ShopWorkingHours', serializer.instance.id, serializer.validated_data)
+
+    def perform_update(self, serializer):
+        old_data = ShopWorkingHoursSerializer(serializer.instance).data
+        super().perform_update(serializer)
+        self._log_action('update', 'ShopWorkingHours', serializer.instance.id, {
+            'old': old_data,
+            'new': serializer.validated_data
+        })
+
+    def perform_destroy(self, instance):
+        old_data = ShopWorkingHoursSerializer(instance).data
+        self._log_action('delete', 'ShopWorkingHours', instance.id, old_data)
+        super().perform_destroy(instance)
+
+    def _log_action(self, action_type, target_model, target_id, changes):
+        try:
+            admin_staff = Staff.objects.get(user=self.request.user, is_admin=True)
+            CalendarAuditLog.objects.create(
+                barbershop=admin_staff.barbershop,
+                user=self.request.user,
+                action_type=action_type,
+                target_model=target_model,
+                target_id=target_id,
+                changes=changes
+            )
+        except Staff.DoesNotExist:
+            pass
+
+
+class PartnerStaffWorkingHoursViewSet(viewsets.ModelViewSet):
+    serializer_class = StaffWorkingHoursSerializer
+    permission_classes = [permissions.IsAuthenticated, IsShopAdmin]
+
+    def get_queryset(self):
+        user = self.request.user
+        return StaffWorkingHours.objects.filter(
+            staff__barbershop__staff__user=user, 
+            staff__barbershop__staff__is_admin=True
+        )
+
+    def perform_create(self, serializer):
+        admin_staff = Staff.objects.get(user=self.request.user, is_admin=True)
+        # Staff'ın aynı barbershop'ta olduğunu kontrol et
+        staff = serializer.validated_data['staff']
+        if staff.barbershop != admin_staff.barbershop:
+            raise serializers.ValidationError("Bu personel bu barbershop'ta çalışmıyor")
+        serializer.save()
+        self._log_action('create', 'StaffWorkingHours', serializer.instance.id, serializer.validated_data)
+
+    def _log_action(self, action_type, target_model, target_id, changes):
+        try:
+            admin_staff = Staff.objects.get(user=self.request.user, is_admin=True)
+            CalendarAuditLog.objects.create(
+                barbershop=admin_staff.barbershop,
+                user=self.request.user,
+                action_type=action_type,
+                target_model=target_model,
+                target_id=target_id,
+                changes=changes
+            )
+        except Staff.DoesNotExist:
+            pass
+
+
+class PartnerOverrideViewSet(viewsets.ModelViewSet):
+    serializer_class = OverrideSerializer
+    permission_classes = [permissions.IsAuthenticated, IsShopAdmin]
+
+    def get_queryset(self):
+        user = self.request.user
+        return Override.objects.filter(barbershop__staff__user=user, barbershop__staff__is_admin=True)
+
+    def perform_create(self, serializer):
+        admin_staff = Staff.objects.get(user=self.request.user, is_admin=True)
+        serializer.save(barbershop=admin_staff.barbershop, created_by=self.request.user)
+        self._log_action('create', 'Override', serializer.instance.id, serializer.validated_data)
+
+    def _log_action(self, action_type, target_model, target_id, changes):
+        try:
+            admin_staff = Staff.objects.get(user=self.request.user, is_admin=True)
+            CalendarAuditLog.objects.create(
+                barbershop=admin_staff.barbershop,
+                user=self.request.user,
+                action_type=action_type,
+                target_model=target_model,
+                target_id=target_id,
+                changes=changes
+            )
+        except Staff.DoesNotExist:
+            pass
+
+    @action(detail=False, methods=["post"], url_path="quick-override")
+    def quick_override(self, request):
+        """Hızlı override oluşturma - personel için özel durumlar"""
+        staff_id = request.data.get('staff_id')
+        override_type = request.data.get('override_type', 'staff_individual')
+        scope = request.data.get('scope')
+        date = request.data.get('date')
+        reason = request.data.get('reason', '')
+        
+        try:
+            admin_staff = Staff.objects.get(user=request.user, is_admin=True)
+            staff = Staff.objects.get(id=staff_id, barbershop=admin_staff.barbershop)
+            
+            override = Override.objects.create(
+                barbershop=admin_staff.barbershop,
+                staff=staff,
+                override_type=override_type,
+                override_scope=scope,
+                start_date=date,
+                reason=reason,
+                created_by=request.user
+            )
+            
+            return Response(OverrideSerializer(override).data, status=201)
+        except Staff.DoesNotExist:
+            return Response({"detail": "Staff not found or no permission"}, status=404)
+
+
+class PartnerSpecialMessageViewSet(viewsets.ModelViewSet):
+    serializer_class = SpecialMessageSerializer
+    permission_classes = [permissions.IsAuthenticated, IsShopAdmin]
+
+    def get_queryset(self):
+        user = self.request.user
+        return SpecialMessage.objects.filter(barbershop__staff__user=user, barbershop__staff__is_admin=True)
+
+    def perform_create(self, serializer):
+        admin_staff = Staff.objects.get(user=self.request.user, is_admin=True)
+        serializer.save(barbershop=admin_staff.barbershop, created_by=self.request.user)
+        self._log_action('create', 'SpecialMessage', serializer.instance.id, serializer.validated_data)
+
+    def _log_action(self, action_type, target_model, target_id, changes):
+        try:
+            admin_staff = Staff.objects.get(user=self.request.user, is_admin=True)
+            CalendarAuditLog.objects.create(
+                barbershop=admin_staff.barbershop,
+                user=self.request.user,
+                action_type=action_type,
+                target_model=target_model,
+                target_id=target_id,
+                changes=changes
+            )
+        except Staff.DoesNotExist:
+            pass
+
+    @action(detail=False, methods=["get"], url_path="active")
+    def active_messages(self, request):
+        """Aktif mesajları getir"""
+        user = request.user
+        try:
+            admin_staff = Staff.objects.get(user=user, is_admin=True)
+            now = timezone.now()
+            
+            messages = SpecialMessage.objects.filter(
+                barbershop=admin_staff.barbershop,
+                is_active=True,
+                start_datetime__lte=now,
+                end_datetime__gte=now
+            ).order_by('-priority', '-created_at')
+            
+            return Response(SpecialMessageSerializer(messages, many=True).data)
+        except Staff.DoesNotExist:
+            return Response({"detail": "No permission"}, status=403)
+
+
+class CalendarStatusViewSet(viewsets.ReadOnlyModelViewSet):
+    """Takvim durumu hesaplama ViewSet'i"""
+    permission_classes = [permissions.AllowAny]  # Public endpoint
+    
+    @action(detail=False, methods=["get"], url_path="shop-status")
+    def shop_status(self, request):
+        """Dükkanın günlük durumunu hesapla"""
+        barbershop_id = request.query_params.get('barbershop_id')
+        date_str = request.query_params.get('date')
+        
+        if not barbershop_id or not date_str:
+            return Response({"detail": "barbershop_id and date required"}, status=400)
+        
+        try:
+            from datetime import datetime
+            date = datetime.strptime(date_str, '%Y-%m-%d').date()
+            barbershop = Barbershop.objects.get(id=barbershop_id)
+            
+            # Takvim hesaplama mantığı burada olacak
+            status = self._calculate_shop_status(barbershop, date)
+            
+            return Response(CalendarStatusSerializer(status).data)
+        except (Barbershop.DoesNotExist, ValueError):
+            return Response({"detail": "Invalid barbershop or date"}, status=404)
+
+    @action(detail=False, methods=["get"], url_path="staff-status")
+    def staff_status(self, request):
+        """Personelin günlük durumunu hesapla"""
+        staff_id = request.query_params.get('staff_id')
+        date_str = request.query_params.get('date')
+        
+        if not staff_id or not date_str:
+            return Response({"detail": "staff_id and date required"}, status=400)
+        
+        try:
+            from datetime import datetime
+            date = datetime.strptime(date_str, '%Y-%m-%d').date()
+            staff = Staff.objects.get(id=staff_id)
+            
+            status = self._calculate_staff_status(staff, date)
+            
+            return Response(StaffCalendarStatusSerializer(status).data)
+        except (Staff.DoesNotExist, ValueError):
+            return Response({"detail": "Invalid staff or date"}, status=404)
+
+    @action(detail=False, methods=["get"], url_path="weekly")
+    def weekly_calendar(self, request):
+        """Haftalık takvim görünümü"""
+        barbershop_id = request.query_params.get('barbershop_id')
+        week_start_str = request.query_params.get('week_start')
+        
+        if not barbershop_id or not week_start_str:
+            return Response({"detail": "barbershop_id and week_start required"}, status=400)
+        
+        try:
+            from datetime import datetime, timedelta
+            week_start = datetime.strptime(week_start_str, '%Y-%m-%d').date()
+            week_end = week_start + timedelta(days=6)
+            
+            barbershop = Barbershop.objects.get(id=barbershop_id)
+            
+            # Haftalık verileri topla
+            shop_hours = ShopWorkingHours.objects.filter(barbershop=barbershop)
+            staff_hours = StaffWorkingHours.objects.filter(staff__barbershop=barbershop)
+            overrides = Override.objects.filter(
+                barbershop=barbershop,
+                start_date__lte=week_end,
+                end_date__gte=week_start
+            )
+            messages = SpecialMessage.objects.filter(
+                barbershop=barbershop,
+                is_active=True,
+                start_datetime__date__lte=week_end,
+                end_datetime__date__gte=week_start
+            )
+            
+            weekly_data = {
+                'barbershop_id': barbershop.id,
+                'week_start': week_start,
+                'week_end': week_end,
+                'shop_hours': shop_hours,
+                'staff_hours': staff_hours,
+                'overrides': overrides,
+                'messages': messages
+            }
+            
+            return Response(WeeklyCalendarSerializer(weekly_data).data)
+        except (Barbershop.DoesNotExist, ValueError):
+            return Response({"detail": "Invalid barbershop or date"}, status=404)
+
+    def _calculate_shop_status(self, barbershop, date):
+        """Dükkan durumunu hesapla - öncelik sırasına göre"""
+        from datetime import datetime, time
+        
+        # 1. Global override kontrolü (en yüksek öncelik)
+        global_overrides = Override.objects.filter(
+            barbershop=barbershop,
+            override_type='shop_global',
+            start_date__lte=date,
+            end_date__gte=date
+        ).order_by('-created_at')
+        
+        if global_overrides.exists():
+            override = global_overrides.first()
+            if override.override_scope == 'full_day_closed':
+                return {
+                    'date': date,
+                    'is_open': False,
+                    'opening_time': None,
+                    'closing_time': None,
+                    'status_message': f"Kapalı: {override.reason or 'Özel durum'}",
+                    'active_overrides': [override],
+                    'active_messages': []
+                }
+        
+        # 2. Personel saatlerini kontrol et
+        working_staff = StaffWorkingHours.objects.filter(
+            staff__barbershop=barbershop,
+            day_of_week=date.weekday() + 1,
+            is_closed=False
+        )
+        
+        if not working_staff.exists():
+            return {
+                'date': date,
+                'is_open': False,
+                'opening_time': None,
+                'closing_time': None,
+                'status_message': "Bugün çalışan personel yok",
+                'active_overrides': [],
+                'active_messages': []
+            }
+        
+        # 3. Dükkan saatlerini al
+        shop_hours = ShopWorkingHours.objects.filter(
+            barbershop=barbershop,
+            day_of_week=date.weekday() + 1
+        ).first()
+        
+        if not shop_hours or shop_hours.is_closed:
+            return {
+                'date': date,
+                'is_open': False,
+                'opening_time': None,
+                'closing_time': None,
+                'status_message': "Dükkan bugün kapalı",
+                'active_overrides': [],
+                'active_messages': []
+            }
+        
+        # 4. Personel saatlerine göre dükkan saatlerini ayarla
+        earliest_start = min([swh.start_time or shop_hours.start_time for swh in working_staff])
+        latest_end = max([swh.end_time or shop_hours.end_time for swh in working_staff])
+        
+        # 5. Aktif mesajları al
+        now = timezone.now()
+        active_messages = SpecialMessage.objects.filter(
+            barbershop=barbershop,
+            is_active=True,
+            start_datetime__lte=now,
+            end_datetime__gte=now,
+            target_type='all_shop'
+        ).order_by('-priority')
+        
+        return {
+            'date': date,
+            'is_open': True,
+            'opening_time': earliest_start,
+            'closing_time': latest_end,
+            'status_message': None,
+            'active_overrides': list(global_overrides),
+            'active_messages': list(active_messages)
+        }
+
+    def _calculate_staff_status(self, staff, date):
+        """Personel durumunu hesapla"""
+        # Personel override'larını kontrol et
+        staff_overrides = Override.objects.filter(
+            staff=staff,
+            start_date__lte=date,
+            end_date__gte=date
+        ).order_by('-created_at')
+        
+        if staff_overrides.exists():
+            override = staff_overrides.first()
+            if override.override_scope == 'full_day_closed':
+                return {
+                    'staff_id': staff.id,
+                    'staff_name': staff.user.email,
+                    'date': date,
+                    'is_working': False,
+                    'start_time': None,
+                    'end_time': None,
+                    'status_message': f"İzinli: {override.reason or 'Özel durum'}",
+                    'active_overrides': [override]
+                }
+        
+        # Personel saatlerini al
+        staff_hours = StaffWorkingHours.objects.filter(
+            staff=staff,
+            day_of_week=date.weekday() + 1
+        ).first()
+        
+        if not staff_hours or staff_hours.is_closed:
+            return {
+                'staff_id': staff.id,
+                'staff_name': staff.user.email,
+                'date': date,
+                'is_working': False,
+                'start_time': None,
+                'end_time': None,
+                'status_message': "Bu gün çalışmıyor",
+                'active_overrides': []
+            }
+        
+        # Dükkan saatlerini devral
+        shop_hours = ShopWorkingHours.objects.filter(
+            barbershop=staff.barbershop,
+            day_of_week=date.weekday() + 1
+        ).first()
+        
+        start_time = staff_hours.start_time or (shop_hours.start_time if shop_hours else None)
+        end_time = staff_hours.end_time or (shop_hours.end_time if shop_hours else None)
+        
+        return {
+            'staff_id': staff.id,
+            'staff_name': staff.user.email,
+            'date': date,
+            'is_working': True,
+            'start_time': start_time,
+            'end_time': end_time,
+            'status_message': None,
+            'active_overrides': list(staff_overrides)
+        }
 
