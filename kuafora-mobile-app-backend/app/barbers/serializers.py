@@ -88,6 +88,22 @@ class WorkScheduleSerializer(serializers.ModelSerializer):
         fields = ("id", "staff", "day_of_week", "start_time", "end_time", "break_time")
 
 
+class ReviewReplySerializer(serializers.ModelSerializer):
+    user_display_name = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = ReviewReply
+        fields = ("id", "review", "user", "reply", "created_at", "user_display_name")
+        read_only_fields = ("created_at", "user")
+    
+    def get_user_display_name(self, obj):
+        u = getattr(obj, "user", None)
+        if not u:
+            return "****"
+        name = getattr(u, "full_name", None) or getattr(u, "first_name", None) or getattr(u, "email", None) or "Kullanıcı"
+        return name
+
+
 class ReviewSerializer(serializers.ModelSerializer):
     user_display_name = serializers.SerializerMethodField()
     user_full_name = serializers.SerializerMethodField()
