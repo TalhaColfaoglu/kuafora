@@ -75,11 +75,39 @@ class BarbershopViewSet(viewsets.ReadOnlyModelViewSet):
         serializer = StaffSerializer(staff, many=True)
         return Response(serializer.data)
 
-    @action(detail=True, methods=["get"], url_path="working-hours")
+    @action(detail=True, methods=["get", "put"], url_path="working-hours")
     def working_hours(self, request, pk=None):
-        schedules = WorkSchedule.objects.filter(staff__barbershop_id=pk).select_related("staff")
-        serializer = WorkScheduleSerializer(schedules, many=True)
-        return Response(serializer.data)
+        """GET: Mağazadaki tüm personelin saatleri (read-only, public)
+        PUT: Admin kullanıcı için mağazanın çalışma saatlerini günceller.
+        Basit yaklaşım: İsteği yapan admin kullanıcının bu mağazadaki ilk staff kaydı
+        üzerinden saatleri set eder (WorkSchedule.staff = admin_staff).
+        Beklenen payload: [ {"day_of_week": 1..7 or "Mon".., "start_time":"09:00", "end_time":"19:00"}, ... ]
+        """
+        if request.method == "GET":
+            schedules = WorkSchedule.objects.filter(staff__barbershop_id=pk).select_related("staff")
+            serializer = WorkScheduleSerializer(schedules, many=True)
+            return Response(serializer.data)
+
+        # PUT
+        if not request.user or not request.user.is_authenticated:
+            return Response({"detail": "Authentication required"}, status=status.HTTP_401_UNAUTHORIZED)
+
+        # İsteği yapan kullanıcı bu dükkanda admin mi?
+        admin_staff = Staff.objects.filter(barbershop_id=pk, user=request.user, is_admin=True).first()
+        if not admin_staff:
+            return Response({"detail": "Not allowed"}, status=status.HTTP_403_FORBIDDEN)
+
+        hours = request.data if isinstance(request.data, list) else request.data.get("hours", [])
+        if not isinstance(hours, list):
+            return Response({"detail": "Invalid payload"}, status=400)
+
+        # Eski saatleri sil, yenilerini ekle
+        WorkSchedule.objects.filter(staff=admin_staff).delete()
+        serializer = StaffHoursSerializer(data=hours, many=True)
+        serializer.is_valid(raise_exception=True)
+        for h in serializer.validated_data:
+            WorkSchedule.objects.create(staff=admin_staff, **h)
+        return Response({"detail": "Updated"})
 
     @action(detail=True, methods=["get", "post"], url_path="reviews")
     def reviews(self, request, pk=None):
@@ -266,8 +294,11 @@ class PartnerBarbershopViewSet(viewsets.ModelViewSet):
         partial = kwargs.pop('partial', True)
         instance = self.get_object()
         # Sadece belirli alanlar güncellenebilir
-        allowed = {"name", "address", "description", "phone_number", "latitude", "longitude", "city", "district"}
+        allowed = {"name", "address", "description", "phone", "phone_number", "latitude", "longitude", "city", "district", "gender"}
         data = {k: v for k, v in request.data.items() if k in allowed}
+        # phone alias desteği
+        if "phone" in data and "phone_number" not in data:
+            data["phone_number"] = data.pop("phone")
         serializer = self.get_serializer(instance, data=data, partial=partial)
         serializer.is_valid(raise_exception=True)
         self.perform_update(serializer)
@@ -501,7 +532,7 @@ class PartnerStaffViewSet(viewsets.ModelViewSet):
         User = get_user_model()
         user = User.objects.filter(email=email).first()
         if not user:
-            user = User.objects.create_user(email=email, password=User.objects.make_random_password())
+            return Response({"detail": "User not found"}, status=400)
         admin_staff_qs = Staff.objects.filter(user=request.user, is_admin=True).select_related("barbershop")
         if target_barbershop_id:
             admin_staff = admin_staff_qs.filter(barbershop_id=target_barbershop_id).first()
