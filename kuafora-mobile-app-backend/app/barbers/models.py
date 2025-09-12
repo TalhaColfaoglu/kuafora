@@ -80,16 +80,16 @@ class WorkSchedule(models.Model):
 class ShopWorkingHours(models.Model):
     """Genel dükkan çalışma saatleri - admin tarafından belirlenir"""
     class Weekday(models.TextChoices):
-        MON = 1, "Monday"
-        TUE = 2, "Tuesday"
-        WED = 3, "Wednesday"
-        THU = 4, "Thursday"
-        FRI = 5, "Friday"
-        SAT = 6, "Saturday"
-        SUN = 7, "Sunday"
+        MON = "MON", "Monday"
+        TUE = "TUE", "Tuesday"
+        WED = "WED", "Wednesday"
+        THU = "THU", "Thursday"
+        FRI = "FRI", "Friday"
+        SAT = "SAT", "Saturday"
+        SUN = "SUN", "Sunday"
 
     barbershop = models.ForeignKey(Barbershop, on_delete=models.CASCADE, related_name="shop_working_hours")
-    day_of_week = models.IntegerField(choices=Weekday.choices)
+    day_of_week = models.CharField(max_length=3, choices=Weekday.choices)
     start_time = models.TimeField()
     end_time = models.TimeField()
     is_closed = models.BooleanField(default=False, help_text="Bu gün tamamen kapalı mı")
@@ -106,16 +106,16 @@ class ShopWorkingHours(models.Model):
 class StaffWorkingHours(models.Model):
     """Personel varsayılan çalışma saatleri - dükkan saatlerini override edebilir"""
     class Weekday(models.TextChoices):
-        MON = 1, "Monday"
-        TUE = 2, "Tuesday"
-        WED = 3, "Wednesday"
-        THU = 4, "Thursday"
-        FRI = 5, "Friday"
-        SAT = 6, "Saturday"
-        SUN = 7, "Sunday"
+        MON = "MON", "Monday"
+        TUE = "TUE", "Tuesday"
+        WED = "WED", "Wednesday"
+        THU = "THU", "Thursday"
+        FRI = "FRI", "Friday"
+        SAT = "SAT", "Saturday"
+        SUN = "SUN", "Sunday"
 
     staff = models.ForeignKey(Staff, on_delete=models.CASCADE, related_name="staff_working_hours")
-    day_of_week = models.IntegerField(choices=Weekday.choices)
+    day_of_week = models.CharField(max_length=3, choices=Weekday.choices)
     start_time = models.TimeField(null=True, blank=True, help_text="Boşsa dükkan saatlerini devralır")
     end_time = models.TimeField(null=True, blank=True, help_text="Boşsa dükkan saatlerini devralır")
     is_closed = models.BooleanField(default=False, help_text="Bu gün personel çalışmıyor")
