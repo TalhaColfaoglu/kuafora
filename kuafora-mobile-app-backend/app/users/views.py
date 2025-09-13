@@ -254,8 +254,31 @@ class CheckEmailView(generics.GenericAPIView):
     def post(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        exists = User.objects.filter(email=serializer.validated_data["email"]).exists()
-        return Response({"exists": exists})
+        email = serializer.validated_data["email"]
+        exists = User.objects.filter(email=email).exists()
+        # Ek alanlar: herhangi bir kuaföre bağlı mı?
+        try:
+            from app.barbers.models import Staff  # type: ignore
+        except Exception:  # döngüsel import riskine karşı
+            Staff = None  # type: ignore
+
+        is_staff_attached = False
+        attached_barbershop_id = None
+        attached_barbershop_name = None
+        if exists and Staff is not None:
+            qs = Staff.objects.filter(user__email=email).select_related("barbershop")
+            if qs.exists():
+                is_staff_attached = True
+                bs = qs.first().barbershop  # type: ignore
+                attached_barbershop_id = getattr(bs, "id", None)
+                attached_barbershop_name = getattr(bs, "name", None)
+
+        return Response({
+            "exists": exists,
+            "is_staff": is_staff_attached,
+            "barbershop_id": attached_barbershop_id,
+            "barbershop_name": attached_barbershop_name,
+        })
 
 
 class CheckPhoneView(generics.GenericAPIView):
