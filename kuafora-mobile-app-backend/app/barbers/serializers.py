@@ -147,7 +147,8 @@ class ServiceCategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = ServiceCategory
         fields = ("id", "barbershop", "name", "created_at")
-        read_only_fields = ("created_at",)
+        # barbershop, perform_create içinde atanıyor → inputta zorunlu olmasın
+        read_only_fields = ("barbershop", "created_at")
 
 
 class ServiceSerializer(serializers.ModelSerializer):
@@ -156,7 +157,8 @@ class ServiceSerializer(serializers.ModelSerializer):
     class Meta:
         model = Service
         fields = ("id", "barbershop", "category", "category_name", "name", "price", "duration", "is_active", "created_at")
-        read_only_fields = ("created_at",)
+        # barbershop, perform_create içinde atanıyor → inputta zorunlu olmasın
+        read_only_fields = ("barbershop", "created_at")
 
 
 class ReviewReplySerializer(serializers.ModelSerializer):
