@@ -28,8 +28,9 @@ router.register(r"last-viewed", LastViewedViewSet, basename="last-viewed")
 router.register(r"reviews", ReviewViewSet, basename="review")
 
 router.register(r"partner/barbershops", PartnerBarbershopViewSet, basename="partner-barbershop")
+# Kategori route'unu, service route'u ile çakışmayı önlemek için ayrı prefix ile tanımla
+router.register(r"partner/service-categories", PartnerServiceCategoryViewSet, basename="partner-service-category")
 router.register(r"partner/services", PartnerServiceViewSet, basename="partner-service")
-router.register(r"partner/services/categories", PartnerServiceCategoryViewSet, basename="partner-service-category")
 router.register(r"partner/staff", PartnerStaffViewSet, basename="partner-staff")
 router.register(r"partner/working-hours", PartnerWorkScheduleViewSet, basename="partner-work-schedule")
 router.register(r"partner/review-replies", ReviewReplyViewSet, basename="partner-review-reply")
