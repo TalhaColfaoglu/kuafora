@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from django.db.models import Prefetch, Q
-from rest_framework import viewsets, mixins, permissions, generics, status
+from rest_framework import viewsets, mixins, permissions, generics, status, serializers as drf_serializers
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.throttling import UserRateThrottle
@@ -96,16 +96,102 @@ class BarbershopViewSet(viewsets.ReadOnlyModelViewSet):
 
     @action(detail=True, methods=["get", "put"], url_path="working-hours")
     def working_hours(self, request, pk=None):
-        """GET: Mağazadaki tüm personelin saatleri (read-only, public)
-        PUT: Admin kullanıcı için mağazanın çalışma saatlerini günceller.
-        Basit yaklaşım: İsteği yapan admin kullanıcının bu mağazadaki ilk staff kaydı
-        üzerinden saatleri set eder (WorkSchedule.staff = admin_staff).
-        Beklenen payload: [ {"day_of_week": 1..7 or "Mon".., "start_time":"09:00", "end_time":"19:00"}, ... ]
+        """\
+        GET: Haftalık tabloyu (7 gün) MON..SUN kodlarıyla, override'lar uygulanmış şekilde döndür.
+             - Öncelik: Global override > Staff override > StaffWorkingHours > ShopWorkingHours
+             - Daha kısıtlayıcı olan kazanır.
+        PUT: Admin kullanıcı için mağazanın çalışma saatlerini günceller (legacy, korunur).
         """
         if request.method == "GET":
-            schedules = WorkSchedule.objects.filter(staff__barbershop_id=pk).select_related("staff")
-            serializer = WorkScheduleSerializer(schedules, many=True)
-            return Response(serializer.data)
+            try:
+                shop = Barbershop.objects.get(id=pk)
+            except Barbershop.DoesNotExist:
+                return Response({"detail": "Barbershop not found"}, status=404)
+
+            code_list = ["MON","TUE","WED","THU","FRI","SAT","SUN"]
+            result = []
+
+            for code in code_list:
+                # 1) Global override kontrolü
+                has_full_closed = Override.objects.filter(
+                    barbershop=shop,
+                    override_type='shop_global',
+                    start_date__lte=timezone.localdate(),  # tarih aralığı bazlı haftalık tablo genel; bugün kapsamlı check yerine record varlığını kontrol ederiz
+                    end_date__gte=timezone.localdate(),
+                    override_scope='full_day_closed',
+                ).exists()
+
+                if has_full_closed:
+                    result.append({
+                        'day_of_week': code,
+                        'start_time': None,
+                        'end_time': None,
+                        'is_closed': True,
+                    })
+                    continue
+
+                # 2) StaffWorkingHours (day_code) açık olanlar
+                staff_hours = StaffWorkingHours.objects.filter(
+                    staff__barbershop=shop,
+                    day_of_week=code,
+                    is_closed=False,
+                )
+
+                # 3) ShopWorkingHours (day_code)
+                shop_hours = ShopWorkingHours.objects.filter(
+                    barbershop=shop,
+                    day_of_week=code,
+                ).first()
+
+                if not staff_hours.exists():
+                    # Personel varsayılanında çalışan yok; dükkan saatine bak
+                    if not shop_hours or shop_hours.is_closed:
+                        result.append({
+                            'day_of_week': code,
+                            'start_time': None,
+                            'end_time': None,
+                            'is_closed': True,
+                        })
+                    else:
+                        result.append({
+                            'day_of_week': code,
+                            'start_time': shop_hours.start_time,
+                            'end_time': shop_hours.end_time,
+                            'is_closed': False,
+                        })
+                    continue
+
+                # 4) Personel saatlerine göre en erken/birleşik saat aralığı
+                candidates_start = []
+                candidates_end = []
+                for sh in staff_hours:
+                    candidates_start.append(sh.start_time or (shop_hours.start_time if shop_hours else None))
+                    candidates_end.append(sh.end_time or (shop_hours.end_time if shop_hours else None))
+                # None'ları filtrele
+                candidates_start = [c for c in candidates_start if c is not None]
+                candidates_end = [c for c in candidates_end if c is not None]
+
+                if not candidates_start or not candidates_end:
+                    # Bilgi yok; kapalı say
+                    result.append({
+                        'day_of_week': code,
+                        'start_time': None,
+                        'end_time': None,
+                        'is_closed': True,
+                    })
+                    continue
+
+                start_time = min(candidates_start)
+                end_time = max(candidates_end)
+
+                result.append({
+                    'day_of_week': code,
+                    'start_time': start_time,
+                    'end_time': end_time,
+                    'is_closed': False,
+                })
+
+            return Response(result)
 
         # PUT
         if not request.user or not request.user.is_authenticated:
@@ -785,7 +871,7 @@ class PartnerStaffWorkingHoursViewSet(viewsets.ModelViewSet):
         # Staff'ın aynı barbershop'ta olduğunu kontrol et
         staff = serializer.validated_data['staff']
         if staff.barbershop != admin_staff.barbershop:
-            raise serializers.ValidationError("Bu personel bu barbershop'ta çalışmıyor")
+            raise drf_serializers.ValidationError("Bu personel bu barbershop'ta çalışmıyor")
         serializer.save()
         self._log_action('create', 'StaffWorkingHours', serializer.instance.id, serializer.validated_data)
 
@@ -813,9 +899,83 @@ class PartnerOverrideViewSet(viewsets.ModelViewSet):
         return Override.objects.filter(barbershop__staff__user=user, barbershop__staff__is_admin=True)
 
     def perform_create(self, serializer):
+        from datetime import datetime, time, timedelta
+        from django.utils import timezone as dj_tz
         admin_staff = Staff.objects.get(user=self.request.user, is_admin=True)
+
+        payload = dict(self.request.data)
+        # Yeni API sözleşmesini destekle: scope (shop/staff) + override_type (closed/open/change/break)
+        scope_in = (payload.get('scope') or '').lower() if isinstance(payload.get('scope'), str) else ''
+        kind_in = (payload.get('override_type') or '').lower() if isinstance(payload.get('override_type'), str) else ''
+
+        mapped_type = None
+        mapped_scope = None
+        if scope_in in ('shop', 'global'):
+            mapped_type = 'shop_global'
+        elif scope_in in ('staff', 'personel'):
+            mapped_type = 'staff_individual'
+
+        if kind_in in ('closed', 'kapali', 'full_day_closed'):
+            mapped_scope = 'full_day_closed'
+        elif kind_in in ('break', 'mola', 'time_range_closed'):
+            mapped_scope = 'time_range_closed'
+        elif kind_in in ('early_closing', 'early'):
+            mapped_scope = 'early_closing'
+        elif kind_in in ('late_opening', 'late'):
+            mapped_scope = 'late_opening'
+
+        # serializer.validated_data içindeki alanları override etmeye çalış
+        if mapped_type and 'override_type' in serializer.fields:
+            serializer.validated_data['override_type'] = mapped_type
+        if mapped_scope and 'override_scope' in serializer.fields:
+            serializer.validated_data['override_scope'] = mapped_scope
+
+        # Eğer personel kapsamı seçilmiş ama staff verilmemişse, isteği yapan admin'in staff kaydını ata
+        if (serializer.validated_data.get('override_type') or mapped_type) == 'staff_individual' and not serializer.validated_data.get('staff'):
+            serializer.validated_data['staff'] = admin_staff
+
+        # Kaydı oluştur
         serializer.save(barbershop=admin_staff.barbershop, created_by=self.request.user)
         self._log_action('create', 'Override', serializer.instance.id, serializer.validated_data)
+
+        # create_message desteği
+        create_message_flag = payload.get('create_message')
+        try:
+            create_message = str(create_message_flag).lower() in ('1', 'true', 'yes')
+        except Exception:
+            create_message = False
+
+        if create_message:
+            # Mesajı otomatik aç
+            ov = serializer.instance
+            # Başlık ve içerik
+            staff_part = f" - {getattr(getattr(ov, 'staff', None), 'user', None) and ov.staff.user.email}" if ov.staff else ''
+            title = "Uygun değil" if ov.override_scope == 'full_day_closed' else "Mola / Kısıtlı hizmet"
+            title = f"{title}{staff_part}"
+            content = ov.reason or ""
+
+            # Zaman aralığı
+            start_dt = dj_tz.make_aware(datetime.combine(ov.start_date, ov.start_time or time(0, 0)))
+            end_date = ov.end_date or ov.start_date
+            # 23:59:59 veya belirtilen end_time
+            end_dt = dj_tz.make_aware(datetime.combine(end_date, ov.end_time or time(23, 59)))
+
+            msg = SpecialMessage.objects.create(
+                barbershop=admin_staff.barbershop,
+                source='automatic',
+                display_type=(payload.get('display_type') or 'banner'),
+                target_type='all_shop' if not ov.staff else 'specific_staff',
+                title=title,
+                content=content,
+                start_datetime=start_dt,
+                end_datetime=end_dt,
+                priority=100,
+                created_by=self.request.user,
+                is_active=True,
+            )
+            if ov.staff and msg.target_type == 'specific_staff':
+                msg.target_staff.add(ov.staff)
+            msg.save()
 
     def _log_action(self, action_type, target_model, target_id, changes):
         try:
@@ -1000,6 +1160,10 @@ class CalendarStatusViewSet(viewsets.ReadOnlyModelViewSet):
         """Dükkan durumunu hesapla - öncelik sırasına göre"""
         from datetime import datetime, time
         
+        # Haftanın günü kodu (MON..SUN)
+        weekday_code_map = {0: "MON", 1: "TUE", 2: "WED", 3: "THU", 4: "FRI", 5: "SAT", 6: "SUN"}
+        day_code = weekday_code_map.get(date.weekday())
+        
         # 1. Global override kontrolü (en yüksek öncelik)
         global_overrides = Override.objects.filter(
             barbershop=barbershop,
@@ -1024,7 +1188,7 @@ class CalendarStatusViewSet(viewsets.ReadOnlyModelViewSet):
         # 2. Personel saatlerini kontrol et
         working_staff = StaffWorkingHours.objects.filter(
             staff__barbershop=barbershop,
-            day_of_week=date.weekday() + 1,
+            day_of_week=day_code,
             is_closed=False
         )
         
@@ -1042,7 +1206,7 @@ class CalendarStatusViewSet(viewsets.ReadOnlyModelViewSet):
         # 3. Dükkan saatlerini al
         shop_hours = ShopWorkingHours.objects.filter(
             barbershop=barbershop,
-            day_of_week=date.weekday() + 1
+            day_of_week=day_code
         ).first()
         
         if not shop_hours or shop_hours.is_closed:
@@ -1060,13 +1224,12 @@ class CalendarStatusViewSet(viewsets.ReadOnlyModelViewSet):
         earliest_start = min([swh.start_time or shop_hours.start_time for swh in working_staff])
         latest_end = max([swh.end_time or shop_hours.end_time for swh in working_staff])
         
-        # 5. Aktif mesajları al
-        now = timezone.now()
+        # 5. Aktif mesajları al (ilgili tarih için)
         active_messages = SpecialMessage.objects.filter(
             barbershop=barbershop,
             is_active=True,
-            start_datetime__lte=now,
-            end_datetime__gte=now,
+            start_datetime__date__lte=date,
+            end_datetime__date__gte=date,
             target_type='all_shop'
         ).order_by('-priority')
         
@@ -1082,6 +1245,9 @@ class CalendarStatusViewSet(viewsets.ReadOnlyModelViewSet):
 
     def _calculate_staff_status(self, staff, date):
         """Personel durumunu hesapla"""
+        # Haftanın günü kodu (MON..SUN)
+        weekday_code_map = {0: "MON", 1: "TUE", 2: "WED", 3: "THU", 4: "FRI", 5: "SAT", 6: "SUN"}
+        day_code = weekday_code_map.get(date.weekday())
         # Personel override'larını kontrol et
         staff_overrides = Override.objects.filter(
             staff=staff,
@@ -1106,7 +1272,7 @@ class CalendarStatusViewSet(viewsets.ReadOnlyModelViewSet):
         # Personel saatlerini al
         staff_hours = StaffWorkingHours.objects.filter(
             staff=staff,
-            day_of_week=date.weekday() + 1
+            day_of_week=day_code
         ).first()
         
         if not staff_hours or staff_hours.is_closed:
@@ -1124,7 +1290,7 @@ class CalendarStatusViewSet(viewsets.ReadOnlyModelViewSet):
         # Dükkan saatlerini devral
         shop_hours = ShopWorkingHours.objects.filter(
             barbershop=staff.barbershop,
-            day_of_week=date.weekday() + 1
+            day_of_week=day_code
         ).first()
         
         start_time = staff_hours.start_time or (shop_hours.start_time if shop_hours else None)
