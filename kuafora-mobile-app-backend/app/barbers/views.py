@@ -861,17 +861,16 @@ class PartnerStaffWorkingHoursViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-        return StaffWorkingHours.objects.filter(
-            staff__barbershop__staff__user=user, 
-            staff__barbershop__staff__is_admin=True
-        )
+        # Politika: Hem admin hem personel SADECE kendi staff kaydı için saatleri yönetebilir
+        my_staff = Staff.objects.filter(user=user).first()
+        return StaffWorkingHours.objects.filter(staff=my_staff)
 
     def perform_create(self, serializer):
-        admin_staff = Staff.objects.get(user=self.request.user, is_admin=True)
-        # Staff'ın aynı barbershop'ta olduğunu kontrol et
+        user = self.request.user
         staff = serializer.validated_data['staff']
-        if staff.barbershop != admin_staff.barbershop:
-            raise drf_serializers.ValidationError("Bu personel bu barbershop'ta çalışmıyor")
+        # RBAC: Yalnızca kendi staff saatlerini düzenleyebilir (admin dahi olsa)
+        if staff.user != user:
+            raise drf_serializers.ValidationError("Yetkisiz işlem: sadece kendi saatlerinizi düzenleyebilirsiniz")
         serializer.save()
         self._log_action('create', 'StaffWorkingHours', serializer.instance.id, serializer.validated_data)
 
@@ -896,12 +895,20 @@ class PartnerOverrideViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-        return Override.objects.filter(barbershop__staff__user=user, barbershop__staff__is_admin=True)
+        # Politika: Shop-level override'lar (admin) + kendi personel override'ları
+        my_staff = Staff.objects.filter(user=user).first()
+        shop_ids = list(Staff.objects.filter(user=user, is_admin=True).values_list('barbershop_id', flat=True))
+        return Override.objects.filter(
+            (Q(staff=my_staff) | Q(barbershop_id__in=shop_ids, override_type='shop_global'))
+        )
 
     def perform_create(self, serializer):
         from datetime import datetime, time, timedelta
         from django.utils import timezone as dj_tz
-        admin_staff = Staff.objects.get(user=self.request.user, is_admin=True)
+        # RBAC: admin olabilir ya da normal personel
+        user = self.request.user
+        admin_staff = Staff.objects.filter(user=user, is_admin=True).first()
+        my_staff = Staff.objects.filter(user=user).first()
 
         payload = dict(self.request.data)
         # Yeni API sözleşmesini destekle: scope (shop/staff) + override_type (closed/open/change/break)
@@ -930,12 +937,56 @@ class PartnerOverrideViewSet(viewsets.ModelViewSet):
         if mapped_scope and 'override_scope' in serializer.fields:
             serializer.validated_data['override_scope'] = mapped_scope
 
-        # Eğer personel kapsamı seçilmiş ama staff verilmemişse, isteği yapan admin'in staff kaydını ata
+        # Eğer personel kapsamı seçilmiş ama staff verilmemişse, isteği yapan kullanıcının staff kaydını ata
         if (serializer.validated_data.get('override_type') or mapped_type) == 'staff_individual' and not serializer.validated_data.get('staff'):
-            serializer.validated_data['staff'] = admin_staff
+            serializer.validated_data['staff'] = my_staff
 
-        # Kaydı oluştur
-        serializer.save(barbershop=admin_staff.barbershop, created_by=self.request.user)
+        # RBAC: admin değilse shop_global yasak; admin olsa bile staff_individual sadece kendi adına
+        effective_type = serializer.validated_data.get('override_type') or mapped_type
+        if not Staff.objects.filter(user=user, is_admin=True).exists() and effective_type == 'shop_global':
+            raise drf_serializers.ValidationError("Yetkisiz işlem: dükkan genel override oluşturma yetkiniz yok")
+        if effective_type == 'staff_individual' and serializer.validated_data.get('staff') and serializer.validated_data['staff'].user != user:
+            raise drf_serializers.ValidationError("Yalnızca kendi adınıza personel override oluşturabilirsiniz")
+
+        # Çoklu tarih desteği: dates[] verilirse her gün için ayrı override oluştur
+        base_shop = admin_staff.barbershop if admin_staff else (my_staff.barbershop if my_staff else None)
+        dates = self.request.data.get('dates')
+        created = []
+        if isinstance(dates, list) and dates:
+            # Tür bazlı doğrulama
+            scope = serializer.validated_data.get('override_scope') or mapped_scope
+            st = serializer.validated_data.get('start_time')
+            et = serializer.validated_data.get('end_time')
+            if scope == 'full_day_closed' and (st or et):
+                raise drf_serializers.ValidationError("Tam gün kapalı için saat girilmemelidir")
+            if scope == 'time_range_closed' and (not st or not et):
+                raise drf_serializers.ValidationError("Saat aralığı kapalı için başlangıç ve bitiş saatleri zorunludur")
+            if scope == 'early_closing' and not et:
+                raise drf_serializers.ValidationError("Erken kapanış için bitiş saati zorunludur")
+            if scope == 'late_opening' and not st:
+                raise drf_serializers.ValidationError("Geç açılış için başlangıç saati zorunludur")
+            # tek serializer instance yerine tek tek create
+            for d in dates:
+                obj = Override.objects.create(
+                    barbershop=base_shop,
+                    staff=serializer.validated_data.get('staff'),
+                    override_type=effective_type,
+                    override_scope=scope,
+                    start_date=d,
+                    end_date=d,
+                    start_time=st,
+                    end_time=et,
+                    is_recurring=False,
+                    recurring_rule='',
+                    reason=serializer.validated_data.get('reason',''),
+                    created_by=self.request.user,
+                )
+                created.append(obj)
+            serializer.instance = created[-1]
+        else:
+            # Tek tarih (mevcut davranış)
+            serializer.save(barbershop=base_shop, created_by=self.request.user)
+            created.append(serializer.instance)
         self._log_action('create', 'Override', serializer.instance.id, serializer.validated_data)
 
         # create_message desteği
@@ -946,36 +997,28 @@ class PartnerOverrideViewSet(viewsets.ModelViewSet):
             create_message = False
 
         if create_message:
-            # Mesajı otomatik aç
-            ov = serializer.instance
-            # Başlık ve içerik
-            staff_part = f" - {getattr(getattr(ov, 'staff', None), 'user', None) and ov.staff.user.email}" if ov.staff else ''
-            title = "Uygun değil" if ov.override_scope == 'full_day_closed' else "Mola / Kısıtlı hizmet"
-            title = f"{title}{staff_part}"
-            content = ov.reason or ""
-
-            # Zaman aralığı
-            start_dt = dj_tz.make_aware(datetime.combine(ov.start_date, ov.start_time or time(0, 0)))
-            end_date = ov.end_date or ov.start_date
-            # 23:59:59 veya belirtilen end_time
-            end_dt = dj_tz.make_aware(datetime.combine(end_date, ov.end_time or time(23, 59)))
-
-            msg = SpecialMessage.objects.create(
-                barbershop=admin_staff.barbershop,
-                source='automatic',
-                display_type=(payload.get('display_type') or 'banner'),
-                target_type='all_shop' if not ov.staff else 'specific_staff',
-                title=title,
-                content=content,
-                start_datetime=start_dt,
-                end_datetime=end_dt,
-                priority=100,
-                created_by=self.request.user,
-                is_active=True,
-            )
-            if ov.staff and msg.target_type == 'specific_staff':
-                msg.target_staff.add(ov.staff)
-            msg.save()
+            for ov in created:
+                staff_part = f" - {getattr(getattr(ov, 'staff', None), 'user', None) and ov.staff.user.email}" if ov.staff else ''
+                title = "Uygun değil" if ov.override_scope == 'full_day_closed' else (
+                    'Mola / Kısıtlı hizmet' if ov.override_scope == 'time_range_closed' else (
+                        'Geç açılış' if ov.override_scope == 'late_opening' else 'Erken kapanış'
+                    )
+                )
+                title = f"{title}{staff_part}"
+                content = ov.reason or ""
+                start_dt = dj_tz.make_aware(datetime.combine(ov.start_date, ov.start_time or time(0, 0)))
+                end_dt = dj_tz.make_aware(datetime.combine(ov.end_date or ov.start_date, ov.end_time or time(23, 59)))
+                msg = SpecialMessage.objects.create(
+                    barbershop=ov.barbershop,
+                    source='automatic', display_type=(payload.get('display_type') or 'banner'),
+                    target_type='all_shop' if not ov.staff else 'specific_staff',
+                    title=title, content=content,
+                    start_datetime=start_dt, end_datetime=end_dt,
+                    priority=100, created_by=self.request.user, is_active=True,
+                )
+                if ov.staff and msg.target_type == 'specific_staff':
+                    msg.target_staff.add(ov.staff)
+                msg.save()
 
     def _log_action(self, action_type, target_model, target_id, changes):
         try:
