@@ -6,6 +6,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.throttling import UserRateThrottle
 from django.utils import timezone
+from datetime import timedelta
 
 from .models import (
     Favorite,
@@ -461,7 +462,52 @@ class PartnerServiceViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-        return Service.objects.filter(barbershop__staff__user=user, barbershop__staff__is_admin=True).select_related("barbershop")
+        return Service.objects.filter(barbershop__staff__user=user, barbershop__staff__is_admin=True).select_related('category')
+
+    def perform_create(self, serializer):
+        # Admin staff'ın barbershop'ını al
+        admin_staff = Staff.objects.get(user=self.request.user, is_admin=True)
+        serializer.save(barbershop=admin_staff.barbershop)
+        # Otomatik duyuru: yeni hizmet eklendi
+        try:
+            SpecialMessage.objects.create(
+                barbershop=admin_staff.barbershop,
+                source='automatic', display_type='banner', target_type='all_shop',
+                title='Yeni hizmet eklendi', content=f"{serializer.instance.name}",
+                start_datetime=timezone.now(), end_datetime=timezone.now() + timedelta(days=30),
+                priority=50, created_by=self.request.user, is_active=True,
+            )
+        except Exception:
+            pass
+
+    def perform_update(self, serializer):
+        super().perform_update(serializer)
+        try:
+            admin_staff = Staff.objects.get(user=self.request.user, is_admin=True)
+            SpecialMessage.objects.create(
+                barbershop=admin_staff.barbershop,
+                source='automatic', display_type='banner', target_type='all_shop',
+                title='Hizmet güncellendi', content=f"{serializer.instance.name}",
+                start_datetime=timezone.now(), end_datetime=timezone.now() + timedelta(days=14),
+                priority=40, created_by=self.request.user, is_active=True,
+            )
+        except Exception:
+            pass
+
+    def perform_destroy(self, instance):
+        name = getattr(instance, 'name', 'Hizmet')
+        shop = instance.barbershop
+        super().perform_destroy(instance)
+        try:
+            SpecialMessage.objects.create(
+                barbershop=shop,
+                source='automatic', display_type='banner', target_type='all_shop',
+                title='Hizmet kaldırıldı', content=name,
+                start_datetime=timezone.now(), end_datetime=timezone.now() + timedelta(days=7),
+                priority=30, created_by=self.request.user, is_active=True,
+            )
+        except Exception:
+            pass
 
 
 class ReviewThrottle(UserRateThrottle):
@@ -652,6 +698,18 @@ class PartnerStaffViewSet(viewsets.ModelViewSet):
         if already:
             return Response({"detail": "User already a staff of this barbershop"}, status=409)
         staff = Staff.objects.create(barbershop=admin_staff.barbershop, user=user, email=user.email, is_admin=is_admin)
+        # Otomatik duyuru: yeni personel
+        try:
+            display_name = getattr(user, 'full_name', '') or getattr(user, 'email', 'Yeni personel')
+            SpecialMessage.objects.create(
+                barbershop=admin_staff.barbershop,
+                source='automatic', display_type='banner', target_type='all_shop',
+                title='Yeni personel aramıza katıldı', content=f"{display_name} takımımıza katıldı. Hoş geldin!",
+                start_datetime=timezone.now(), end_datetime=timezone.now() + timedelta(days=30),
+                priority=60, created_by=self.request.user, is_active=True,
+            )
+        except Exception:
+            pass
         return Response(StaffSerializer(staff).data, status=201)
 
 
@@ -730,6 +788,17 @@ class PartnerServiceCategoryViewSet(viewsets.ModelViewSet):
         # Admin staff'ın barbershop'ını al
         admin_staff = Staff.objects.get(user=self.request.user, is_admin=True)
         serializer.save(barbershop=admin_staff.barbershop)
+        # Otomatik duyuru: yeni kategori
+        try:
+            SpecialMessage.objects.create(
+                barbershop=admin_staff.barbershop,
+                source='automatic', display_type='banner', target_type='all_shop',
+                title='Yeni kategori eklendi', content=f"{serializer.instance.name}",
+                start_datetime=timezone.now(), end_datetime=timezone.now() + timedelta(days=30),
+                priority=30, created_by=self.request.user, is_active=True,
+            )
+        except Exception:
+            pass
 
 
 class PartnerServiceViewSet(viewsets.ModelViewSet):
@@ -744,6 +813,46 @@ class PartnerServiceViewSet(viewsets.ModelViewSet):
         # Admin staff'ın barbershop'ını al
         admin_staff = Staff.objects.get(user=self.request.user, is_admin=True)
         serializer.save(barbershop=admin_staff.barbershop)
+        # Otomatik duyuru: yeni hizmet eklendi
+        try:
+            SpecialMessage.objects.create(
+                barbershop=admin_staff.barbershop,
+                source='automatic', display_type='banner', target_type='all_shop',
+                title='Yeni hizmet eklendi', content=f"{serializer.instance.name}",
+                start_datetime=timezone.now(), end_datetime=timezone.now() + timedelta(days=30),
+                priority=50, created_by=self.request.user, is_active=True,
+            )
+        except Exception:
+            pass
+
+    def perform_update(self, serializer):
+        super().perform_update(serializer)
+        try:
+            admin_staff = Staff.objects.get(user=self.request.user, is_admin=True)
+            SpecialMessage.objects.create(
+                barbershop=admin_staff.barbershop,
+                source='automatic', display_type='banner', target_type='all_shop',
+                title='Hizmet güncellendi', content=f"{serializer.instance.name}",
+                start_datetime=timezone.now(), end_datetime=timezone.now() + timedelta(days=14),
+                priority=40, created_by=self.request.user, is_active=True,
+            )
+        except Exception:
+            pass
+
+    def perform_destroy(self, instance):
+        name = getattr(instance, 'name', 'Hizmet')
+        shop = instance.barbershop
+        super().perform_destroy(instance)
+        try:
+            SpecialMessage.objects.create(
+                barbershop=shop,
+                source='automatic', display_type='banner', target_type='all_shop',
+                title='Hizmet kaldırıldı', content=name,
+                start_datetime=timezone.now(), end_datetime=timezone.now() + timedelta(days=7),
+                priority=30, created_by=self.request.user, is_active=True,
+            )
+        except Exception:
+            pass
 
     @action(detail=False, methods=["get"], url_path="tree")
     def tree(self, request):
@@ -826,6 +935,17 @@ class PartnerShopWorkingHoursViewSet(viewsets.ModelViewSet):
         admin_staff = Staff.objects.get(user=self.request.user, is_admin=True)
         serializer.save(barbershop=admin_staff.barbershop)
         self._log_action('create', 'ShopWorkingHours', serializer.instance.id, serializer.validated_data)
+        # Duyuru
+        try:
+            SpecialMessage.objects.create(
+                barbershop=admin_staff.barbershop,
+                source='automatic', display_type='banner', target_type='all_shop',
+                title='Çalışma saatleri güncellendi', content='Dükkan çalışma saatleri düzenlendi',
+                start_datetime=timezone.now(), end_datetime=timezone.now() + timedelta(days=14),
+                priority=20, created_by=self.request.user, is_active=True,
+            )
+        except Exception:
+            pass
 
     def perform_update(self, serializer):
         old_data = ShopWorkingHoursSerializer(serializer.instance).data
@@ -834,11 +954,33 @@ class PartnerShopWorkingHoursViewSet(viewsets.ModelViewSet):
             'old': old_data,
             'new': serializer.validated_data
         })
+        try:
+            admin_staff = Staff.objects.get(user=self.request.user, is_admin=True)
+            SpecialMessage.objects.create(
+                barbershop=admin_staff.barbershop,
+                source='automatic', display_type='banner', target_type='all_shop',
+                title='Çalışma saatleri güncellendi', content='Dükkan çalışma saatleri düzenlendi',
+                start_datetime=timezone.now(), end_datetime=timezone.now() + timedelta(days=14),
+                priority=20, created_by=self.request.user, is_active=True,
+            )
+        except Exception:
+            pass
 
     def perform_destroy(self, instance):
         old_data = ShopWorkingHoursSerializer(instance).data
         self._log_action('delete', 'ShopWorkingHours', instance.id, old_data)
         super().perform_destroy(instance)
+        try:
+            admin_staff = Staff.objects.get(user=self.request.user, is_admin=True)
+            SpecialMessage.objects.create(
+                barbershop=admin_staff.barbershop,
+                source='automatic', display_type='banner', target_type='all_shop',
+                title='Çalışma saatleri kaldırıldı', content='Bazı çalışma saatleri kaldırıldı',
+                start_datetime=timezone.now(), end_datetime=timezone.now() + timedelta(days=7),
+                priority=15, created_by=self.request.user, is_active=True,
+            )
+        except Exception:
+            pass
 
     def _log_action(self, action_type, target_model, target_id, changes):
         try:
@@ -873,6 +1015,52 @@ class PartnerStaffWorkingHoursViewSet(viewsets.ModelViewSet):
             raise drf_serializers.ValidationError("Yetkisiz işlem: sadece kendi saatlerinizi düzenleyebilirsiniz")
         serializer.save()
         self._log_action('create', 'StaffWorkingHours', serializer.instance.id, serializer.validated_data)
+        try:
+            admin_staff = Staff.objects.get(user=self.request.user, is_admin=True)
+            SpecialMessage.objects.create(
+                barbershop=admin_staff.barbershop,
+                source='automatic', display_type='banner', target_type='all_shop',
+                title='Personel çalışma saatleri güncellendi', content=f"{getattr(serializer.instance.staff.user, 'email', 'Personel')}",
+                start_datetime=timezone.now(), end_datetime=timezone.now() + timedelta(days=14),
+                priority=18, created_by=self.request.user, is_active=True,
+            )
+        except Exception:
+            pass
+
+    def perform_update(self, serializer):
+        old = StaffWorkingHoursSerializer(serializer.instance).data
+        super().perform_update(serializer)
+        self._log_action('update', 'StaffWorkingHours', serializer.instance.id, {
+            'old': old,
+            'new': StaffWorkingHoursSerializer(serializer.instance).data
+        })
+        try:
+            admin_staff = Staff.objects.get(user=self.request.user, is_admin=True)
+            SpecialMessage.objects.create(
+                barbershop=admin_staff.barbershop,
+                source='automatic', display_type='banner', target_type='all_shop',
+                title='Personel çalışma saatleri güncellendi', content=f"{getattr(serializer.instance.staff.user, 'email', 'Personel')}",
+                start_datetime=timezone.now(), end_datetime=timezone.now() + timedelta(days=14),
+                priority=18, created_by=self.request.user, is_active=True,
+            )
+        except Exception:
+            pass
+
+    def perform_destroy(self, instance):
+        old = StaffWorkingHoursSerializer(instance).data
+        self._log_action('delete', 'StaffWorkingHours', instance.id, old)
+        super().perform_destroy(instance)
+        try:
+            admin_staff = Staff.objects.get(user=self.request.user, is_admin=True)
+            SpecialMessage.objects.create(
+                barbershop=admin_staff.barbershop,
+                source='automatic', display_type='banner', target_type='all_shop',
+                title='Personel çalışma saatleri kaldırıldı', content=f"{getattr(instance.staff.user, 'email', 'Personel')}",
+                start_datetime=timezone.now(), end_datetime=timezone.now() + timedelta(days=7),
+                priority=12, created_by=self.request.user, is_active=True,
+            )
+        except Exception:
+            pass
 
     def _log_action(self, action_type, target_model, target_id, changes):
         try:
