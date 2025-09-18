@@ -1285,16 +1285,19 @@ class PartnerSpecialMessageViewSet(viewsets.ModelViewSet):
             source = (request.data.get('source') or 'manual')
             target_type = (request.data.get('target_type') or 'all_shop')
 
-            # Serializer ile oluştur: varsayılanları serializer doldurur
+            # Serializer ile oluştur: eksikleri biz dolduruyoruz (client'tan bağımsız)
+            now = timezone.now()
             payload = {
                 'barbershop': admin_staff.barbershop.id,
-                'source': source,
-                'target_type': target_type,
+                'source': source or 'manual',
+                'display_type': request.data.get('display_type') or 'banner',
+                'target_type': target_type or 'all_shop',
                 'title': title,
                 'content': content,
-                # start/end göndermezsek serializer varsayılana set edecek
+                'start_datetime': request.data.get('start_datetime') or now.isoformat(),
+                'end_datetime': request.data.get('end_datetime') or (now + timedelta(days=365)).isoformat(),
             }
-            serializer = self.get_serializer(data=payload)
+            serializer = self.get_serializer(data=payload, partial=True)
             serializer.is_valid(raise_exception=True)
             obj = serializer.save()
             # target_staff ids varsa bağla
