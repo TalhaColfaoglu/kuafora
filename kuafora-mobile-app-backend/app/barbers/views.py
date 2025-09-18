@@ -6,7 +6,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.throttling import UserRateThrottle
 from django.utils import timezone
-from datetime import timedelta
+from datetime import timedelta, datetime
 
 from .models import (
     Favorite,
@@ -792,10 +792,10 @@ class PartnerServiceCategoryViewSet(viewsets.ModelViewSet):
         try:
             SpecialMessage.objects.create(
                 barbershop=admin_staff.barbershop,
-                source='automatic', display_type='banner', target_type='all_shop',
+                source='automatic', target_type='all_shop',
                 title='Yeni kategori eklendi', content=f"{serializer.instance.name}",
                 start_datetime=timezone.now(), end_datetime=timezone.now() + timedelta(days=30),
-                priority=30, created_by=self.request.user, is_active=True,
+                created_by=self.request.user, is_active=True,
             )
         except Exception:
             pass
@@ -817,10 +817,10 @@ class PartnerServiceViewSet(viewsets.ModelViewSet):
         try:
             SpecialMessage.objects.create(
                 barbershop=admin_staff.barbershop,
-                source='automatic', display_type='banner', target_type='all_shop',
+                source='automatic', target_type='all_shop',
                 title='Yeni hizmet eklendi', content=f"{serializer.instance.name}",
                 start_datetime=timezone.now(), end_datetime=timezone.now() + timedelta(days=30),
-                priority=50, created_by=self.request.user, is_active=True,
+                created_by=self.request.user, is_active=True,
             )
         except Exception:
             pass
@@ -831,10 +831,10 @@ class PartnerServiceViewSet(viewsets.ModelViewSet):
             admin_staff = Staff.objects.get(user=self.request.user, is_admin=True)
             SpecialMessage.objects.create(
                 barbershop=admin_staff.barbershop,
-                source='automatic', display_type='banner', target_type='all_shop',
+                source='automatic', target_type='all_shop',
                 title='Hizmet güncellendi', content=f"{serializer.instance.name}",
                 start_datetime=timezone.now(), end_datetime=timezone.now() + timedelta(days=14),
-                priority=40, created_by=self.request.user, is_active=True,
+                created_by=self.request.user, is_active=True,
             )
         except Exception:
             pass
@@ -846,10 +846,10 @@ class PartnerServiceViewSet(viewsets.ModelViewSet):
         try:
             SpecialMessage.objects.create(
                 barbershop=shop,
-                source='automatic', display_type='banner', target_type='all_shop',
+                source='automatic', target_type='all_shop',
                 title='Hizmet kaldırıldı', content=name,
                 start_datetime=timezone.now(), end_datetime=timezone.now() + timedelta(days=7),
-                priority=30, created_by=self.request.user, is_active=True,
+                created_by=self.request.user, is_active=True,
             )
         except Exception:
             pass
@@ -1305,8 +1305,8 @@ class PartnerSpecialMessageViewSet(viewsets.ModelViewSet):
                 target_type=payload['target_type'],
                 title=payload['title'],
                 content=payload['content'],
-                start_datetime=timezone.datetime.fromisoformat(payload['start_datetime']) if isinstance(payload['start_datetime'], str) else payload['start_datetime'],
-                end_datetime=timezone.datetime.fromisoformat(payload['end_datetime']) if isinstance(payload['end_datetime'], str) else payload['end_datetime'],
+                start_datetime=datetime.fromisoformat(payload['start_datetime']) if isinstance(payload['start_datetime'], str) else payload['start_datetime'],
+                end_datetime=datetime.fromisoformat(payload['end_datetime']) if isinstance(payload['end_datetime'], str) else payload['end_datetime'],
                 created_by=request.user,
                 is_active=True,
             )
@@ -1610,7 +1610,7 @@ class CalendarStatusViewSet(viewsets.ReadOnlyModelViewSet):
             start_datetime__date__lte=date,
             end_datetime__date__gte=date,
             target_type='all_shop'
-        ).order_by('-priority')
+        ).order_by('-created_at')
         
         return {
             'date': date,
