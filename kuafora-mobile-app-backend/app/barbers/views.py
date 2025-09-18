@@ -1266,7 +1266,10 @@ class PartnerSpecialMessageViewSet(viewsets.ModelViewSet):
             admin_qs = admin_qs.filter(barbershop_id=target_shop_id)
         admin_staff = admin_qs.first()
         if not admin_staff:
-            raise drf_serializers.ValidationError("No permission for this barbershop")
+            # Fallback: kullanıcının herhangi bir admin barbershop'u varsa onu kullan
+            admin_staff = Staff.objects.filter(user=self.request.user, is_admin=True).first()
+            if not admin_staff:
+                raise drf_serializers.ValidationError("No permission for this barbershop")
         # Varsayılanları ata ve kaydet
         now = timezone.now()
         start_dt = serializer.validated_data.get('start_datetime') or now
