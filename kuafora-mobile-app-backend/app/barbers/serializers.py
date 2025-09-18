@@ -277,7 +277,7 @@ class SpecialMessageSerializer(serializers.ModelSerializer):
     class Meta:
         model = SpecialMessage
         fields = (
-            "id", "barbershop", "source", "target_type", "title", "content",
+            "id", "barbershop", "source", "display_type", "target_type", "title", "content",
             "target_staff", "target_staff_names", "start_datetime", "end_datetime",
             "created_by", "created_by_name", "created_at", "updated_at", "is_active", "view_count"
         )
@@ -288,6 +288,7 @@ class SpecialMessageSerializer(serializers.ModelSerializer):
             'target_type': {'required': False},
             'is_active': {'required': False},
             'source': {'required': False},
+            'display_type': {'required': False},
             'barbershop': {'required': False},
             'target_staff': {'required': False},
         }
@@ -297,6 +298,32 @@ class SpecialMessageSerializer(serializers.ModelSerializer):
     
     def get_view_count(self, obj):
         return obj.view_logs.count()
+
+    def create(self, validated_data):
+        from django.utils import timezone
+        from datetime import timedelta
+        request = self.context.get('request')
+        user = getattr(request, 'user', None)
+        # Varsayılanlar
+        validated_data['source'] = validated_data.get('source') or 'manual'
+        validated_data['display_type'] = validated_data.get('display_type') or 'banner'
+        validated_data['target_type'] = validated_data.get('target_type') or 'all_shop'
+        validated_data['start_datetime'] = validated_data.get('start_datetime') or timezone.now()
+        validated_data['end_datetime'] = validated_data.get('end_datetime') or (timezone.now() + timedelta(days=365))
+        validated_data['is_active'] = validated_data.get('is_active', True)
+
+        # Barbershop otomatik belirle
+        if not validated_data.get('barbershop') and user and user.is_authenticated:
+            from .models import Staff
+            admin_staff = Staff.objects.filter(user=user, is_admin=True).first()
+            if admin_staff:
+                validated_data['barbershop'] = admin_staff.barbershop
+
+        # created_by otomatik
+        if user and user.is_authenticated:
+            validated_data['created_by'] = user
+
+        return super().create(validated_data)
 
 
 class MessageViewLogSerializer(serializers.ModelSerializer):
