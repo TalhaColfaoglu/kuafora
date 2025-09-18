@@ -1268,10 +1268,11 @@ class PartnerSpecialMessageViewSet(viewsets.ModelViewSet):
         obj = serializer.save(
             barbershop=admin_staff.barbershop,
             created_by=self.request.user,
+            source=serializer.validated_data.get('source') or 'manual',
             start_datetime=start_dt,
             end_datetime=end_dt,
             target_type=target_type,
-            is_visible=True,
+            is_active=True,
         )
         self._log_action('create', 'SpecialMessage', serializer.instance.id, serializer.validated_data)
 
