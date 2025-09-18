@@ -20,6 +20,7 @@ from .views import (
     PartnerOverrideViewSet,
     PartnerSpecialMessageViewSet,
     CalendarStatusViewSet,
+    AnnouncementsPublicApi,
 )
 
 router = DefaultRouter()
@@ -49,4 +50,7 @@ urlpatterns = [
     path("", include(router.urls)),
     path("favorites/", FavoriteListView.as_view(), name="favorites-list"),
     path("favorites/toggle/<int:barbershop_id>/", FavoriteToggleView.as_view(), name="favorites-toggle"),
+    # Public announcements for mobile app
+    path("announcements/", AnnouncementsPublicApi.as_view(), name="announcements-public"),
+    path("special-messages/", AnnouncementsPublicApi.as_view(), name="special-messages-public"),
 ]

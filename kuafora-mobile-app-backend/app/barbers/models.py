@@ -168,7 +168,7 @@ class Override(models.Model):
 
 
 class SpecialMessage(models.Model):
-    """Özel mesajlar - banner veya popup olarak gösterilebilir"""
+    """Özel mesajlar - duyurular bölümünde listelenir"""
     class MessageSource(models.TextChoices):
         AUTOMATIC = "automatic", "Otomatik (Sistem)"
         MANUAL = "manual", "Manuel (Admin)"
@@ -183,7 +183,7 @@ class SpecialMessage(models.Model):
 
     barbershop = models.ForeignKey(Barbershop, on_delete=models.CASCADE, related_name="special_messages")
     source = models.CharField(max_length=10, choices=MessageSource.choices)
-    display_type = models.CharField(max_length=10, choices=DisplayType.choices)
+    display_type = models.CharField(max_length=10, choices=DisplayType.choices, default="banner")
     target_type = models.CharField(max_length=15, choices=TargetType.choices)
     
     # Mesaj içeriği
@@ -205,7 +205,8 @@ class SpecialMessage(models.Model):
     is_active = models.BooleanField(default=True)
 
     class Meta:
-        ordering = ["-priority", "-created_at"]
+        # Önceliği dikkate almıyoruz; her zaman en yeni üstte
+        ordering = ["-created_at"]
 
     def __str__(self) -> str:
         return f"{self.barbershop.name} - {self.title}"

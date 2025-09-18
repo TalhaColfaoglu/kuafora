@@ -277,11 +277,17 @@ class SpecialMessageSerializer(serializers.ModelSerializer):
     class Meta:
         model = SpecialMessage
         fields = (
-            "id", "barbershop", "source", "display_type", "target_type", "title", "content",
-            "target_staff", "target_staff_names", "start_datetime", "end_datetime", "priority",
+            "id", "barbershop", "source", "target_type", "title", "content",
+            "target_staff", "target_staff_names", "start_datetime", "end_datetime",
             "created_by", "created_by_name", "created_at", "updated_at", "is_active", "view_count"
         )
         read_only_fields = ("created_at", "updated_at", "created_by", "view_count")
+        extra_kwargs = {
+            'start_datetime': {'required': False},
+            'end_datetime': {'required': False},
+            'target_type': {'required': False},
+            'is_active': {'required': False},
+        }
     
     def get_target_staff_names(self, obj):
         return [staff.user.email for staff in obj.target_staff.all()]

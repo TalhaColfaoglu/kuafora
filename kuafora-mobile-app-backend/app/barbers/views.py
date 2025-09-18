@@ -472,10 +472,10 @@ class PartnerServiceViewSet(viewsets.ModelViewSet):
         try:
             SpecialMessage.objects.create(
                 barbershop=admin_staff.barbershop,
-                source='automatic', display_type='banner', target_type='all_shop',
+                source='automatic', target_type='all_shop',
                 title='Yeni hizmet eklendi', content=f"{serializer.instance.name}",
                 start_datetime=timezone.now(), end_datetime=timezone.now() + timedelta(days=30),
-                priority=50, created_by=self.request.user, is_active=True,
+                created_by=self.request.user, is_active=True,
             )
         except Exception:
             pass
@@ -486,10 +486,10 @@ class PartnerServiceViewSet(viewsets.ModelViewSet):
             admin_staff = Staff.objects.get(user=self.request.user, is_admin=True)
             SpecialMessage.objects.create(
                 barbershop=admin_staff.barbershop,
-                source='automatic', display_type='banner', target_type='all_shop',
+                source='automatic', target_type='all_shop',
                 title='Hizmet güncellendi', content=f"{serializer.instance.name}",
                 start_datetime=timezone.now(), end_datetime=timezone.now() + timedelta(days=14),
-                priority=40, created_by=self.request.user, is_active=True,
+                created_by=self.request.user, is_active=True,
             )
         except Exception:
             pass
@@ -501,10 +501,10 @@ class PartnerServiceViewSet(viewsets.ModelViewSet):
         try:
             SpecialMessage.objects.create(
                 barbershop=shop,
-                source='automatic', display_type='banner', target_type='all_shop',
+                source='automatic', target_type='all_shop',
                 title='Hizmet kaldırıldı', content=name,
                 start_datetime=timezone.now(), end_datetime=timezone.now() + timedelta(days=7),
-                priority=30, created_by=self.request.user, is_active=True,
+                created_by=self.request.user, is_active=True,
             )
         except Exception:
             pass
@@ -703,10 +703,10 @@ class PartnerStaffViewSet(viewsets.ModelViewSet):
             display_name = getattr(user, 'full_name', '') or getattr(user, 'email', 'Yeni personel')
             SpecialMessage.objects.create(
                 barbershop=admin_staff.barbershop,
-                source='automatic', display_type='banner', target_type='all_shop',
+                source='automatic', target_type='all_shop',
                 title='Yeni personel aramıza katıldı', content=f"{display_name} takımımıza katıldı. Hoş geldin!",
                 start_datetime=timezone.now(), end_datetime=timezone.now() + timedelta(days=30),
-                priority=60, created_by=self.request.user, is_active=True,
+                created_by=self.request.user, is_active=True,
             )
         except Exception:
             pass
@@ -939,10 +939,10 @@ class PartnerShopWorkingHoursViewSet(viewsets.ModelViewSet):
         try:
             SpecialMessage.objects.create(
                 barbershop=admin_staff.barbershop,
-                source='automatic', display_type='banner', target_type='all_shop',
+                source='automatic', target_type='all_shop',
                 title='Çalışma saatleri güncellendi', content='Dükkan çalışma saatleri düzenlendi',
                 start_datetime=timezone.now(), end_datetime=timezone.now() + timedelta(days=14),
-                priority=20, created_by=self.request.user, is_active=True,
+                created_by=self.request.user, is_active=True,
             )
         except Exception:
             pass
@@ -958,10 +958,10 @@ class PartnerShopWorkingHoursViewSet(viewsets.ModelViewSet):
             admin_staff = Staff.objects.get(user=self.request.user, is_admin=True)
             SpecialMessage.objects.create(
                 barbershop=admin_staff.barbershop,
-                source='automatic', display_type='banner', target_type='all_shop',
+                source='automatic', target_type='all_shop',
                 title='Çalışma saatleri güncellendi', content='Dükkan çalışma saatleri düzenlendi',
                 start_datetime=timezone.now(), end_datetime=timezone.now() + timedelta(days=14),
-                priority=20, created_by=self.request.user, is_active=True,
+                created_by=self.request.user, is_active=True,
             )
         except Exception:
             pass
@@ -974,10 +974,10 @@ class PartnerShopWorkingHoursViewSet(viewsets.ModelViewSet):
             admin_staff = Staff.objects.get(user=self.request.user, is_admin=True)
             SpecialMessage.objects.create(
                 barbershop=admin_staff.barbershop,
-                source='automatic', display_type='banner', target_type='all_shop',
+                source='automatic', target_type='all_shop',
                 title='Çalışma saatleri kaldırıldı', content='Bazı çalışma saatleri kaldırıldı',
                 start_datetime=timezone.now(), end_datetime=timezone.now() + timedelta(days=7),
-                priority=15, created_by=self.request.user, is_active=True,
+                created_by=self.request.user, is_active=True,
             )
         except Exception:
             pass
@@ -1019,10 +1019,10 @@ class PartnerStaffWorkingHoursViewSet(viewsets.ModelViewSet):
             admin_staff = Staff.objects.get(user=self.request.user, is_admin=True)
             SpecialMessage.objects.create(
                 barbershop=admin_staff.barbershop,
-                source='automatic', display_type='banner', target_type='all_shop',
+                source='automatic', target_type='all_shop',
                 title='Personel çalışma saatleri güncellendi', content=f"{getattr(serializer.instance.staff.user, 'email', 'Personel')}",
                 start_datetime=timezone.now(), end_datetime=timezone.now() + timedelta(days=14),
-                priority=18, created_by=self.request.user, is_active=True,
+                created_by=self.request.user, is_active=True,
             )
         except Exception:
             pass
@@ -1038,10 +1038,10 @@ class PartnerStaffWorkingHoursViewSet(viewsets.ModelViewSet):
             admin_staff = Staff.objects.get(user=self.request.user, is_admin=True)
             SpecialMessage.objects.create(
                 barbershop=admin_staff.barbershop,
-                source='automatic', display_type='banner', target_type='all_shop',
+                source='automatic', target_type='all_shop',
                 title='Personel çalışma saatleri güncellendi', content=f"{getattr(serializer.instance.staff.user, 'email', 'Personel')}",
                 start_datetime=timezone.now(), end_datetime=timezone.now() + timedelta(days=14),
-                priority=18, created_by=self.request.user, is_active=True,
+                created_by=self.request.user, is_active=True,
             )
         except Exception:
             pass
@@ -1054,10 +1054,10 @@ class PartnerStaffWorkingHoursViewSet(viewsets.ModelViewSet):
             admin_staff = Staff.objects.get(user=self.request.user, is_admin=True)
             SpecialMessage.objects.create(
                 barbershop=admin_staff.barbershop,
-                source='automatic', display_type='banner', target_type='all_shop',
+                source='automatic', target_type='all_shop',
                 title='Personel çalışma saatleri kaldırıldı', content=f"{getattr(instance.staff.user, 'email', 'Personel')}",
                 start_datetime=timezone.now(), end_datetime=timezone.now() + timedelta(days=7),
-                priority=12, created_by=self.request.user, is_active=True,
+                created_by=self.request.user, is_active=True,
             )
         except Exception:
             pass
@@ -1198,11 +1198,11 @@ class PartnerOverrideViewSet(viewsets.ModelViewSet):
                 end_dt = dj_tz.make_aware(datetime.combine(ov.end_date or ov.start_date, ov.end_time or time(23, 59)))
                 msg = SpecialMessage.objects.create(
                     barbershop=ov.barbershop,
-                    source='automatic', display_type=(payload.get('display_type') or 'banner'),
+                    source='automatic',
                     target_type='all_shop' if not ov.staff else 'specific_staff',
                     title=title, content=content,
                     start_datetime=start_dt, end_datetime=end_dt,
-                    priority=100, created_by=self.request.user, is_active=True,
+                    created_by=self.request.user, is_active=True,
                 )
                 if ov.staff and msg.target_type == 'specific_staff':
                     msg.target_staff.add(ov.staff)
@@ -1260,8 +1260,33 @@ class PartnerSpecialMessageViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         admin_staff = Staff.objects.get(user=self.request.user, is_admin=True)
-        serializer.save(barbershop=admin_staff.barbershop, created_by=self.request.user)
+        # Banner/Popup, öncelik, aktiflik kaldırıldı → basitleştirilmiş kurallar
+        now = timezone.now()
+        start_dt = serializer.validated_data.get('start_datetime') or now
+        end_dt = serializer.validated_data.get('end_datetime') or (now + timedelta(days=365))
+        target_type = serializer.validated_data.get('target_type') or 'all_shop'
+        obj = serializer.save(
+            barbershop=admin_staff.barbershop,
+            created_by=self.request.user,
+            start_datetime=start_dt,
+            end_datetime=end_dt,
+            target_type=target_type,
+            is_visible=True,
+        )
         self._log_action('create', 'SpecialMessage', serializer.instance.id, serializer.validated_data)
+
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        # Otomatik mesajlar düzenlenemez
+        if instance.source != 'manual':
+            return Response({"detail": "Automatic messages cannot be edited"}, status=403)
+        return super().update(request, *args, **kwargs)
+
+    def partial_update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        if instance.source != 'manual':
+            return Response({"detail": "Automatic messages cannot be edited"}, status=403)
+        return super().partial_update(request, *args, **kwargs)
 
     def _log_action(self, action_type, target_model, target_id, changes):
         try:
@@ -1284,17 +1309,50 @@ class PartnerSpecialMessageViewSet(viewsets.ModelViewSet):
         try:
             admin_staff = Staff.objects.get(user=user, is_admin=True)
             now = timezone.now()
-            
+
             messages = SpecialMessage.objects.filter(
                 barbershop=admin_staff.barbershop,
                 is_active=True,
                 start_datetime__lte=now,
                 end_datetime__gte=now
-            ).order_by('-priority', '-created_at')
+            ).order_by('-created_at')
             
             return Response(SpecialMessageSerializer(messages, many=True).data)
         except Staff.DoesNotExist:
             return Response({"detail": "No permission"}, status=403)
+
+    @action(detail=True, methods=["post", "patch"], url_path="visibility")
+    def set_visibility(self, request, pk=None):
+        """Duyuru görünürlüğünü aç/kapat. Otomatik dahil tüm mesajlar için izin verilir."""
+        instance = self.get_object()
+        is_active = request.data.get('is_active')
+        if is_active is None:
+            return Response({"detail": "is_active required"}, status=400)
+        instance.is_active = bool(is_active)
+        instance.save(update_fields=["is_active"])
+        return Response(SpecialMessageSerializer(instance).data)
+
+
+class AnnouncementsPublicApi(generics.GenericAPIView):
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request):
+        barbershop_id = request.query_params.get('barbershop_id')
+        if not barbershop_id:
+            return Response({"detail": "barbershop_id required"}, status=400)
+        try:
+            bs = Barbershop.objects.get(id=barbershop_id)
+        except Barbershop.DoesNotExist:
+            return Response({"detail": "Barbershop not found"}, status=404)
+        now = timezone.now()
+        qs = SpecialMessage.objects.filter(
+            barbershop=bs,
+            is_active=True,
+            start_datetime__lte=now,
+            end_datetime__gte=now,
+        ).order_by('-created_at')
+        data = SpecialMessageSerializer(qs, many=True).data
+        return Response(data)
 
 
 class CalendarStatusViewSet(viewsets.ReadOnlyModelViewSet):
