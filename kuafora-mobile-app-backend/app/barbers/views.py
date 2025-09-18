@@ -1292,8 +1292,8 @@ class PartnerSpecialMessageViewSet(viewsets.ModelViewSet):
                 'target_type': target_type,
                 'title': title,
                 'content': content,
-                'start_datetime': start_dt,
-                'end_datetime': end_dt,
+                'start_datetime': getattr(start_dt, 'isoformat', lambda: start_dt)(),
+                'end_datetime': getattr(end_dt, 'isoformat', lambda: end_dt)(),
                 'is_active': True,
             }
             serializer = self.get_serializer(data=payload)
