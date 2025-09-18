@@ -1285,18 +1285,20 @@ class PartnerSpecialMessageViewSet(viewsets.ModelViewSet):
             source = (request.data.get('source') or 'manual')
             target_type = (request.data.get('target_type') or 'all_shop')
 
-            # Oluştur
-            obj = SpecialMessage.objects.create(
-                barbershop=admin_staff.barbershop,
-                source=source,
-                target_type=target_type,
-                title=title,
-                content=content,
-                start_datetime=start_dt,
-                end_datetime=end_dt,
-                created_by=request.user,
-                is_active=True,
-            )
+            # Serializer ile güvenli oluştur
+            payload = {
+                'barbershop': admin_staff.barbershop.id,
+                'source': source,
+                'target_type': target_type,
+                'title': title,
+                'content': content,
+                'start_datetime': start_dt,
+                'end_datetime': end_dt,
+                'is_active': True,
+            }
+            serializer = self.get_serializer(data=payload)
+            serializer.is_valid(raise_exception=True)
+            obj = serializer.save(barbershop=admin_staff.barbershop, created_by=request.user)
             # target_staff ids varsa bağla
             try:
                 staff_ids = request.data.get('target_staff') or []
