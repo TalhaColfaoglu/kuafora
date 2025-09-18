@@ -1259,8 +1259,15 @@ class PartnerSpecialMessageViewSet(viewsets.ModelViewSet):
         return SpecialMessage.objects.filter(barbershop__staff__user=user, barbershop__staff__is_admin=True)
 
     def perform_create(self, serializer):
-        admin_staff = Staff.objects.get(user=self.request.user, is_admin=True)
-        # Banner/Popup, öncelik, aktiflik kaldırıldı → basitleştirilmiş kurallar
+        # İsteği yapan kullanıcının admin olduğu barbershop'u belirle
+        target_shop_id = self.request.data.get('barbershop') or self.request.query_params.get('barbershop')
+        admin_qs = Staff.objects.filter(user=self.request.user, is_admin=True)
+        if target_shop_id:
+            admin_qs = admin_qs.filter(barbershop_id=target_shop_id)
+        admin_staff = admin_qs.first()
+        if not admin_staff:
+            raise drf_serializers.ValidationError("No permission for this barbershop")
+        # Varsayılanları ata ve kaydet
         now = timezone.now()
         start_dt = serializer.validated_data.get('start_datetime') or now
         end_dt = serializer.validated_data.get('end_datetime') or (now + timedelta(days=365))

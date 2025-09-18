@@ -288,6 +288,8 @@ class SpecialMessageSerializer(serializers.ModelSerializer):
             'target_type': {'required': False},
             'is_active': {'required': False},
             'source': {'required': False},
+            'barbershop': {'required': False},
+            'target_staff': {'required': False},
         }
     
     def get_target_staff_names(self, obj):
