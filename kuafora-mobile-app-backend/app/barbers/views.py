@@ -1258,6 +1258,56 @@ class PartnerSpecialMessageViewSet(viewsets.ModelViewSet):
         user = self.request.user
         return SpecialMessage.objects.filter(barbershop__staff__user=user, barbershop__staff__is_admin=True)
 
+    def create(self, request, *args, **kwargs):
+        """Kökten sağlam create: minimum alanlarla duyuru oluştur.
+        Beklenen zorunlu alanlar: title, content
+        Opsiyoneller: barbershop, target_type, source, start_datetime, end_datetime, target_staff[]
+        """
+        title = (request.data.get('title') or '').strip()
+        content = (request.data.get('content') or '').strip()
+        if not title or not content:
+            return Response({"detail": "title and content are required"}, status=400)
+
+        # Barbershop belirle
+        target_shop_id = request.data.get('barbershop') or request.query_params.get('barbershop')
+        admin_qs = Staff.objects.filter(user=request.user, is_admin=True)
+        if target_shop_id:
+            admin_qs = admin_qs.filter(barbershop_id=target_shop_id)
+        admin_staff = admin_qs.first()
+        if not admin_staff:
+            return Response({"detail": "No permission for this barbershop"}, status=403)
+
+        # Varsayılanlar
+        now = timezone.now()
+        start_dt = request.data.get('start_datetime') or now
+        end_dt = request.data.get('end_datetime') or (now + timedelta(days=365))
+        source = (request.data.get('source') or 'manual')
+        target_type = (request.data.get('target_type') or 'all_shop')
+
+        # Oluştur
+        obj = SpecialMessage.objects.create(
+            barbershop=admin_staff.barbershop,
+            source=source,
+            target_type=target_type,
+            title=title,
+            content=content,
+            start_datetime=start_dt,
+            end_datetime=end_dt,
+            created_by=request.user,
+            is_active=True,
+        )
+        # target_staff ids varsa bağla
+        try:
+            staff_ids = request.data.get('target_staff') or []
+            if isinstance(staff_ids, list) and staff_ids:
+                staff_objs = Staff.objects.filter(id__in=staff_ids, barbershop=admin_staff.barbershop)
+                obj.target_staff.add(*list(staff_objs))
+        except Exception:
+            pass
+
+        data = SpecialMessageSerializer(obj).data
+        return Response(data, status=201)
+
     def perform_create(self, serializer):
         # İsteği yapan kullanıcının admin olduğu barbershop'u belirle
         target_shop_id = self.request.data.get('barbershop') or self.request.query_params.get('barbershop')
