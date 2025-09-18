@@ -1297,9 +1297,19 @@ class PartnerSpecialMessageViewSet(viewsets.ModelViewSet):
                 'start_datetime': request.data.get('start_datetime') or now.isoformat(),
                 'end_datetime': request.data.get('end_datetime') or (now + timedelta(days=365)).isoformat(),
             }
-            serializer = self.get_serializer(data=payload, partial=True)
-            serializer.is_valid(raise_exception=True)
-            obj = serializer.save()
+            # Bypass serializer validation to avoid legacy required fields
+            obj = SpecialMessage.objects.create(
+                barbershop=admin_staff.barbershop,
+                source=payload['source'],
+                display_type=payload['display_type'],
+                target_type=payload['target_type'],
+                title=payload['title'],
+                content=payload['content'],
+                start_datetime=timezone.datetime.fromisoformat(payload['start_datetime']) if isinstance(payload['start_datetime'], str) else payload['start_datetime'],
+                end_datetime=timezone.datetime.fromisoformat(payload['end_datetime']) if isinstance(payload['end_datetime'], str) else payload['end_datetime'],
+                created_by=request.user,
+                is_active=True,
+            )
             # target_staff ids varsa bağla
             try:
                 staff_ids = request.data.get('target_staff') or []
@@ -1309,7 +1319,20 @@ class PartnerSpecialMessageViewSet(viewsets.ModelViewSet):
             except Exception:
                 pass
 
-            data = SpecialMessageSerializer(obj).data
+            data = {
+                'id': obj.id,
+                'barbershop': obj.barbershop.id,
+                'source': obj.source,
+                'display_type': obj.display_type,
+                'target_type': obj.target_type,
+                'title': obj.title,
+                'content': obj.content,
+                'start_datetime': obj.start_datetime.isoformat(),
+                'end_datetime': obj.end_datetime.isoformat(),
+                'is_active': obj.is_active,
+                'created_at': obj.created_at.isoformat(),
+                'updated_at': obj.updated_at.isoformat(),
+            }
             return Response(data, status=201)
         except Exception as e:
             return Response({"detail": f"create_failed: {str(e)}"}, status=400)
