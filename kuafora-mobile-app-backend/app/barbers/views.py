@@ -974,18 +974,52 @@ class PartnerShopWorkingHoursViewSet(viewsets.ModelViewSet):
             from rest_framework.exceptions import PermissionDenied
             raise PermissionDenied("Admin yetkisi gerekli")
 
+        # Debug: Log the request data
+        print(f"DEBUG: Request data: {request.data}")
+        print(f"DEBUG: Admin staff barbershop: {admin_staff.barbershop.id}")
+
         # Create directly without serializer validation issues
         try:
+            # Parse time strings to time objects
+            start_time_str = request.data.get('start_time')
+            end_time_str = request.data.get('end_time')
+            
+            from datetime import datetime
+            start_time = None
+            end_time = None
+            
+            if start_time_str:
+                try:
+                    start_time = datetime.strptime(start_time_str, '%H:%M:%S').time()
+                except ValueError:
+                    try:
+                        start_time = datetime.strptime(start_time_str, '%H:%M').time()
+                    except ValueError:
+                        return Response({"detail": f"Invalid start_time format: {start_time_str}"}, status=400)
+            
+            if end_time_str:
+                try:
+                    end_time = datetime.strptime(end_time_str, '%H:%M:%S').time()
+                except ValueError:
+                    try:
+                        end_time = datetime.strptime(end_time_str, '%H:%M').time()
+                    except ValueError:
+                        return Response({"detail": f"Invalid end_time format: {end_time_str}"}, status=400)
+
             obj = ShopWorkingHours.objects.create(
                 barbershop=admin_staff.barbershop,
                 day_of_week=request.data.get('day_of_week'),
-                start_time=request.data.get('start_time'),
-                end_time=request.data.get('end_time'),
+                start_time=start_time,
+                end_time=end_time,
                 is_closed=request.data.get('is_closed', False)
             )
+            print(f"DEBUG: Created ShopWorkingHours: {obj.id}")
             serializer = self.get_serializer(obj)
             return Response(serializer.data, status=201)
         except Exception as e:
+            print(f"DEBUG: Exception in create: {str(e)}")
+            import traceback
+            traceback.print_exc()
             return Response({"detail": f"Creation failed: {str(e)}"}, status=400)
 
     def perform_create(self, serializer):
