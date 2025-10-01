@@ -978,7 +978,7 @@ class PartnerShopWorkingHoursViewSet(viewsets.ModelViewSet):
         print(f"DEBUG: Request data: {request.data}")
         print(f"DEBUG: Admin staff barbershop: {admin_staff.barbershop.id}")
 
-        # Create directly without serializer validation issues
+        # Create/update directly without serializer validation issues
         try:
             # Parse time strings to time objects
             start_time_str = request.data.get('start_time')
@@ -1006,12 +1006,25 @@ class PartnerShopWorkingHoursViewSet(viewsets.ModelViewSet):
                     except ValueError:
                         return Response({"detail": f"Invalid end_time format: {end_time_str}"}, status=400)
 
-            obj = ShopWorkingHours.objects.create(
+            day_code = (request.data.get('day_of_week') or '').upper()
+            valid_days = {'MON','TUE','WED','THU','FRI','SAT','SUN'}
+            if day_code not in valid_days:
+                return Response({"detail": f"Invalid day_of_week: {day_code}"}, status=400)
+
+            is_closed = bool(request.data.get('is_closed', False))
+            if is_closed:
+                start_time = None
+                end_time = None
+
+            # Upsert to avoid unique_together IntegrityError
+            obj, _created = ShopWorkingHours.objects.update_or_create(
                 barbershop=admin_staff.barbershop,
-                day_of_week=request.data.get('day_of_week'),
-                start_time=start_time,
-                end_time=end_time,
-                is_closed=request.data.get('is_closed', False)
+                day_of_week=day_code,
+                defaults={
+                    'start_time': start_time,
+                    'end_time': end_time,
+                    'is_closed': is_closed,
+                }
             )
             print(f"DEBUG: Created ShopWorkingHours: {obj.id}")
             serializer = self.get_serializer(obj)
