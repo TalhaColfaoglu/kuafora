@@ -79,7 +79,14 @@ class StaffSerializer(serializers.ModelSerializer):
         u = getattr(obj, "user", None)
         if not u:
             return ""
-        return getattr(u, "full_name", None) or f"{getattr(u, 'first_name', '')} {getattr(u, 'last_name', '')}".strip() or getattr(u, 'email', '')
+        full = getattr(u, "full_name", None)
+        if full and full != "****":
+            return full
+        combo = f"{getattr(u, 'first_name', '')} {getattr(u, 'last_name', '')}".strip()
+        if combo:
+            return combo
+        email = getattr(u, 'email', '')
+        return email
 
 
 class WorkScheduleSerializer(serializers.ModelSerializer):
@@ -244,6 +251,9 @@ class ShopWorkingHoursSerializer(serializers.ModelSerializer):
         model = ShopWorkingHours
         fields = ("id", "barbershop", "day_of_week", "start_time", "end_time", "is_closed", "created_at", "updated_at")
         read_only_fields = ("created_at", "updated_at")
+        extra_kwargs = {
+            'barbershop': {'required': False},  # Set in perform_create
+        }
 
 
 class StaffWorkingHoursSerializer(serializers.ModelSerializer):
@@ -264,7 +274,7 @@ class OverrideSerializer(serializers.ModelSerializer):
         fields = (
             "id", "barbershop", "staff", "staff_name", "override_type", "override_scope",
             "start_date", "end_date", "start_time", "end_time", "is_recurring", "recurring_rule",
-            "reason", "created_by", "created_by_name", "created_at", "updated_at"
+            "reason", "is_active", "created_by", "created_by_name", "created_at", "updated_at"
         )
         read_only_fields = ("created_at", "updated_at", "created_by")
 

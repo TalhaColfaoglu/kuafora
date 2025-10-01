@@ -158,6 +158,7 @@ class Override(models.Model):
     
     # Meta bilgiler
     reason = models.CharField(max_length=200, blank=True, help_text="Override sebebi")
+    is_active = models.BooleanField(default=True, help_text="Override aktif mi?")
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="created_overrides")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -165,6 +166,13 @@ class Override(models.Model):
     def __str__(self) -> str:
         staff_name = f" - {self.staff.user.email}" if self.staff else ""
         return f"{self.barbershop.name}{staff_name} - {self.get_override_scope_display()}"
+    
+    def save(self, *args, **kwargs):
+        """Auto-deactivate if end_date is in the past"""
+        from django.utils import timezone
+        if self.end_date and self.end_date < timezone.now().date():
+            self.is_active = False
+        super().save(*args, **kwargs)
 
 
 class SpecialMessage(models.Model):

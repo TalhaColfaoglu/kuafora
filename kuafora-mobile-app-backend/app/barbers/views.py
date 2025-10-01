@@ -194,25 +194,60 @@ class BarbershopViewSet(viewsets.ReadOnlyModelViewSet):
 
             return Response(result)
 
-        # PUT
+        # PUT (normalize "week" payload)
         if not request.user or not request.user.is_authenticated:
             return Response({"detail": "Authentication required"}, status=status.HTTP_401_UNAUTHORIZED)
 
-        # İsteği yapan kullanıcı bu dükkanda admin mi?
         admin_staff = Staff.objects.filter(barbershop_id=pk, user=request.user, is_admin=True).first()
         if not admin_staff:
             return Response({"detail": "Not allowed"}, status=status.HTTP_403_FORBIDDEN)
 
-        hours = request.data if isinstance(request.data, list) else request.data.get("hours", [])
-        if not isinstance(hours, list):
-            return Response({"detail": "Invalid payload"}, status=400)
+        body = request.data or {}
+        week = body.get("week")
+        if not isinstance(week, list) or len(week) != 7:
+            return Response({"detail": "invalid_payload", "errors": {"week": "7 items required (MON..SUN)"}}, status=400)
 
-        # Eski saatleri sil, yenilerini ekle
-        WorkSchedule.objects.filter(staff=admin_staff).delete()
-        serializer = StaffHoursSerializer(data=hours, many=True)
-        serializer.is_valid(raise_exception=True)
-        for h in serializer.validated_data:
-            WorkSchedule.objects.create(staff=admin_staff, **h)
+        def parse_hhmm(s: str):
+            try:
+                hh, mm = str(s).split(":")
+                return timezone.datetime(2000, 1, 1, int(hh), int(mm)).time()
+            except Exception:
+                return None
+
+        valid_days = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"]
+        errors = {}
+        normalized = []
+        for item in week:
+            day = (item.get("day") or "").upper()
+            is_closed = bool(item.get("is_closed", False))
+            open_s = item.get("open")
+            close_s = item.get("close")
+            if day not in valid_days:
+                errors[day or "?"] = "invalid_day"
+                continue
+            if is_closed:
+                normalized.append({"day": day, "is_closed": True, "open": None, "close": None})
+                continue
+            st = parse_hhmm(open_s)
+            et = parse_hhmm(close_s)
+            if not st or not et:
+                errors[day] = "invalid_time"
+                continue
+            normalized.append({"day": day, "is_closed": False, "open": st, "close": et})
+
+        if errors:
+            return Response({"detail": "invalid_payload", "errors": errors}, status=400)
+
+        # Replace ShopWorkingHours for this shop
+        ShopWorkingHours.objects.filter(barbershop_id=pk).delete()
+        for it in normalized:
+            ShopWorkingHours.objects.create(
+                barbershop_id=pk,
+                day_of_week=it["day"],
+                is_closed=it["is_closed"],
+                start_time=it["open"],
+                end_time=it["close"],
+            )
         return Response({"detail": "Updated"})
 
     @action(detail=True, methods=["get", "post"], url_path="reviews")
@@ -932,7 +967,12 @@ class PartnerShopWorkingHoursViewSet(viewsets.ModelViewSet):
         return ShopWorkingHours.objects.filter(barbershop__staff__user=user, barbershop__staff__is_admin=True)
 
     def perform_create(self, serializer):
-        admin_staff = Staff.objects.get(user=self.request.user, is_admin=True)
+        try:
+            admin_staff = Staff.objects.get(user=self.request.user, is_admin=True)
+        except Staff.DoesNotExist:
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied("Admin yetkisi gerekli")
+        
         serializer.save(barbershop=admin_staff.barbershop)
         self._log_action('create', 'ShopWorkingHours', serializer.instance.id, serializer.validated_data)
         # Duyuru
@@ -1006,6 +1046,88 @@ class PartnerStaffWorkingHoursViewSet(viewsets.ModelViewSet):
         # Politika: Hem admin hem personel SADECE kendi staff kaydı için saatleri yönetebilir
         my_staff = Staff.objects.filter(user=user).first()
         return StaffWorkingHours.objects.filter(staff=my_staff)
+
+    @action(detail=False, methods=["get", "put"], url_path="weekly")
+    def weekly(self, request):
+        """GET: Personelin haftalık saatlerini (shop inherit ile) döndür.
+        PUT: Personelin haftalık saatlerini ayarla; inherits_shop_hours=true ise personel kayıtlarını sil.
+        """
+        staff_id = request.query_params.get("staff_id") or request.data.get("staff_id")
+        if not staff_id:
+            return Response({"detail": "staff_id required"}, status=400)
+        try:
+            staff = Staff.objects.get(id=staff_id, barbershop__staff__user=request.user)
+        except Staff.DoesNotExist:
+            return Response({"detail": "Staff not found or no permission"}, status=404)
+
+        valid_days = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"]
+
+        if request.method == "GET":
+            result = []
+            inherits = True
+            for day in valid_days:
+                shop = ShopWorkingHours.objects.filter(barbershop=staff.barbershop, day_of_week=day).first()
+                sh = StaffWorkingHours.objects.filter(staff=staff, day_of_week=day).first()
+                if sh:
+                    inherits = False
+                    result.append({
+                        "day": day,
+                        "is_closed": sh.is_closed,
+                        "open": sh.start_time.strftime("%H:%M") if sh.start_time else None,
+                        "close": sh.end_time.strftime("%H:%M") if sh.end_time else None,
+                        "source": "staff",
+                    })
+                else:
+                    result.append({
+                        "day": day,
+                        "is_closed": bool(getattr(shop, 'is_closed', False)),
+                        "open": getattr(shop, 'start_time', None) and shop.start_time.strftime("%H:%M"),
+                        "close": getattr(shop, 'end_time', None) and shop.end_time.strftime("%H:%M"),
+                        "source": "shop",
+                    })
+            return Response({"staff_id": staff.id, "inherits_shop_hours": inherits, "week": result})
+
+        # PUT
+        inherits_shop_hours = bool(request.data.get("inherits_shop_hours", False))
+        week = request.data.get("week") or []
+        if inherits_shop_hours:
+            StaffWorkingHours.objects.filter(staff=staff).delete()
+            return Response({"detail": "Inherited from shop"})
+
+        def parse_hhmm(s: str):
+            try:
+                hh, mm = str(s).split(":"); return timezone.datetime(2000,1,1,int(hh),int(mm)).time()
+            except Exception:
+                return None
+
+        errors = {}
+        normalized = []
+        if not isinstance(week, list) or len(week) != 7:
+            return Response({"detail": "invalid_payload", "errors": {"week": "7 items required"}}, status=400)
+        for item in week:
+            day = (item.get("day") or "").upper()
+            if day not in valid_days:
+                errors[day or "?"] = "invalid_day"; continue
+            is_closed = bool(item.get("is_closed", False))
+            if is_closed:
+                normalized.append({"day": day, "is_closed": True, "open": None, "close": None}); continue
+            st = parse_hhmm(item.get("open")); et = parse_hhmm(item.get("close"))
+            if not st or not et:
+                errors[day] = "invalid_time"; continue
+            normalized.append({"day": day, "is_closed": False, "open": st, "close": et})
+        if errors:
+            return Response({"detail": "invalid_payload", "errors": errors}, status=400)
+
+        StaffWorkingHours.objects.filter(staff=staff).delete()
+        for it in normalized:
+            StaffWorkingHours.objects.create(
+                staff=staff,
+                day_of_week=it["day"],
+                is_closed=it["is_closed"],
+                start_time=it["open"],
+                end_time=it["close"],
+            )
+        return Response({"detail": "Updated"})
 
     def perform_create(self, serializer):
         user = self.request.user
@@ -1221,6 +1343,102 @@ class PartnerOverrideViewSet(viewsets.ModelViewSet):
             )
         except Staff.DoesNotExist:
             pass
+
+    @action(detail=False, methods=['post'], url_path='today-quick-set')
+    def today_quick_set(self, request):
+        """
+        Quick set today's override
+        Payload: {
+          "override_scope": "full_day_closed" | "late_opening" | "early_closing" | "time_range_closed",
+          "time": "14:00" (for late_opening/early_closing),
+          "start_time": "12:00", "end_time": "13:00" (for time_range_closed),
+          "reason": "Optional message"
+        }
+        """
+        from django.utils import timezone
+        from datetime import datetime, time as dt_time, timedelta
+        
+        user = request.user
+        admin_staff = Staff.objects.filter(user=user, is_admin=True).first()
+        if not admin_staff:
+            return Response({"detail": "Admin yetkisi gerekli"}, status=403)
+        
+        scope = request.data.get('override_scope')
+        reason = request.data.get('reason', '')
+        today = timezone.now().date()
+        
+        # Delete any existing today overrides for this shop
+        Override.objects.filter(
+            barbershop=admin_staff.barbershop,
+            override_type='shop_global',
+            start_date=today,
+            end_date=today
+        ).delete()
+        
+        override_data = {
+            'barbershop': admin_staff.barbershop,
+            'override_type': 'shop_global',
+            'override_scope': scope,
+            'start_date': today,
+            'end_date': today,
+            'reason': reason,
+            'created_by': user,
+            'is_active': True
+        }
+        
+        if scope == 'late_opening':
+            override_data['start_time'] = request.data.get('time', '10:00')
+        elif scope == 'early_closing':
+            override_data['end_time'] = request.data.get('time', '18:00')
+        elif scope == 'time_range_closed':
+            override_data['start_time'] = request.data.get('start_time', '12:00')
+            override_data['end_time'] = request.data.get('end_time', '13:00')
+        
+        override = Override.objects.create(**override_data)
+        
+        # Create announcement if reason provided
+        if reason:
+            SpecialMessage.objects.create(
+                barbershop=admin_staff.barbershop,
+                source='automatic',
+                target_type='all_shop',
+                title='Özel Durum',
+                content=reason,
+                start_datetime=timezone.now(),
+                end_datetime=timezone.now() + timedelta(hours=24),
+                created_by=user,
+                is_active=True
+            )
+        
+        return Response(OverrideSerializer(override).data, status=201)
+    
+    @action(detail=False, methods=['get'], url_path='today-active')
+    def today_active(self, request):
+        """Get today's active overrides for the shop"""
+        from django.utils import timezone
+        user = request.user
+        admin_staff = Staff.objects.filter(user=user, is_admin=True).first()
+        if not admin_staff:
+            return Response({"detail": "Admin yetkisi gerekli"}, status=403)
+        
+        today = timezone.now().date()
+        overrides = Override.objects.filter(
+            barbershop=admin_staff.barbershop,
+            override_type='shop_global',
+            start_date__lte=today,
+            end_date__gte=today,
+            is_active=True
+        )
+        
+        return Response(OverrideSerializer(overrides, many=True).data)
+    
+    @action(detail=True, methods=['post'], url_path='deactivate')
+    def deactivate(self, request, pk=None):
+        """Deactivate (undo) an override"""
+        override = self.get_object()
+        override.is_active = False
+        override.save()
+        return Response({"detail": "Override deactivated"})
 
     @action(detail=False, methods=["post"], url_path="quick-override")
     def quick_override(self, request):
@@ -1489,6 +1707,74 @@ class CalendarStatusViewSet(viewsets.ReadOnlyModelViewSet):
             return Response(StaffCalendarStatusSerializer(status).data)
         except (Staff.DoesNotExist, ValueError):
             return Response({"detail": "Invalid staff or date"}, status=404)
+
+    @action(detail=False, methods=["get"], url_path="today-status")
+    def today_status(self, request):
+        """Get today's status for a barbershop (for customer app)"""
+        from django.utils import timezone
+        barbershop_id = request.query_params.get('barbershop_id')
+        
+        if not barbershop_id:
+            return Response({"detail": "barbershop_id required"}, status=400)
+        
+        try:
+            barbershop = Barbershop.objects.get(id=barbershop_id)
+            today = timezone.now().date()
+            
+            # Check for active override
+            override = Override.objects.filter(
+                barbershop=barbershop,
+                override_type='shop_global',
+                start_date__lte=today,
+                end_date__gte=today,
+                is_active=True
+            ).first()
+            
+            if override:
+                scope_labels = {
+                    'full_day_closed': 'Bugün Kapalı',
+                    'late_opening': 'Geç Açılış',
+                    'early_closing': 'Erken Kapanış',
+                    'time_range_closed': 'Mola',
+                }
+                message = scope_labels.get(override.override_scope, 'Özel Durum')
+                if override.reason:
+                    message += f' - {override.reason}'
+                if override.start_time:
+                    message += f' ({override.start_time.strftime("%H:%M")})'
+                if override.end_time:
+                    message += f' - {override.end_time.strftime("%H:%M")}'
+                
+                return Response({
+                    'is_open': False if override.override_scope == 'full_day_closed' else True,
+                    'status_message': message,
+                    'active_override': {
+                        'scope': override.override_scope,
+                        'reason': override.reason,
+                        'start_time': override.start_time.strftime("%H:%M") if override.start_time else None,
+                        'end_time': override.end_time.strftime("%H:%M") if override.end_time else None,
+                    }
+                })
+            
+            # No override, check regular shop hours
+            weekday_code_map = {0: "MON", 1: "TUE", 2: "WED", 3: "THU", 4: "FRI", 5: "SAT", 6: "SUN"}
+            day_code = weekday_code_map.get(today.weekday())
+            shop_hours = ShopWorkingHours.objects.filter(barbershop=barbershop, day_of_week=day_code).first()
+            
+            if shop_hours and not shop_hours.is_closed:
+                return Response({
+                    'is_open': True,
+                    'status_message': f'Açık • {shop_hours.start_time.strftime("%H:%M")} - {shop_hours.end_time.strftime("%H:%M")}',
+                    'active_override': None
+                })
+            else:
+                return Response({
+                    'is_open': False,
+                    'status_message': 'Bugün Kapalı',
+                    'active_override': None
+                })
+        except Barbershop.DoesNotExist:
+            return Response({"detail": "Barbershop not found"}, status=404)
 
     @action(detail=False, methods=["get"], url_path="weekly")
     def weekly_calendar(self, request):
