@@ -966,6 +966,25 @@ class PartnerShopWorkingHoursViewSet(viewsets.ModelViewSet):
         user = self.request.user
         return ShopWorkingHours.objects.filter(barbershop__staff__user=user, barbershop__staff__is_admin=True)
 
+    def create(self, request, *args, **kwargs):
+        """Force-inject barbershop before serializer validation to avoid 400."""
+        try:
+            admin_staff = Staff.objects.get(user=request.user, is_admin=True)
+        except Staff.DoesNotExist:
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied("Admin yetkisi gerekli")
+
+        payload = request.data.copy()
+        # If client did not send barbershop, provide it explicitly to satisfy any legacy required validations
+        if not payload.get('barbershop'):
+            payload['barbershop'] = admin_staff.barbershop.id
+
+        serializer = self.get_serializer(data=payload)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        headers = self.get_success_headers(serializer.data)
+        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+
     def perform_create(self, serializer):
         try:
             admin_staff = Staff.objects.get(user=self.request.user, is_admin=True)
