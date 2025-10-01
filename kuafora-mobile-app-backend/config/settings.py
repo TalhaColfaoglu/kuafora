@@ -15,7 +15,7 @@ env_file_name = ".env.prod" if os.getenv("DJANGO_ENV") == "production" else ".en
 environ.Env.read_env(env_file=os.path.join(BASE_DIR, env_file_name))
 
 
-DEBUG = env.bool("DJANGO_DEBUG", default=False)
+DEBUG = True  # Temporarily enable debug to see real errors
 SECRET_KEY = env("SECRET_KEY", default="change-me")
 ALLOWED_HOSTS = env.list("ALLOWED_HOSTS", default=["*"])
 
