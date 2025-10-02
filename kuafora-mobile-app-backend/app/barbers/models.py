@@ -325,6 +325,53 @@ class Favorite(models.Model):
 
 
 
+# --- Holidays & Special Days ---
+class OfficialHoliday(models.Model):
+    """Materialized list of official holidays (TR). Read-only for partners."""
+    class HolidayType(models.TextChoices):
+        NATIONAL = "national", "National"
+        RELIGIOUS = "religious", "Religious"
+        OBSERVANCE = "observance", "Observance"
+
+    date = models.DateField(db_index=True)
+    name = models.CharField(max_length=120)
+    type = models.CharField(max_length=12, choices=HolidayType.choices)
+    country_code = models.CharField(max_length=2, default="TR", db_index=True)
+    year = models.IntegerField(db_index=True)
+
+    class Meta:
+        unique_together = ("country_code", "date")
+        ordering = ["date"]
+
+    def __str__(self) -> str:
+        return f"{self.date} - {self.name}"
+
+
+class ShopHolidayOverride(models.Model):
+    """Per shop decision for a given date (closed/open/custom hours or custom special day)."""
+    class Status(models.TextChoices):
+        CLOSED = "closed", "Closed all day"
+        OPEN = "open", "Open all day"
+        CUSTOM = "custom_hours", "Custom hours"
+
+    barbershop = models.ForeignKey(Barbershop, on_delete=models.CASCADE, related_name="holiday_overrides")
+    date = models.DateField(db_index=True)
+    status = models.CharField(max_length=20, choices=Status.choices)
+    open_time = models.TimeField(null=True, blank=True)
+    close_time = models.TimeField(null=True, blank=True)
+    title = models.CharField(max_length=120, blank=True)
+    note = models.CharField(max_length=200, blank=True)
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="holiday_overrides")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ("barbershop", "date")
+        ordering = ["date"]
+
+    def __str__(self) -> str:
+        return f"{self.barbershop.name} - {self.date} - {self.status}"
+
 class LastViewed(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="last_viewed")
     barbershop = models.ForeignKey(Barbershop, on_delete=models.CASCADE, related_name="viewed_by")

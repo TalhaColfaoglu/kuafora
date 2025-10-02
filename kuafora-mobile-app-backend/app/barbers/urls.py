@@ -21,6 +21,7 @@ from .views import (
     PartnerSpecialMessageViewSet,
     CalendarStatusViewSet,
     AnnouncementsPublicApi,
+    PartnerHolidayOverrideViewSet,
 )
 
 router = DefaultRouter()
@@ -39,6 +40,7 @@ router.register(r"partner/shop-working-hours", PartnerShopWorkingHoursViewSet, b
 router.register(r"partner/staff-working-hours", PartnerStaffWorkingHoursViewSet, basename="partner-staff-working-hours")
 router.register(r"partner/overrides", PartnerOverrideViewSet, basename="partner-override")
 router.register(r"partner/special-messages", PartnerSpecialMessageViewSet, basename="partner-special-message")
+router.register(r"partner/holidayoverride", PartnerHolidayOverrideViewSet, basename="partner-holiday-override")
 router.register(r"calendar", CalendarStatusViewSet, basename="calendar-status")
 
 urlpatterns = [

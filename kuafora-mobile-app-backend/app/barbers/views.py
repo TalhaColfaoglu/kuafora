@@ -26,6 +26,8 @@ from .models import (
     ServiceCategory,
     LastViewed,
     ViewEvent,
+    OfficialHoliday,
+    ShopHolidayOverride,
     
 )
 from .serializers import (
@@ -50,6 +52,8 @@ from .serializers import (
     CalendarStatusSerializer,
     StaffCalendarStatusSerializer,
     WeeklyCalendarSerializer,
+    OfficialHolidaySerializer,
+    ShopHolidayOverrideSerializer,
 )
 from .filters import BarbershopFilter
 from .permissions import IsShopAdmin
@@ -1825,7 +1829,33 @@ class CalendarStatusViewSet(viewsets.ReadOnlyModelViewSet):
                     }
                 })
             
-            # No override, check regular shop hours
+            # Holiday decisions (shop-specific first, then official default)
+            decision = ShopHolidayOverride.objects.filter(barbershop=barbershop, date=today).first()
+            if decision:
+                if decision.status == ShopHolidayOverride.Status.CLOSED:
+                    return Response({
+                        'is_open': False,
+                        'status_message': f"Bugün Kapalı - {decision.title or 'Özel Gün'}",
+                        'active_override': None
+                    })
+                if decision.status == ShopHolidayOverride.Status.CUSTOM:
+                    ot = decision.open_time.strftime('%H:%M') if decision.open_time else None
+                    ct = decision.close_time.strftime('%H:%M') if decision.close_time else None
+                    return Response({
+                        'is_open': True,
+                        'status_message': f"Özel Saatler • {ot} - {ct}",
+                        'active_override': None
+                    })
+                # OPEN -> continue
+            else:
+                if OfficialHoliday.objects.filter(country_code='TR', date=today).exists():
+                    return Response({
+                        'is_open': False,
+                        'status_message': 'Bugün Kapalı (Resmi Tatil)',
+                        'active_override': None
+                    })
+
+            # No override/holiday, check regular shop hours
             weekday_code_map = {0: "MON", 1: "TUE", 2: "WED", 3: "THU", 4: "FRI", 5: "SAT", 6: "SUN"}
             day_code = weekday_code_map.get(today.weekday())
             shop_hours = ShopWorkingHours.objects.filter(barbershop=barbershop, day_of_week=day_code).first()
@@ -1889,6 +1919,92 @@ class CalendarStatusViewSet(viewsets.ReadOnlyModelViewSet):
             return Response(WeeklyCalendarSerializer(weekly_data).data)
         except (Barbershop.DoesNotExist, ValueError):
             return Response({"detail": "Invalid barbershop or date"}, status=404)
+
+    @action(detail=False, methods=["get"], url_path="holidays")
+    def holidays(self, request):
+        """Merged list of official holidays and shop overrides for a given year."""
+        barbershop_id = request.query_params.get('barbershop_id')
+        year = int(request.query_params.get('year') or timezone.now().year)
+        with_feed = str(request.query_params.get('feed') or 'false').lower() in ('1','true','yes')
+        if not barbershop_id:
+            return Response({"detail": "barbershop_id required"}, status=400)
+        try:
+            barbershop = Barbershop.objects.get(id=barbershop_id)
+        except Barbershop.DoesNotExist:
+            return Response({"detail": "Barbershop not found"}, status=404)
+
+        officials = OfficialHoliday.objects.filter(country_code='TR', year=year)
+        overrides = ShopHolidayOverride.objects.filter(barbershop=barbershop, date__year=year)
+        data = {
+            'officials': OfficialHolidaySerializer(officials, many=True).data,
+            'overrides': ShopHolidayOverrideSerializer(overrides, many=True).data,
+        }
+        if with_feed:
+            # Build feed: chronological cards with effective status and range grouping
+            from datetime import timedelta as _td
+            # Map date->effective
+            ov_map = {o.date: o for o in overrides}
+            items = []
+            for oh in officials.order_by('date'):
+                dec = ov_map.get(oh.date)
+                eff = dec.status if dec else 'closed'  # default closed
+                items.append({'date': oh.date, 'name': oh.name, 'is_official': True, 'effective_status': eff, 'override_id': getattr(dec,'id',None)})
+            # Add custom special days (those with title)
+            for o in overrides.order_by('date'):
+                if getattr(o, 'title', ''):
+                    items.append({'date': o.date, 'name': o.title, 'is_official': False, 'effective_status': o.status, 'override_id': o.id})
+            # Sort
+            items.sort(key=lambda x: x['date'])
+            # Merge consecutive same-name ranges with same status
+            feed = []
+            for it in items:
+                if not feed:
+                    feed.append({'date_start': it['date'], 'date_end': it['date'], 'name': it['name'], 'is_official': it['is_official'], 'effective_status': it['effective_status'], 'override_id': it['override_id']})
+                    continue
+                last = feed[-1]
+                if last['name'] == it['name'] and last['effective_status'] == it['effective_status'] and (last['date_end'] + _td(days=1) == it['date']):
+                    last['date_end'] = it['date']
+                else:
+                    feed.append({'date_start': it['date'], 'date_end': it['date'], 'name': it['name'], 'is_official': it['is_official'], 'effective_status': it['effective_status'], 'override_id': it['override_id']})
+            # Serialize dates
+            def _fmt(d):
+                return d.strftime('%Y-%m-%d')
+            for f in feed:
+                f['date_start'] = _fmt(f['date_start'])
+                f['date_end'] = _fmt(f['date_end'])
+            data['feed'] = feed
+        return Response(data)
+
+
+class PartnerHolidayOverrideViewSet(viewsets.ModelViewSet):
+    serializer_class = ShopHolidayOverrideSerializer
+    permission_classes = [permissions.IsAuthenticated, IsShopAdmin]
+
+    def get_queryset(self):
+        user = self.request.user
+        return ShopHolidayOverride.objects.filter(barbershop__staff__user=user, barbershop__staff__is_admin=True)
+
+    def perform_create(self, serializer):
+        # Upsert by (barbershop,date)
+        admin_staff = Staff.objects.get(user=self.request.user, is_admin=True)
+        date = serializer.validated_data.get('date')
+        defaults = {
+            'status': serializer.validated_data.get('status'),
+            'open_time': serializer.validated_data.get('open_time'),
+            'close_time': serializer.validated_data.get('close_time'),
+            'title': serializer.validated_data.get('title', ''),
+            'note': serializer.validated_data.get('note', ''),
+            'created_by': self.request.user,
+        }
+        obj, _ = ShopHolidayOverride.objects.update_or_create(
+            barbershop=admin_staff.barbershop, date=date, defaults=defaults
+        )
+        serializer.instance = obj
+
+    def perform_update(self, serializer):
+        # Ensure barbershop remains same and user is admin
+        admin_staff = Staff.objects.get(user=self.request.user, is_admin=True)
+        serializer.save(barbershop=admin_staff.barbershop)
 
     def _calculate_shop_status(self, barbershop, date):
         """Dükkan durumunu hesapla - öncelik sırasına göre"""

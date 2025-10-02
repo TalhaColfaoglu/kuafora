@@ -262,6 +262,35 @@ class StaffWorkingHoursSerializer(serializers.ModelSerializer):
     class Meta:
         model = StaffWorkingHours
         fields = ("id", "staff", "staff_name", "day_of_week", "start_time", "end_time", "is_closed", "created_at", "updated_at")
+
+
+# --- Holidays & Special Days ---
+from .models import OfficialHoliday, ShopHolidayOverride
+
+
+class OfficialHolidaySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = OfficialHoliday
+        fields = ("id", "date", "name", "type", "country_code", "year")
+
+
+class ShopHolidayOverrideSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ShopHolidayOverride
+        fields = (
+            "id",
+            "barbershop",
+            "date",
+            "status",
+            "open_time",
+            "close_time",
+            "title",
+            "note",
+            "created_by",
+            "created_at",
+            "updated_at",
+        )
+        read_only_fields = ("created_by", "created_at", "updated_at")
         read_only_fields = ("created_at", "updated_at")
 
 
