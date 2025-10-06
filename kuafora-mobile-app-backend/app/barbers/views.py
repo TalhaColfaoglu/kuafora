@@ -159,6 +159,15 @@ class BarbershopViewSet(viewsets.ReadOnlyModelViewSet):
                         result.append({'day_of_week': code,'start_time': None,'end_time': None,'is_closed': True})
                     else:
                         result.append({'day_of_week': code,'start_time': shop_hours.start_time,'end_time': shop_hours.end_time,'is_closed': False})
+            # stringify times to prevent ProgrammingError in JSON serialization
+            def _fmt(t):
+                try:
+                    return t.strftime('%H:%M') if t else None
+                except Exception:
+                    return None
+            for it in result:
+                it['start_time'] = _fmt(it.get('start_time'))
+                it['end_time'] = _fmt(it.get('end_time'))
             return Response(result)
 
         # PUT (normalize "week" payload)
@@ -1652,13 +1661,9 @@ class PartnerSpecialMessageViewSet(viewsets.ModelViewSet):
         user = request.user
         try:
             admin_staff = Staff.objects.get(user=user, is_admin=True)
-            now = timezone.now()
-
             messages = SpecialMessage.objects.filter(
                 barbershop=admin_staff.barbershop,
                 is_active=True,
-                start_datetime__lte=now,
-                end_datetime__gte=now
             ).order_by('-created_at')
             
             return Response(SpecialMessageSerializer(messages, many=True).data)
@@ -1688,12 +1693,10 @@ class AnnouncementsPublicApi(generics.GenericAPIView):
             bs = Barbershop.objects.get(id=barbershop_id)
         except Barbershop.DoesNotExist:
             return Response({"detail": "Barbershop not found"}, status=404)
-        now = timezone.now()
+        # Sade ve esnek: sadece is_active=True filtrele, geçmiş/gelecek tarih kısıtını kaldır
         qs = SpecialMessage.objects.filter(
             barbershop=bs,
             is_active=True,
-            start_datetime__lte=now,
-            end_datetime__gte=now,
         ).order_by('-created_at')
         data = SpecialMessageSerializer(qs, many=True).data
         return Response(data)
