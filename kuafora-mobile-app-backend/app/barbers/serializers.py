@@ -336,11 +336,8 @@ class SpecialMessageSerializer(serializers.ModelSerializer):
         return [staff.user.email for staff in obj.target_staff.all()]
     
     def get_view_count(self, obj):
-        try:
-            return obj.view_logs.count()
-        except Exception:
-            # Table might not exist yet (migrations pending) → fail safe
-            return 0
+        # DB tablo eksikliği veya yoğunluk için herhangi bir sorgu yapma; sabit 0 dön
+        return 0
 
     def create(self, validated_data):
         from django.utils import timezone

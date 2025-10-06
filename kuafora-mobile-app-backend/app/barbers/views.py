@@ -1519,7 +1519,11 @@ class PartnerSpecialMessageViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-        return SpecialMessage.objects.filter(barbershop__staff__user=user, barbershop__staff__is_admin=True)
+        qs = SpecialMessage.objects.filter(barbershop__staff__user=user, barbershop__staff__is_admin=True)
+        barbershop_id = self.request.query_params.get('barbershop')
+        if barbershop_id:
+            qs = qs.filter(barbershop_id=barbershop_id)
+        return qs
 
     def create(self, request, *args, **kwargs):
         """Kökten sağlam create: minimum alanlarla duyuru oluştur.
