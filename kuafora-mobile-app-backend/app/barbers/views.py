@@ -115,87 +115,50 @@ class BarbershopViewSet(viewsets.ReadOnlyModelViewSet):
 
             code_list = ["MON","TUE","WED","THU","FRI","SAT","SUN"]
             result = []
+            try:
+                for code in code_list:
+                    has_full_closed = Override.objects.filter(
+                        barbershop=shop,
+                        override_type='shop_global',
+                        start_date__lte=timezone.localdate(),
+                        end_date__gte=timezone.localdate(),
+                        override_scope='full_day_closed',
+                    ).exists()
+                    if has_full_closed:
+                        result.append({'day_of_week': code,'start_time': None,'end_time': None,'is_closed': True})
+                        continue
 
-            for code in code_list:
-                # 1) Global override kontrolü
-                has_full_closed = Override.objects.filter(
-                    barbershop=shop,
-                    override_type='shop_global',
-                    start_date__lte=timezone.localdate(),  # tarih aralığı bazlı haftalık tablo genel; bugün kapsamlı check yerine record varlığını kontrol ederiz
-                    end_date__gte=timezone.localdate(),
-                    override_scope='full_day_closed',
-                ).exists()
+                    staff_hours = StaffWorkingHours.objects.filter(
+                        staff__barbershop=shop, day_of_week=code, is_closed=False,
+                    )
+                    shop_hours = ShopWorkingHours.objects.filter(barbershop=shop, day_of_week=code).first()
 
-                if has_full_closed:
-                    result.append({
-                        'day_of_week': code,
-                        'start_time': None,
-                        'end_time': None,
-                        'is_closed': True,
-                    })
-                    continue
+                    if not staff_hours.exists():
+                        if not shop_hours or shop_hours.is_closed:
+                            result.append({'day_of_week': code,'start_time': None,'end_time': None,'is_closed': True})
+                        else:
+                            result.append({'day_of_week': code,'start_time': shop_hours.start_time,'end_time': shop_hours.end_time,'is_closed': False})
+                        continue
 
-                # 2) StaffWorkingHours (day_code) açık olanlar
-                staff_hours = StaffWorkingHours.objects.filter(
-                    staff__barbershop=shop,
-                    day_of_week=code,
-                    is_closed=False,
-                )
-
-                # 3) ShopWorkingHours (day_code)
-                shop_hours = ShopWorkingHours.objects.filter(
-                    barbershop=shop,
-                    day_of_week=code,
-                ).first()
-
-                if not staff_hours.exists():
-                    # Personel varsayılanında çalışan yok; dükkan saatine bak
+                    candidates_start = [sh.start_time or (shop_hours.start_time if shop_hours else None) for sh in staff_hours]
+                    candidates_end = [sh.end_time or (shop_hours.end_time if shop_hours else None) for sh in staff_hours]
+                    candidates_start = [c for c in candidates_start if c is not None]
+                    candidates_end = [c for c in candidates_end if c is not None]
+                    if not candidates_start or not candidates_end:
+                        result.append({'day_of_week': code,'start_time': None,'end_time': None,'is_closed': True})
+                        continue
+                    start_time = min(candidates_start)
+                    end_time = max(candidates_end)
+                    result.append({'day_of_week': code,'start_time': start_time,'end_time': end_time,'is_closed': False})
+            except Exception:
+                # Safe fallback: return only ShopWorkingHours to avoid 500s
+                result = []
+                for code in code_list:
+                    shop_hours = ShopWorkingHours.objects.filter(barbershop=shop, day_of_week=code).first()
                     if not shop_hours or shop_hours.is_closed:
-                        result.append({
-                            'day_of_week': code,
-                            'start_time': None,
-                            'end_time': None,
-                            'is_closed': True,
-                        })
+                        result.append({'day_of_week': code,'start_time': None,'end_time': None,'is_closed': True})
                     else:
-                        result.append({
-                            'day_of_week': code,
-                            'start_time': shop_hours.start_time,
-                            'end_time': shop_hours.end_time,
-                            'is_closed': False,
-                        })
-                    continue
-
-                # 4) Personel saatlerine göre en erken/birleşik saat aralığı
-                candidates_start = []
-                candidates_end = []
-                for sh in staff_hours:
-                    candidates_start.append(sh.start_time or (shop_hours.start_time if shop_hours else None))
-                    candidates_end.append(sh.end_time or (shop_hours.end_time if shop_hours else None))
-                # None'ları filtrele
-                candidates_start = [c for c in candidates_start if c is not None]
-                candidates_end = [c for c in candidates_end if c is not None]
-
-                if not candidates_start or not candidates_end:
-                    # Bilgi yok; kapalı say
-                    result.append({
-                        'day_of_week': code,
-                        'start_time': None,
-                        'end_time': None,
-                        'is_closed': True,
-                    })
-                    continue
-
-                start_time = min(candidates_start)
-                end_time = max(candidates_end)
-
-                result.append({
-                    'day_of_week': code,
-                    'start_time': start_time,
-                    'end_time': end_time,
-                    'is_closed': False,
-                })
-
+                        result.append({'day_of_week': code,'start_time': shop_hours.start_time,'end_time': shop_hours.end_time,'is_closed': False})
             return Response(result)
 
         # PUT (normalize "week" payload)
@@ -1754,8 +1717,34 @@ class CalendarStatusViewSet(viewsets.ReadOnlyModelViewSet):
             date = datetime.strptime(date_str, '%Y-%m-%d').date()
             barbershop = Barbershop.objects.get(id=barbershop_id)
             
-            # Takvim hesaplama mantığı burada olacak
-            status = self._calculate_shop_status(barbershop, date)
+            # Takvim hesaplama mantığı
+            try:
+                status = self._calculate_shop_status(barbershop, date)
+            except Exception:
+                # Safe fallback: shop working hours only
+                weekday_code_map = {0: "MON", 1: "TUE", 2: "WED", 3: "THU", 4: "FRI", 5: "SAT", 6: "SUN"}
+                code = weekday_code_map.get(date.weekday())
+                sh = ShopWorkingHours.objects.filter(barbershop=barbershop, day_of_week=code).first()
+                if not sh or sh.is_closed:
+                    status = {
+                        'date': date,
+                        'is_open': False,
+                        'opening_time': None,
+                        'closing_time': None,
+                        'status_message': 'Dükkan bugün kapalı',
+                        'active_overrides': [],
+                        'active_messages': [],
+                    }
+                else:
+                    status = {
+                        'date': date,
+                        'is_open': True,
+                        'opening_time': sh.start_time,
+                        'closing_time': sh.end_time,
+                        'status_message': None,
+                        'active_overrides': [],
+                        'active_messages': [],
+                    }
             
             return Response(CalendarStatusSerializer(status).data)
         except (Barbershop.DoesNotExist, ValueError):
