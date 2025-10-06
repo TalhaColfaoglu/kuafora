@@ -1525,6 +1525,15 @@ class PartnerSpecialMessageViewSet(viewsets.ModelViewSet):
             qs = qs.filter(barbershop_id=barbershop_id)
         return qs
 
+    def list(self, request, *args, **kwargs):
+        # Bypass serializer to avoid touching view_logs/view_count when DB table is missing
+        qs = self.filter_queryset(self.get_queryset())
+        data = list(qs.values(
+            'id','barbershop_id','source','display_type','target_type','title','content',
+            'start_datetime','end_datetime','is_active','created_at','updated_at'
+        ))
+        return Response(data)
+
     def create(self, request, *args, **kwargs):
         """Kökten sağlam create: minimum alanlarla duyuru oluştur.
         Beklenen zorunlu alanlar: title, content
@@ -1665,12 +1674,15 @@ class PartnerSpecialMessageViewSet(viewsets.ModelViewSet):
         user = request.user
         try:
             admin_staff = Staff.objects.get(user=user, is_admin=True)
-            messages = SpecialMessage.objects.filter(
+            qs = SpecialMessage.objects.filter(
                 barbershop=admin_staff.barbershop,
                 is_active=True,
             ).order_by('-created_at')
-            
-            return Response(SpecialMessageSerializer(messages, many=True).data)
+            data = list(qs.values(
+                'id','barbershop_id','source','display_type','target_type','title','content',
+                'start_datetime','end_datetime','is_active','created_at','updated_at'
+            ))
+            return Response(data)
         except Staff.DoesNotExist:
             return Response({"detail": "No permission"}, status=403)
 
@@ -1697,12 +1709,15 @@ class AnnouncementsPublicApi(generics.GenericAPIView):
             bs = Barbershop.objects.get(id=barbershop_id)
         except Barbershop.DoesNotExist:
             return Response({"detail": "Barbershop not found"}, status=404)
-        # Sade ve esnek: sadece is_active=True filtrele, geçmiş/gelecek tarih kısıtını kaldır
+        # Sade ve esnek: is_active=True, tarih kısıtı yok; serializer kullanmadan sözlük döndür
         qs = SpecialMessage.objects.filter(
             barbershop=bs,
             is_active=True,
         ).order_by('-created_at')
-        data = SpecialMessageSerializer(qs, many=True).data
+        data = list(qs.values(
+            'id','barbershop_id','source','display_type','target_type','title','content',
+            'start_datetime','end_datetime','is_active','created_at','updated_at'
+        ))
         return Response(data)
 
 
