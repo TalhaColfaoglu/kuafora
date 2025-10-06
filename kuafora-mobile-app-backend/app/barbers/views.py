@@ -1717,34 +1717,30 @@ class CalendarStatusViewSet(viewsets.ReadOnlyModelViewSet):
             date = datetime.strptime(date_str, '%Y-%m-%d').date()
             barbershop = Barbershop.objects.get(id=barbershop_id)
             
-            # Takvim hesaplama mantığı
-            try:
-                status = self._calculate_shop_status(barbershop, date)
-            except Exception:
-                # Safe fallback: shop working hours only
-                weekday_code_map = {0: "MON", 1: "TUE", 2: "WED", 3: "THU", 4: "FRI", 5: "SAT", 6: "SUN"}
-                code = weekday_code_map.get(date.weekday())
-                sh = ShopWorkingHours.objects.filter(barbershop=barbershop, day_of_week=code).first()
-                if not sh or sh.is_closed:
-                    status = {
-                        'date': date,
-                        'is_open': False,
-                        'opening_time': None,
-                        'closing_time': None,
-                        'status_message': 'Dükkan bugün kapalı',
-                        'active_overrides': [],
-                        'active_messages': [],
-                    }
-                else:
-                    status = {
-                        'date': date,
-                        'is_open': True,
-                        'opening_time': sh.start_time,
-                        'closing_time': sh.end_time,
-                        'status_message': None,
-                        'active_overrides': [],
-                        'active_messages': [],
-                    }
+            # Güvenli fallback: sadece shop working hours'a göre durum
+            weekday_code_map = {0: "MON", 1: "TUE", 2: "WED", 3: "THU", 4: "FRI", 5: "SAT", 6: "SUN"}
+            code = weekday_code_map.get(date.weekday())
+            sh = ShopWorkingHours.objects.filter(barbershop=barbershop, day_of_week=code).first()
+            if not sh or sh.is_closed:
+                status = {
+                    'date': date,
+                    'is_open': False,
+                    'opening_time': None,
+                    'closing_time': None,
+                    'status_message': 'Dükkan bugün kapalı',
+                    'active_overrides': [],
+                    'active_messages': [],
+                }
+            else:
+                status = {
+                    'date': date,
+                    'is_open': True,
+                    'opening_time': sh.start_time,
+                    'closing_time': sh.end_time,
+                    'status_message': None,
+                    'active_overrides': [],
+                    'active_messages': [],
+                }
             
             return Response(CalendarStatusSerializer(status).data)
         except (Barbershop.DoesNotExist, ValueError):
@@ -1880,20 +1876,20 @@ class CalendarStatusViewSet(viewsets.ReadOnlyModelViewSet):
             
             barbershop = Barbershop.objects.get(id=barbershop_id)
             
-            # Haftalık verileri topla
-            shop_hours = ShopWorkingHours.objects.filter(barbershop=barbershop)
-            staff_hours = StaffWorkingHours.objects.filter(staff__barbershop=barbershop)
-            overrides = Override.objects.filter(
+            # Haftalık verileri topla (values ile serialize edilir)
+            shop_hours = list(ShopWorkingHours.objects.filter(barbershop=barbershop).values('day_of_week','is_closed','start_time','end_time'))
+            staff_hours = list(StaffWorkingHours.objects.filter(staff__barbershop=barbershop).values('staff_id','day_of_week','is_closed','start_time','end_time'))
+            overrides = list(Override.objects.filter(
                 barbershop=barbershop,
                 start_date__lte=week_end,
                 end_date__gte=week_start
-            )
-            messages = SpecialMessage.objects.filter(
+            ).values('id','override_type','override_scope','start_date','end_date','start_time','end_time','reason'))
+            messages = list(SpecialMessage.objects.filter(
                 barbershop=barbershop,
                 is_active=True,
                 start_datetime__date__lte=week_end,
                 end_datetime__date__gte=week_start
-            )
+            ).values('id','title','content','is_active','start_datetime','end_datetime','source','created_at','updated_at'))
             
             weekly_data = {
                 'barbershop_id': barbershop.id,
@@ -1905,7 +1901,28 @@ class CalendarStatusViewSet(viewsets.ReadOnlyModelViewSet):
                 'messages': messages
             }
             
-            return Response(WeeklyCalendarSerializer(weekly_data).data)
+            # Serializer kullanmadan sade dict döndür (500 hatalarını önlemek için)
+            def _fmt_time(t):
+                return t.strftime('%H:%M') if t else None
+            for it in shop_hours:
+                it['start_time'] = _fmt_time(it.get('start_time'))
+                it['end_time'] = _fmt_time(it.get('end_time'))
+            for it in staff_hours:
+                it['start_time'] = _fmt_time(it.get('start_time'))
+                it['end_time'] = _fmt_time(it.get('end_time'))
+            for it in overrides:
+                it['start_time'] = _fmt_time(it.get('start_time'))
+                it['end_time'] = _fmt_time(it.get('end_time'))
+
+            return Response({
+                'barbershop_id': barbershop.id,
+                'week_start': week_start.strftime('%Y-%m-%d'),
+                'week_end': week_end.strftime('%Y-%m-%d'),
+                'shop_hours': shop_hours,
+                'staff_hours': staff_hours,
+                'overrides': overrides,
+                'messages': messages,
+            })
         except (Barbershop.DoesNotExist, ValueError):
             return Response({"detail": "Invalid barbershop or date"}, status=404)
 
