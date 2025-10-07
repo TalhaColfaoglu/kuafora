@@ -13,6 +13,7 @@ from .models import (
     
     Barbershop,
     Staff,
+    StaffService,
     WorkSchedule,
     ShopWorkingHours,
     StaffWorkingHours,
@@ -37,6 +38,7 @@ from .serializers import (
     ReviewSerializer,
     ReviewReplySerializer,
     StaffSerializer,
+    StaffServiceSerializer,
     WorkScheduleSerializer,
     ServiceSerializer,
     ServiceCategorySerializer,
@@ -642,6 +644,25 @@ class PartnerStaffViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         user = self.request.user
         return Staff.objects.filter(barbershop__staff__user=user, barbershop__staff__is_admin=True).select_related("barbershop", "user")
+    
+    @action(detail=False, methods=['get', 'patch'], url_path='me')
+    def my_profile(self, request):
+        """
+        Personelin kendi profilini görüntülemesi/güncellemesi.
+        Her personel sadece kendi bilgilerini değiştirebilir.
+        """
+        staff = Staff.objects.filter(user=request.user).first()
+        if not staff:
+            return Response({"detail": "Staff profile not found"}, status=404)
+        
+        if request.method == 'PATCH':
+            serializer = self.get_serializer(staff, data=request.data, partial=True)
+            serializer.is_valid(raise_exception=True)
+            serializer.save()
+            return Response(serializer.data)
+        else:
+            serializer = self.get_serializer(staff)
+            return Response(serializer.data)
 
     @action(detail=False, methods=["get"], url_path="my-shops")
     def my_shops(self, request):
@@ -1867,17 +1888,31 @@ class CalendarStatusViewSet(viewsets.ReadOnlyModelViewSet):
             day_code = weekday_code_map.get(today.weekday())
             shop_hours = ShopWorkingHours.objects.filter(barbershop=barbershop, day_of_week=day_code).first()
             
+            # Aktif personel sayısı hesapla (şu anda çalışan personeller)
+            now = timezone.now()
+            active_staff_count = 0
+            if shop_hours and not shop_hours.is_closed:
+                active_staff_count = StaffWorkingHours.objects.filter(
+                    staff__barbershop=barbershop,
+                    day_of_week=day_code,
+                    start_time__lte=now.time(),
+                    end_time__gte=now.time(),
+                    is_closed=False
+                ).values('staff').distinct().count()
+            
             if shop_hours and not shop_hours.is_closed:
                 return Response({
                     'is_open': True,
                     'status_message': f'Açık • {shop_hours.start_time.strftime("%H:%M")} - {shop_hours.end_time.strftime("%H:%M")}',
-                    'active_override': None
+                    'active_override': None,
+                    'active_staff_count': active_staff_count
                 })
             else:
                 return Response({
                     'is_open': False,
                     'status_message': 'Bugün Kapalı',
-                    'active_override': None
+                    'active_override': None,
+                    'active_staff_count': 0
                 })
         except Barbershop.DoesNotExist:
             return Response({"detail": "Barbershop not found"}, status=404)
@@ -2002,6 +2037,27 @@ class CalendarStatusViewSet(viewsets.ReadOnlyModelViewSet):
                 f['date_end'] = _fmt(f['date_end'])
             data['feed'] = feed
         return Response(data)
+
+
+class StaffServiceViewSet(viewsets.ModelViewSet):
+    """
+    Personellerin kendi hizmetlerini yönetmesi için.
+    Sadece personel kendi kaydını düzenleyebilir.
+    """
+    serializer_class = StaffServiceSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def get_queryset(self):
+        user = self.request.user
+        # Kendi staff profilime ait servisleri getir
+        return StaffService.objects.filter(staff__user=user).select_related('service', 'staff')
+    
+    def perform_create(self, serializer):
+        staff = Staff.objects.filter(user=self.request.user).first()
+        if not staff:
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied("Staff profile not found")
+        serializer.save(staff=staff)
 
 
 class PartnerHolidayOverrideViewSet(viewsets.ModelViewSet):

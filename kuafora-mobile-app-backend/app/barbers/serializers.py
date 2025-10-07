@@ -66,14 +66,33 @@ class StaffCatalogSerializer(serializers.ModelSerializer):
         fields = ("id", "image")
 
 
+class StaffServiceSerializer(serializers.ModelSerializer):
+    service_name = serializers.CharField(source='service.name', read_only=True)
+    service_id = serializers.IntegerField(source='service.id', read_only=True)
+    
+    class Meta:
+        model = StaffService
+        fields = ("id", "staff", "service", "service_id", "service_name", "price", "duration_minutes", "is_active", "created_at", "updated_at")
+        read_only_fields = ("id", "created_at", "updated_at")
+
+
 class StaffSerializer(serializers.ModelSerializer):
     catalog = StaffCatalogSerializer(many=True, read_only=True)
     user_full_name = serializers.SerializerMethodField()
+    staff_services = serializers.SerializerMethodField()
+    rating_avg = serializers.FloatField(read_only=True)
 
     class Meta:
         model = Staff
-        fields = ("id", "barbershop", "user", "photo", "email", "certificate", "is_admin", "catalog", "total_reviews", "user_full_name")
-        read_only_fields = ("total_reviews",)
+        fields = (
+            "id", "barbershop", "user", "photo", "email", "certificate", "is_admin",
+            "catalog", "total_reviews", "user_full_name",
+            # Yeni alanlar:
+            "bio", "gender_preference", "experience_years", "career_start_year", "tags",
+            "rating_avg", "staff_services",
+            "auto_approval", "commission_rate", "appointment_interval"
+        )
+        read_only_fields = ("total_reviews", "rating_avg")
 
     def get_user_full_name(self, obj):
         u = getattr(obj, "user", None)
@@ -87,6 +106,10 @@ class StaffSerializer(serializers.ModelSerializer):
             return combo
         email = getattr(u, 'email', '')
         return email
+    
+    def get_staff_services(self, obj):
+        from .models import StaffService
+        return StaffServiceSerializer(obj.staff_services.filter(is_active=True), many=True).data
 
 
 class WorkScheduleSerializer(serializers.ModelSerializer):
@@ -115,13 +138,14 @@ class ReviewSerializer(serializers.ModelSerializer):
     user_display_name = serializers.SerializerMethodField()
     user_full_name = serializers.SerializerMethodField()
     barbershop_name = serializers.SerializerMethodField()
+    staff_name = serializers.SerializerMethodField()
     replies = ReviewReplySerializer(many=True, read_only=True)
     replies_count = serializers.SerializerMethodField()
 
     class Meta:
         model = Review
-        fields = ("id", "user", "barbershop", "rating", "comment", "is_anonymous", "created_at", "updated_at", "user_display_name", "user_full_name", "barbershop_name", "replies", "replies_count")
-        read_only_fields = ("created_at", "updated_at", "user", "barbershop", "user_display_name", "user_full_name", "barbershop_name", "replies", "replies_count")
+        fields = ("id", "user", "barbershop", "staff", "rating", "comment", "is_anonymous", "created_at", "updated_at", "user_display_name", "user_full_name", "barbershop_name", "staff_name", "replies", "replies_count")
+        read_only_fields = ("created_at", "updated_at", "user", "barbershop", "user_display_name", "user_full_name", "barbershop_name", "staff_name", "replies", "replies_count")
 
     def get_user_display_name(self, obj):
         if obj.is_anonymous:
@@ -146,6 +170,14 @@ class ReviewSerializer(serializers.ModelSerializer):
         bs = getattr(obj, "barbershop", None)
         return getattr(bs, "name", None)
     
+    def get_staff_name(self, obj):
+        if not obj.staff:
+            return None
+        u = getattr(obj.staff, "user", None)
+        if not u:
+            return None
+        return getattr(u, "full_name", None) or getattr(u, "email", None)
+    
     def get_replies_count(self, obj):
         return obj.replies.count()
 
@@ -160,12 +192,20 @@ class ServiceCategorySerializer(serializers.ModelSerializer):
 
 class ServiceSerializer(serializers.ModelSerializer):
     category_name = serializers.CharField(source='category.name', read_only=True)
+    price_range = serializers.SerializerMethodField()
     
     class Meta:
         model = Service
-        fields = ("id", "barbershop", "category", "category_name", "name", "price", "duration", "is_active", "created_at")
+        fields = ("id", "barbershop", "category", "category_name", "name", "price", "duration", "is_active", "created_at", "price_range")
         # barbershop, perform_create içinde atanıyor → inputta zorunlu olmasın
-        read_only_fields = ("barbershop", "created_at")
+        read_only_fields = ("barbershop", "created_at", "price_range")
+    
+    def get_price_range(self, obj):
+        from .models import StaffService
+        staff_prices = StaffService.objects.filter(service=obj, is_active=True).values_list('price', flat=True)
+        if not staff_prices:
+            return {'min': float(obj.price), 'max': float(obj.price)}
+        return {'min': float(min(staff_prices)), 'max': float(max(staff_prices))}
 
 
 class ReviewReplySerializer(serializers.ModelSerializer):

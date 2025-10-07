@@ -53,6 +53,47 @@ class Staff(models.Model):
     certificate = models.BooleanField(default=False)
     is_admin = models.BooleanField(default=False)
     total_reviews = models.PositiveIntegerField(default=0, editable=False)
+    
+    # Personel profil bilgileri
+    bio = models.TextField(blank=True, help_text="Personel hakkında açıklama")
+    gender_preference = models.CharField(
+        max_length=10,
+        choices=[
+            ('all', 'Herkese Hizmet'),
+            ('male', 'Sadece Erkek'),
+            ('female', 'Sadece Kadın'),
+        ],
+        default='all'
+    )
+    experience_years = models.PositiveIntegerField(
+        null=True, blank=True,
+        help_text="Kuaförlük deneyimi (yıl)"
+    )
+    career_start_year = models.PositiveIntegerField(
+        null=True, blank=True,
+        help_text="Kuaförlüğe başladığı yıl (YYYY)"
+    )
+    tags = models.JSONField(
+        default=list, blank=True,
+        help_text="Uzmanlık etiketleri: ['boyama_ustasi', '20_yillik_usta', ...]"
+    )
+    rating_avg = models.FloatField(default=0, editable=False)
+    
+    # Randevu sistemi için (şimdilik boş kalabilir)
+    auto_approval = models.BooleanField(
+        default=False,
+        help_text="Randevular otomatik onayla mı?"
+    )
+    commission_rate = models.DecimalField(
+        max_digits=5, decimal_places=2,
+        null=True, blank=True,
+        help_text="Personelin yaptığı hizmetten alacağı pay (yüzde)"
+    )
+    appointment_interval = models.PositiveIntegerField(
+        default=15,
+        choices=[(5, '5 dk'), (10, '10 dk'), (15, '15 dk'), (20, '20 dk'), (30, '30 dk')],
+        help_text="Randevu aralığı (dakika)"
+    )
 
 
 class StaffCatalogImage(models.Model):
@@ -258,9 +299,36 @@ class CalendarAuditLog(models.Model):
         return f"{self.barbershop.name} - {self.get_action_type_display()} - {self.target_model}"
 
 
+class StaffService(models.Model):
+    """
+    Bir personelin sunduğu hizmet ve o hizmet için belirlediği fiyat/süre.
+    Dükkan hizmetlerinden seçilir; personel kendi fiyat ve süresini belirler.
+    """
+    staff = models.ForeignKey('Staff', on_delete=models.CASCADE, related_name="staff_services")
+    service = models.ForeignKey('Service', on_delete=models.CASCADE, related_name="staff_offerings")
+    price = models.DecimalField(max_digits=10, decimal_places=2)
+    duration_minutes = models.PositiveIntegerField()
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        unique_together = ("staff", "service")
+        ordering = ["service__name"]
+    
+    def __str__(self):
+        return f"{self.staff.email} - {self.service.name} (₺{self.price})"
+
+
 class Review(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="reviews")
     barbershop = models.ForeignKey(Barbershop, on_delete=models.CASCADE, related_name="reviews")
+    staff = models.ForeignKey(
+        Staff, on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name="reviews",
+        help_text="Hangi personele yapılan yorum (opsiyonel)"
+    )
     rating = models.IntegerField(validators=[MinValueValidator(1), MaxValueValidator(5)])
     comment = models.TextField(blank=True)
     is_anonymous = models.BooleanField(default=False)
@@ -268,7 +336,12 @@ class Review(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        unique_together = ("user", "barbershop")
+        constraints = [
+            models.UniqueConstraint(
+                fields=['user', 'barbershop', 'staff'],
+                name='unique_user_barbershop_staff_review'
+            )
+        ]
 
 
 class ReviewReply(models.Model):
