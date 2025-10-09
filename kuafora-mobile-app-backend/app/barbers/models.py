@@ -299,6 +299,24 @@ class CalendarAuditLog(models.Model):
         return f"{self.barbershop.name} - {self.get_action_type_display()} - {self.target_model}"
 
 
+class StaffServiceCategory(models.Model):
+    """
+    Bir personelin sunduğu hizmet kategorileri.
+    Personel dükkanın mevcut kategorilerinden seçim yapar.
+    """
+    staff = models.ForeignKey('Staff', on_delete=models.CASCADE, related_name="staff_categories")
+    category = models.ForeignKey('ServiceCategory', on_delete=models.CASCADE, related_name="staff_offerings")
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        unique_together = ("staff", "category")
+        ordering = ["category__name"]
+    
+    def __str__(self):
+        return f"{self.staff.email} - {self.category.name}"
+
+
 class StaffService(models.Model):
     """
     Bir personelin sunduğu hizmet ve o hizmet için belirlediği fiyat/süre.

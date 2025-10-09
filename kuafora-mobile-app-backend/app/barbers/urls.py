@@ -13,6 +13,7 @@ from .views import (
     PartnerServiceCategoryViewSet,
     PartnerStaffViewSet,
     StaffServiceViewSet,
+    StaffServiceCategoryViewSet,
     PartnerWorkScheduleViewSet,
     ReviewReplyViewSet,
     LastViewedViewSet,
@@ -36,6 +37,7 @@ router.register(r"partner/service-categories", PartnerServiceCategoryViewSet, ba
 router.register(r"partner/services", PartnerServiceViewSet, basename="partner-service")
 router.register(r"partner/staff", PartnerStaffViewSet, basename="partner-staff")
 router.register(r"partner/staff-services", StaffServiceViewSet, basename="partner-staff-services")
+router.register(r"partner/staff-categories", StaffServiceCategoryViewSet, basename="partner-staff-categories")
 router.register(r"partner/working-hours", PartnerWorkScheduleViewSet, basename="partner-work-schedule")
 router.register(r"partner/review-replies", ReviewReplyViewSet, basename="partner-review-reply")
 router.register(r"partner/shop-working-hours", PartnerShopWorkingHoursViewSet, basename="partner-shop-working-hours")

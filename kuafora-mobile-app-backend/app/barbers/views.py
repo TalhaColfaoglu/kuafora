@@ -2097,6 +2097,28 @@ class StaffServiceViewSet(viewsets.ModelViewSet):
         serializer.save(staff=staff)
 
 
+class StaffServiceCategoryViewSet(viewsets.ModelViewSet):
+    """
+    Personellerin kendi hizmet kategorilerini yönetmesi için.
+    Sadece personel kendi kategorilerini düzenleyebilir.
+    """
+    serializer_class = StaffServiceCategorySerializer
+    permission_classes = [permissions.IsAuthenticated, IsStaffMember]
+    
+    def get_queryset(self):
+        # Staff can only see their own categories
+        try:
+            staff = Staff.objects.get(user=self.request.user)
+            return StaffServiceCategory.objects.filter(staff=staff).select_related('category')
+        except Staff.DoesNotExist:
+            return StaffServiceCategory.objects.none()
+    
+    def perform_create(self, serializer):
+        # Auto-inject staff from logged-in user
+        staff = Staff.objects.get(user=self.request.user)
+        serializer.save(staff=staff)
+
+
 class PartnerHolidayOverrideViewSet(viewsets.ModelViewSet):
     serializer_class = ShopHolidayOverrideSerializer
     permission_classes = [permissions.IsAuthenticated, IsShopAdmin]

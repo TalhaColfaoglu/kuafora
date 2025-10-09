@@ -66,6 +66,16 @@ class StaffCatalogSerializer(serializers.ModelSerializer):
         fields = ("id", "image")
 
 
+class StaffServiceCategorySerializer(serializers.ModelSerializer):
+    category_id = serializers.IntegerField(source='category.id', read_only=True)
+    category_name = serializers.CharField(source='category.name', read_only=True)
+    
+    class Meta:
+        model = StaffServiceCategory
+        fields = ['id', 'category', 'category_id', 'category_name', 'is_active', 'created_at']
+        read_only_fields = ['category_id', 'category_name']
+
+
 class StaffServiceSerializer(serializers.ModelSerializer):
     service_name = serializers.CharField(source='service.name', read_only=True)
     service_id = serializers.IntegerField(source='service.id', read_only=True)
