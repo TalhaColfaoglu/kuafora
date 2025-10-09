@@ -7,6 +7,8 @@ from .models import (
     Barbershop,
     BarbershopImage,
     Staff,
+    StaffService,
+    StaffServiceCategory,
     StaffCatalogImage,
     WorkSchedule,
     ShopWorkingHours,
