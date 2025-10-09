@@ -1141,7 +1141,7 @@ class PartnerShopWorkingHoursViewSet(viewsets.ModelViewSet):
 
 class PartnerStaffWorkingHoursViewSet(viewsets.ModelViewSet):
     serializer_class = StaffWorkingHoursSerializer
-    permission_classes = [permissions.IsAuthenticated, IsShopAdmin]
+    permission_classes = [permissions.IsAuthenticated, IsStaffMember]
 
     def get_queryset(self):
         user = self.request.user
@@ -1154,13 +1154,11 @@ class PartnerStaffWorkingHoursViewSet(viewsets.ModelViewSet):
         """GET: Personelin haftalık saatlerini (shop inherit ile) döndür.
         PUT: Personelin haftalık saatlerini ayarla; inherits_shop_hours=true ise personel kayıtlarını sil.
         """
-        staff_id = request.query_params.get("staff_id") or request.data.get("staff_id")
-        if not staff_id:
-            return Response({"detail": "staff_id required"}, status=400)
+        # Get staff from logged-in user
         try:
-            staff = Staff.objects.get(id=staff_id, barbershop__staff__user=request.user)
+            staff = Staff.objects.get(user=request.user)
         except Staff.DoesNotExist:
-            return Response({"detail": "Staff not found or no permission"}, status=404)
+            return Response({"detail": "Staff profile not found"}, status=404)
 
         valid_days = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"]
 
