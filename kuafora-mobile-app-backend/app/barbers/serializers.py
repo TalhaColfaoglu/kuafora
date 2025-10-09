@@ -69,11 +69,13 @@ class StaffCatalogSerializer(serializers.ModelSerializer):
 class StaffServiceSerializer(serializers.ModelSerializer):
     service_name = serializers.CharField(source='service.name', read_only=True)
     service_id = serializers.IntegerField(source='service.id', read_only=True)
+    service_category_name = serializers.CharField(source='service.category.name', read_only=True, allow_null=True)
+    service_category_id = serializers.IntegerField(source='service.category.id', read_only=True, allow_null=True)
     
     class Meta:
         model = StaffService
-        fields = ("id", "staff", "service", "service_id", "service_name", "price", "duration_minutes", "is_active", "created_at", "updated_at")
-        read_only_fields = ("id", "created_at", "updated_at")
+        fields = ("id", "staff", "service", "service_id", "service_name", "service_category_id", "service_category_name", "price", "duration_minutes", "is_active", "created_at", "updated_at")
+        read_only_fields = ("id", "service_id", "service_name", "service_category_id", "service_category_name", "created_at", "updated_at")
 
 
 class StaffSerializer(serializers.ModelSerializer):
@@ -81,6 +83,7 @@ class StaffSerializer(serializers.ModelSerializer):
     user_full_name = serializers.SerializerMethodField()
     staff_services = serializers.SerializerMethodField()
     rating_avg = serializers.FloatField(read_only=True)
+    experience_years = serializers.SerializerMethodField()
 
     class Meta:
         model = Staff
@@ -92,7 +95,7 @@ class StaffSerializer(serializers.ModelSerializer):
             "rating_avg", "staff_services",
             "auto_approval", "commission_rate", "appointment_interval"
         )
-        read_only_fields = ("total_reviews", "rating_avg")
+        read_only_fields = ("total_reviews", "rating_avg", "experience_years")
 
     def get_user_full_name(self, obj):
         u = getattr(obj, "user", None)
@@ -106,6 +109,12 @@ class StaffSerializer(serializers.ModelSerializer):
             return combo
         email = getattr(u, 'email', '')
         return email
+    
+    def get_experience_years(self, obj):
+        if obj.career_start_year:
+            from datetime import datetime
+            return datetime.now().year - obj.career_start_year
+        return None
     
     def get_staff_services(self, obj):
         from .models import StaffService

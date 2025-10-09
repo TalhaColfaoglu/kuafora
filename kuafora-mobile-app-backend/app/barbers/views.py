@@ -5,6 +5,7 @@ from rest_framework import viewsets, mixins, permissions, generics, status, seri
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.throttling import UserRateThrottle
+from rest_framework.permissions import BasePermission
 from django.utils import timezone
 from datetime import timedelta, datetime
 
@@ -62,6 +63,12 @@ from .permissions import IsShopAdmin
 from django.conf import settings
 
 
+class IsStaffMember(BasePermission):
+    """Permission to only allow staff members to access staff-related endpoints."""
+    def has_permission(self, request, view):
+        return request.user.is_authenticated and Staff.objects.filter(user=request.user).exists()
+
+
 class BarbershopViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = (
         Barbershop.objects.all()
@@ -100,6 +107,30 @@ class BarbershopViewSet(viewsets.ReadOnlyModelViewSet):
         staff = Staff.objects.filter(barbershop_id=pk)
         serializer = StaffSerializer(staff, many=True)
         return Response(serializer.data)
+
+    @action(detail=True, methods=["get"], url_path="services-tree")
+    def services_tree(self, request, pk=None):
+        """
+        Get barbershop's categories and services in tree structure.
+        Accessible to authenticated staff of this barbershop.
+        """
+        barbershop = self.get_object()
+        
+        categories = ServiceCategory.objects.filter(
+            barbershop=barbershop
+        ).prefetch_related(
+            Prefetch('services', queryset=Service.objects.filter(is_active=True))
+        ).order_by('name')
+        
+        result = []
+        for category in categories:
+            result.append({
+                'id': category.id,
+                'name': category.name,
+                'services': ServiceSerializer(category.services.all(), many=True).data
+            })
+        
+        return Response(result)
 
     @action(detail=True, methods=["get", "put"], url_path="working-hours")
     def working_hours(self, request, pk=None):
@@ -651,18 +682,23 @@ class PartnerStaffViewSet(viewsets.ModelViewSet):
         Personelin kendi profilini görüntülemesi/güncellemesi.
         Her personel sadece kendi bilgilerini değiştirebilir.
         """
-        staff = Staff.objects.filter(user=request.user).first()
-        if not staff:
+        try:
+            staff = Staff.objects.select_related('barbershop', 'user').get(user=request.user)
+        except Staff.DoesNotExist:
             return Response({"detail": "Staff profile not found"}, status=404)
         
         if request.method == 'PATCH':
             serializer = self.get_serializer(staff, data=request.data, partial=True)
             serializer.is_valid(raise_exception=True)
             serializer.save()
-            return Response(serializer.data)
+            data = serializer.data
+            data['barbershop_id'] = staff.barbershop.id  # Add barbershop ID
+            return Response(data)
         else:
             serializer = self.get_serializer(staff)
-            return Response(serializer.data)
+            data = serializer.data
+            data['barbershop_id'] = staff.barbershop.id  # Add barbershop ID
+            return Response(data)
 
     @action(detail=False, methods=["get"], url_path="my-shops")
     def my_shops(self, request):
@@ -2045,18 +2081,19 @@ class StaffServiceViewSet(viewsets.ModelViewSet):
     Sadece personel kendi kaydını düzenleyebilir.
     """
     serializer_class = StaffServiceSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, IsStaffMember]
     
     def get_queryset(self):
-        user = self.request.user
-        # Kendi staff profilime ait servisleri getir
-        return StaffService.objects.filter(staff__user=user).select_related('service', 'staff')
+        # Staff can only see their own services
+        try:
+            staff = Staff.objects.get(user=self.request.user)
+            return StaffService.objects.filter(staff=staff).select_related('service', 'service__category')
+        except Staff.DoesNotExist:
+            return StaffService.objects.none()
     
     def perform_create(self, serializer):
-        staff = Staff.objects.filter(user=self.request.user).first()
-        if not staff:
-            from rest_framework.exceptions import PermissionDenied
-            raise PermissionDenied("Staff profile not found")
+        # Auto-inject staff from logged-in user
+        staff = Staff.objects.get(user=self.request.user)
         serializer.save(staff=staff)
 
 
