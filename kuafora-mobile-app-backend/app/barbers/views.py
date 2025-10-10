@@ -66,9 +66,15 @@ from django.conf import settings
 
 
 class IsStaffMember(BasePermission):
-    """Permission to only allow staff members to access staff-related endpoints."""
+    """
+    Permission to only allow staff members to access staff-related endpoints.
+    Handles cases where a user might have multiple staff records.
+    """
     def has_permission(self, request, view):
-        return request.user.is_authenticated and Staff.objects.filter(user=request.user).exists()
+        if not request.user.is_authenticated:
+            return False
+        # Use exists() to safely check if user has at least one staff record
+        return Staff.objects.filter(user=request.user).exists()
 
 
 class BarbershopViewSet(viewsets.ReadOnlyModelViewSet):
@@ -685,7 +691,10 @@ class PartnerStaffViewSet(viewsets.ModelViewSet):
         Her personel sadece kendi bilgilerini değiştirebilir.
         """
         try:
-            staff = Staff.objects.select_related('barbershop', 'user').get(user=request.user)
+            # Use filter().first() to handle multiple staff records safely
+            staff = Staff.objects.select_related('barbershop', 'user').filter(user=request.user).order_by('-is_admin', '-id').first()
+            if not staff:
+                raise Staff.DoesNotExist
         except Staff.DoesNotExist:
             return Response({"detail": "Staff profile not found"}, status=404)
         
@@ -1157,9 +1166,9 @@ class PartnerStaffWorkingHoursViewSet(viewsets.ModelViewSet):
         PUT: Personelin haftalık saatlerini ayarla; inherits_shop_hours=true ise personel kayıtlarını sil.
         """
         # Get staff from logged-in user
-        try:
-            staff = Staff.objects.get(user=request.user)
-        except Staff.DoesNotExist:
+        # Use filter().first() to handle multiple staff records safely
+        staff = Staff.objects.filter(user=request.user).order_by('-is_admin', '-id').first()
+        if not staff:
             return Response({"detail": "Staff profile not found"}, status=404)
 
         valid_days = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"]
@@ -2085,23 +2094,24 @@ class StaffServiceViewSet(viewsets.ModelViewSet):
     
     def get_queryset(self):
         # Staff can only see their own services
-        try:
-            staff = Staff.objects.get(user=self.request.user)
+        # Use filter().first() to handle multiple staff records safely
+        staff = Staff.objects.filter(user=self.request.user).order_by('-is_admin', '-id').first()
+        if staff:
             return StaffService.objects.filter(staff=staff).select_related('service', 'service__category')
-        except Staff.DoesNotExist:
-            return StaffService.objects.none()
+        return StaffService.objects.none()
     
     def create(self, request, *args, **kwargs):
         import logging
         logger = logging.getLogger(__name__)
         logger.error(f"[StaffService CREATE] Request data: {request.data}")
         
-        try:
-            staff = Staff.objects.get(user=request.user)
-            logger.error(f"[StaffService CREATE] Staff found: {staff.id}, email: {staff.email}")
-        except Staff.DoesNotExist:
+        # Use filter().first() to handle multiple staff records safely
+        staff = Staff.objects.filter(user=request.user).order_by('-is_admin', '-id').first()
+        if not staff:
             logger.error(f"[StaffService CREATE] Staff not found for user: {request.user}")
             return Response({"detail": "Staff profile not found"}, status=400)
+        
+        logger.error(f"[StaffService CREATE] Staff found: {staff.id}, email: {staff.email}")
         
         serializer = self.get_serializer(data=request.data)
         logger.error(f"[StaffService CREATE] Serializer validation starting...")
@@ -2128,16 +2138,18 @@ class StaffServiceCategoryViewSet(viewsets.ModelViewSet):
     
     def get_queryset(self):
         # Staff can only see their own categories
-        try:
-            staff = Staff.objects.get(user=self.request.user)
+        # Use filter().first() to handle multiple staff records safely
+        staff = Staff.objects.filter(user=self.request.user).order_by('-is_admin', '-id').first()
+        if staff:
             return StaffServiceCategory.objects.filter(staff=staff).select_related('category')
-        except Staff.DoesNotExist:
-            return StaffServiceCategory.objects.none()
+        return StaffServiceCategory.objects.none()
     
     def perform_create(self, serializer):
         # Auto-inject staff from logged-in user
-        staff = Staff.objects.get(user=self.request.user)
-        serializer.save(staff=staff)
+        # Use filter().first() to handle multiple staff records safely
+        staff = Staff.objects.filter(user=self.request.user).order_by('-is_admin', '-id').first()
+        if staff:
+            serializer.save(staff=staff)
 
 
 class PartnerHolidayOverrideViewSet(viewsets.ModelViewSet):
