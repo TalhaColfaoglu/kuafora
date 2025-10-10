@@ -2091,10 +2091,31 @@ class StaffServiceViewSet(viewsets.ModelViewSet):
         except Staff.DoesNotExist:
             return StaffService.objects.none()
     
-    def perform_create(self, serializer):
-        # Auto-inject staff from logged-in user
-        staff = Staff.objects.get(user=self.request.user)
+    def create(self, request, *args, **kwargs):
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"[StaffService CREATE] Request data: {request.data}")
+        
+        try:
+            staff = Staff.objects.get(user=request.user)
+            logger.error(f"[StaffService CREATE] Staff found: {staff.id}, email: {staff.email}")
+        except Staff.DoesNotExist:
+            logger.error(f"[StaffService CREATE] Staff not found for user: {request.user}")
+            return Response({"detail": "Staff profile not found"}, status=400)
+        
+        serializer = self.get_serializer(data=request.data)
+        logger.error(f"[StaffService CREATE] Serializer validation starting...")
+        
+        if not serializer.is_valid():
+            logger.error(f"[StaffService CREATE] Validation errors: {serializer.errors}")
+            return Response(serializer.errors, status=400)
+        
+        logger.error(f"[StaffService CREATE] Serializer valid, saving...")
         serializer.save(staff=staff)
+        logger.error(f"[StaffService CREATE] Service created successfully")
+        
+        headers = self.get_success_headers(serializer.data)
+        return Response(serializer.data, status=201, headers=headers)
 
 
 class StaffServiceCategoryViewSet(viewsets.ModelViewSet):
