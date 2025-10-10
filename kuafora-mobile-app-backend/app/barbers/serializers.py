@@ -87,7 +87,7 @@ class StaffServiceSerializer(serializers.ModelSerializer):
     class Meta:
         model = StaffService
         fields = ("id", "staff", "service", "service_id", "service_name", "service_category_id", "service_category_name", "price", "duration_minutes", "is_active", "created_at", "updated_at")
-        read_only_fields = ("id", "service_id", "service_name", "service_category_id", "service_category_name", "created_at", "updated_at")
+        read_only_fields = ("id", "staff", "service_id", "service_name", "service_category_id", "service_category_name", "created_at", "updated_at")
 
 
 class StaffSerializer(serializers.ModelSerializer):
