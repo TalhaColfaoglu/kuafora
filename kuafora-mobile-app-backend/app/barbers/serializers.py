@@ -130,7 +130,7 @@ class StaffSerializer(serializers.ModelSerializer):
     
     def get_staff_services(self, obj):
         from .models import StaffService
-        return StaffServiceSerializer(obj.staff_services.filter(is_active=True), many=True).data
+        return StaffServiceSerializer(obj.staff_services.all(), many=True).data
 
 
 class WorkScheduleSerializer(serializers.ModelSerializer):
