@@ -156,8 +156,10 @@ class BarbershopViewSet(viewsets.ReadOnlyModelViewSet):
 
             code_list = ["MON","TUE","WED","THU","FRI","SAT","SUN"]
             result = []
-            try:
-                for code in code_list:
+            # Be defensive: never raise 500s here
+            result = []
+            for code in code_list:
+                try:
                     has_full_closed = Override.objects.filter(
                         barbershop=shop,
                         override_type='shop_global',
@@ -191,10 +193,7 @@ class BarbershopViewSet(viewsets.ReadOnlyModelViewSet):
                     start_time = min(candidates_start)
                     end_time = max(candidates_end)
                     result.append({'day_of_week': code,'start_time': start_time,'end_time': end_time,'is_closed': False})
-            except Exception:
-                # Safe fallback: return only ShopWorkingHours to avoid 500s
-                result = []
-                for code in code_list:
+                except Exception:
                     shop_hours = ShopWorkingHours.objects.filter(barbershop=shop, day_of_week=code).first()
                     if not shop_hours or shop_hours.is_closed:
                         result.append({'day_of_week': code,'start_time': None,'end_time': None,'is_closed': True})
