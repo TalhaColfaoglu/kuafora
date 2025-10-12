@@ -195,11 +195,8 @@ class BarbershopViewSet(viewsets.ReadOnlyModelViewSet):
                     end_time = max(candidates_end)
                     result.append({'day_of_week': code,'start_time': start_time,'end_time': end_time,'is_closed': False})
                 except Exception:
-                    shop_hours = ShopWorkingHours.objects.filter(barbershop=shop, day_of_week=code).first()
-                    if not shop_hours or shop_hours.is_closed:
-                        result.append({'day_of_week': code,'start_time': None,'end_time': None,'is_closed': True})
-                    else:
-                        result.append({'day_of_week': code,'start_time': shop_hours.start_time,'end_time': shop_hours.end_time,'is_closed': False})
+                    # Fallback: at least return closed state (no 500)
+                    result.append({'day_of_week': code,'start_time': None,'end_time': None,'is_closed': True})
             # stringify times to prevent ProgrammingError in JSON serialization
             def _fmt(t):
                 try:
@@ -2205,36 +2202,42 @@ class StaffServiceViewSet(viewsets.ModelViewSet):
             return Response(serializer.errors, status=400)
 
         try:
-            instance, created = StaffService.objects.get_or_create(
-                staff=staff,
-                service=service,
-                defaults={
-                    'price': serializer.validated_data['price'],
-                    'duration_minutes': serializer.validated_data['duration_minutes'],
-                    'is_active': True,
-                },
-            )
-            if not created:
+            # Manual upsert to avoid MultipleObjectsReturned
+            qs = StaffService.objects.filter(staff=staff, service=service).order_by('created_at', 'id')
+            if qs.exists():
+                instance = qs.first()
+                # Clean duplicates quietly
+                qs.exclude(id=instance.id).delete()
                 instance.price = serializer.validated_data['price']
                 instance.duration_minutes = serializer.validated_data['duration_minutes']
                 instance.is_active = True
                 instance.save(update_fields=['price', 'duration_minutes', 'is_active', 'updated_at'])
-
-            out = self.get_serializer(instance)
-            headers = self.get_success_headers(out.data)
-            return Response(out.data, status=201 if created else 200, headers=headers)
-        except MultipleObjectsReturned:
-            # Dedupe then update
-            dups = StaffService.objects.filter(staff=staff, service=service).order_by('created_at', 'id')
-            keep = dups.first()
-            StaffService.objects.filter(staff=staff, service=service).exclude(id=keep.id).delete()
-            keep.price = serializer.validated_data['price']
-            keep.duration_minutes = serializer.validated_data['duration_minutes']
-            keep.is_active = True
-            keep.save(update_fields=['price', 'duration_minutes', 'is_active', 'updated_at'])
-            out = self.get_serializer(keep)
-            return Response(out.data, status=200)
+                out = self.get_serializer(instance)
+                headers = self.get_success_headers(out.data)
+                return Response(out.data, status=200, headers=headers)
+            else:
+                instance = StaffService.objects.create(
+                    staff=staff,
+                    service=service,
+                    price=serializer.validated_data['price'],
+                    duration_minutes=serializer.validated_data['duration_minutes'],
+                    is_active=True,
+                )
+                out = self.get_serializer(instance)
+                headers = self.get_success_headers(out.data)
+                return Response(out.data, status=201, headers=headers)
         except IntegrityError:
+            # As a last resort, dedupe and retry once
+            qs = StaffService.objects.filter(staff=staff, service=service).order_by('created_at', 'id')
+            if qs.exists():
+                instance = qs.first()
+                qs.exclude(id=instance.id).delete()
+                instance.price = serializer.validated_data['price']
+                instance.duration_minutes = serializer.validated_data['duration_minutes']
+                instance.is_active = True
+                instance.save(update_fields=['price', 'duration_minutes', 'is_active', 'updated_at'])
+                out = self.get_serializer(instance)
+                return Response(out.data, status=200)
             return Response({"detail": "Duplicate staff-service combination"}, status=409)
 
 
