@@ -7,6 +7,7 @@ from rest_framework.response import Response
 from rest_framework.throttling import UserRateThrottle
 from rest_framework.permissions import BasePermission
 from django.utils import timezone
+from django.core.exceptions import MultipleObjectsReturned
 from datetime import timedelta, datetime
 
 from .models import (
@@ -2124,12 +2125,10 @@ class StaffServiceViewSet(viewsets.ModelViewSet):
         logger = logging.getLogger(__name__)
         logger.error(f"[StaffService CREATE] Request data: {request.data}")
 
-        # Incoming service id is required
         service_id = request.data.get('service')
         if not service_id:
             return Response({"detail": "'service' field is required"}, status=400)
 
-        # Resolve service and matching staff (ensure same barbershop)
         try:
             service = Service.objects.get(id=service_id)
         except Service.DoesNotExist:
@@ -2144,14 +2143,11 @@ class StaffServiceViewSet(viewsets.ModelViewSet):
             logger.error(f"[StaffService CREATE] Staff not found or not in same barbershop. user={request.user} service.barbershop={service.barbershop_id}")
             return Response({"detail": "Staff profile not found for this barbershop"}, status=403)
 
-        # Validate payload
         serializer = self.get_serializer(data=request.data)
-        logger.error(f"[StaffService CREATE] Serializer validation starting...")
         if not serializer.is_valid():
             logger.error(f"[StaffService CREATE] Validation errors: {serializer.errors}")
             return Response(serializer.errors, status=400)
 
-        # Upsert to avoid 500 on unique_together(staff, service)
         try:
             instance, created = StaffService.objects.get_or_create(
                 staff=staff,
@@ -2163,7 +2159,6 @@ class StaffServiceViewSet(viewsets.ModelViewSet):
                 },
             )
             if not created:
-                # Update existing with new values
                 instance.price = serializer.validated_data['price']
                 instance.duration_minutes = serializer.validated_data['duration_minutes']
                 instance.is_active = True
@@ -2172,8 +2167,18 @@ class StaffServiceViewSet(viewsets.ModelViewSet):
             out = self.get_serializer(instance)
             headers = self.get_success_headers(out.data)
             return Response(out.data, status=201 if created else 200, headers=headers)
-        except IntegrityError as e:
-            logger.exception("[StaffService CREATE] IntegrityError")
+        except MultipleObjectsReturned:
+            # Dedupe then update
+            dups = StaffService.objects.filter(staff=staff, service=service).order_by('created_at', 'id')
+            keep = dups.first()
+            StaffService.objects.filter(staff=staff, service=service).exclude(id=keep.id).delete()
+            keep.price = serializer.validated_data['price']
+            keep.duration_minutes = serializer.validated_data['duration_minutes']
+            keep.is_active = True
+            keep.save(update_fields=['price', 'duration_minutes', 'is_active', 'updated_at'])
+            out = self.get_serializer(keep)
+            return Response(out.data, status=200)
+        except IntegrityError:
             return Response({"detail": "Duplicate staff-service combination"}, status=409)
 
 
