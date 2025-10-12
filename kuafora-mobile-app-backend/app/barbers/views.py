@@ -2108,39 +2108,74 @@ class StaffServiceViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated, IsStaffMember]
     
     def get_queryset(self):
-        # Staff can only see their own services
-        # Use filter().first() to handle multiple staff records safely
-        staff = Staff.objects.filter(user=self.request.user).order_by('-is_admin', '-id').first()
+        # Staff can only see their own services; optionally scope by barbershop
+        user = self.request.user
+        barbershop_id = self.request.query_params.get('barbershop')
+        staff_qs = Staff.objects.filter(user=user)
+        if barbershop_id:
+            staff_qs = staff_qs.filter(barbershop_id=barbershop_id)
+        staff = staff_qs.order_by('-is_admin', '-id').first()
         if staff:
             return StaffService.objects.filter(staff=staff).select_related('service', 'service__category')
         return StaffService.objects.none()
     
     def create(self, request, *args, **kwargs):
         import logging
+        from django.db import IntegrityError
         logger = logging.getLogger(__name__)
         logger.error(f"[StaffService CREATE] Request data: {request.data}")
-        
-        # Use filter().first() to handle multiple staff records safely
-        staff = Staff.objects.filter(user=request.user).order_by('-is_admin', '-id').first()
+
+        # Incoming service id is required
+        service_id = request.data.get('service')
+        if not service_id:
+            return Response({"detail": "'service' field is required"}, status=400)
+
+        # Resolve service and matching staff (ensure same barbershop)
+        try:
+            service = Service.objects.get(id=service_id)
+        except Service.DoesNotExist:
+            return Response({"detail": "Service not found"}, status=404)
+
+        staff = (
+            Staff.objects.filter(user=request.user, barbershop=service.barbershop)
+            .order_by('-is_admin', '-id')
+            .first()
+        )
         if not staff:
-            logger.error(f"[StaffService CREATE] Staff not found for user: {request.user}")
-            return Response({"detail": "Staff profile not found"}, status=400)
-        
-        logger.error(f"[StaffService CREATE] Staff found: {staff.id}, email: {staff.email}")
-        
+            logger.error(f"[StaffService CREATE] Staff not found or not in same barbershop. user={request.user} service.barbershop={service.barbershop_id}")
+            return Response({"detail": "Staff profile not found for this barbershop"}, status=403)
+
+        # Validate payload
         serializer = self.get_serializer(data=request.data)
         logger.error(f"[StaffService CREATE] Serializer validation starting...")
-        
         if not serializer.is_valid():
             logger.error(f"[StaffService CREATE] Validation errors: {serializer.errors}")
             return Response(serializer.errors, status=400)
-        
-        logger.error(f"[StaffService CREATE] Serializer valid, saving...")
-        serializer.save(staff=staff)
-        logger.error(f"[StaffService CREATE] Service created successfully")
-        
-        headers = self.get_success_headers(serializer.data)
-        return Response(serializer.data, status=201, headers=headers)
+
+        # Upsert to avoid 500 on unique_together(staff, service)
+        try:
+            instance, created = StaffService.objects.get_or_create(
+                staff=staff,
+                service=service,
+                defaults={
+                    'price': serializer.validated_data['price'],
+                    'duration_minutes': serializer.validated_data['duration_minutes'],
+                    'is_active': True,
+                },
+            )
+            if not created:
+                # Update existing with new values
+                instance.price = serializer.validated_data['price']
+                instance.duration_minutes = serializer.validated_data['duration_minutes']
+                instance.is_active = True
+                instance.save(update_fields=['price', 'duration_minutes', 'is_active', 'updated_at'])
+
+            out = self.get_serializer(instance)
+            headers = self.get_success_headers(out.data)
+            return Response(out.data, status=201 if created else 200, headers=headers)
+        except IntegrityError as e:
+            logger.exception("[StaffService CREATE] IntegrityError")
+            return Response({"detail": "Duplicate staff-service combination"}, status=409)
 
 
 class StaffServiceCategoryViewSet(viewsets.ModelViewSet):
