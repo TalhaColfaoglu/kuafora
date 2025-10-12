@@ -580,6 +580,13 @@ class ReviewUpsertApi(generics.GenericAPIView):
             "comment": request.data.get("comment", ""),
             "is_anonymous": bool(request.data.get("is_anonymous", False)),
         }
+        staff_id = request.data.get("staff_id")
+        staff = None
+        if staff_id:
+            try:
+                staff = Staff.objects.get(id=staff_id, barbershop=shop)
+            except Staff.DoesNotExist:
+                return Response({"detail": "invalid_staff_for_shop"}, status=400)
         try:
             rating = int(payload["rating"]) if payload["rating"] is not None else None
         except (TypeError, ValueError):
@@ -587,10 +594,11 @@ class ReviewUpsertApi(generics.GenericAPIView):
         if rating is None or rating < 1 or rating > 5:
             return Response({"rating": ["1 ile 5 arasında olmalı."]}, status=400)
 
-        # upsert by (user, barbershop)
+        # upsert by (user, barbershop, staff)
         obj, created = Review.objects.update_or_create(
             user=request.user,
             barbershop=shop,
+            staff=staff,
             defaults={
                 "rating": rating,
                 "comment": payload["comment"],
@@ -1243,6 +1251,23 @@ class PartnerStaffWorkingHoursViewSet(viewsets.ModelViewSet):
             normalized.append({"day": day, "is_closed": False, "open": st, "close": et})
         if errors:
             return Response({"detail": "invalid_payload", "errors": errors}, status=400)
+
+        # Conflict validation against shop hours
+        conflict_errors = {}
+        for it in normalized:
+            if it["is_closed"]:
+                continue
+            shop_hours = ShopWorkingHours.objects.filter(barbershop=staff.barbershop, day_of_week=it["day"]).first()
+            if not shop_hours or shop_hours.is_closed:
+                conflict_errors[it["day"]] = "invalid_time_shop_closed"
+                continue
+            sh_start = shop_hours.start_time
+            sh_end = shop_hours.end_time
+            if sh_start and sh_end:
+                if (it["open"] < sh_start) or (it["close"] > sh_end):
+                    conflict_errors[it["day"]] = "out_of_shop_hours"
+        if conflict_errors:
+            return Response({"detail": "conflict", "errors": conflict_errors}, status=400)
 
         StaffWorkingHours.objects.filter(staff=staff).delete()
         for it in normalized:
@@ -2097,6 +2122,37 @@ class CalendarStatusViewSet(viewsets.ReadOnlyModelViewSet):
                 f['date_end'] = _fmt(f['date_end'])
             data['feed'] = feed
         return Response(data)
+
+    @action(detail=False, methods=["get"], url_path="now")
+    def now_status(self, request):
+        """Return current open/closed and working staff count for a barbershop."""
+        barbershop_id = request.query_params.get('barbershop_id')
+        if not barbershop_id:
+            return Response({"detail": "barbershop_id required"}, status=400)
+        try:
+            barbershop = Barbershop.objects.get(id=barbershop_id)
+        except Barbershop.DoesNotExist:
+            return Response({"detail": "Barbershop not found"}, status=404)
+        now = timezone.localtime()
+        weekday_code_map = {0: "MON", 1: "TUE", 2: "WED", 3: "THU", 4: "FRI", 5: "SAT", 6: "SUN"}
+        day_code = weekday_code_map.get(now.weekday())
+        shop_hours = ShopWorkingHours.objects.filter(barbershop=barbershop, day_of_week=day_code).first()
+        active_staff_count = 0
+        if shop_hours and not shop_hours.is_closed:
+            active_staff_count = StaffWorkingHours.objects.filter(
+                staff__barbershop=barbershop,
+                day_of_week=day_code,
+                start_time__lte=now.time(),
+                end_time__gte=now.time(),
+                is_closed=False
+            ).values('staff').distinct().count()
+        is_open = bool(shop_hours and not shop_hours.is_closed)
+        return Response({
+            'is_open': is_open,
+            'opening_time': shop_hours.start_time.strftime('%H:%M') if (shop_hours and shop_hours.start_time) else None,
+            'closing_time': shop_hours.end_time.strftime('%H:%M') if (shop_hours and shop_hours.end_time) else None,
+            'active_staff_count': active_staff_count,
+        })
 
 
 class StaffServiceViewSet(viewsets.ModelViewSet):
