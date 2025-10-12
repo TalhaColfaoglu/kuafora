@@ -1174,33 +1174,48 @@ class PartnerStaffWorkingHoursViewSet(viewsets.ModelViewSet):
         valid_days = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"]
 
         if request.method == "GET":
-            result = []
-            inherits = True
-            for day in valid_days:
-                shop = ShopWorkingHours.objects.filter(barbershop=staff.barbershop, day_of_week=day).first()
-                sh = StaffWorkingHours.objects.filter(staff=staff, day_of_week=day).first()
-                if sh:
-                    inherits = False
-                    result.append({
-                        "day": day,
-                        "is_closed": sh.is_closed,
-                        "open": sh.start_time.strftime("%H:%M") if sh.start_time else None,
-                        "close": sh.end_time.strftime("%H:%M") if sh.end_time else None,
-                        "source": "staff",
-                    })
-                else:
-                    result.append({
-                        "day": day,
-                        "is_closed": bool(getattr(shop, 'is_closed', False)),
-                        "open": getattr(shop, 'start_time', None) and shop.start_time.strftime("%H:%M"),
-                        "close": getattr(shop, 'end_time', None) and shop.end_time.strftime("%H:%M"),
-                        "source": "shop",
-                    })
-            return Response({"staff_id": staff.id, "inherits_shop_hours": inherits, "week": result})
+            try:
+                result = []
+                inherits = True
+                for day in valid_days:
+                    shop = ShopWorkingHours.objects.filter(barbershop=staff.barbershop, day_of_week=day).first()
+                    sh = StaffWorkingHours.objects.filter(staff=staff, day_of_week=day).first()
+                    if sh:
+                        inherits = False
+                        result.append({
+                            "day": day,
+                            "is_closed": bool(getattr(sh, 'is_closed', False)),
+                            "open": getattr(sh, 'start_time', None) and sh.start_time.strftime("%H:%M"),
+                            "close": getattr(sh, 'end_time', None) and sh.end_time.strftime("%H:%M"),
+                            "source": "staff",
+                        })
+                    else:
+                        # Shop saatleri olmayabilir; güvenli fallback
+                        result.append({
+                            "day": day,
+                            "is_closed": bool(getattr(shop, 'is_closed', False)) if shop else True,
+                            "open": (shop.start_time.strftime("%H:%M") if getattr(shop, 'start_time', None) else None),
+                            "close": (shop.end_time.strftime("%H:%M") if getattr(shop, 'end_time', None) else None),
+                            "source": "shop" if shop else "default",
+                        })
+                return Response({"staff_id": staff.id, "inherits_shop_hours": inherits, "week": result})
+            except Exception:
+                # Hiçbir şeyi patlatma; tamamını kapalı default dön
+                safe = [{"day": d, "is_closed": True, "open": None, "close": None, "source": "default"} for d in valid_days]
+                return Response({"staff_id": staff.id, "inherits_shop_hours": True, "week": safe})
 
         # PUT
-        inherits_shop_hours = bool(request.data.get("inherits_shop_hours", False))
-        week = request.data.get("week") or []
+        # Dio/Flutter bazı durumlarda JSON'ı string olarak gönderebilir; güvenle parse et
+        data = request.data
+        if isinstance(data, (str, bytes)):
+            try:
+                import json
+                data = json.loads(data)
+            except Exception:
+                data = {}
+
+        inherits_shop_hours = bool((data or {}).get("inherits_shop_hours", False))
+        week = (data or {}).get("week") or []
         if inherits_shop_hours:
             StaffWorkingHours.objects.filter(staff=staff).delete()
             return Response({"detail": "Inherited from shop"})
