@@ -1000,7 +1000,7 @@ class PartnerServiceViewSet(viewsets.ModelViewSet):
     def tree(self, request):
         """Kategoriler ve altındaki hizmetleri ağaç yapısında döndür"""
         user = request.user
-        barbershop_id = request.query_params.get('barbershop')
+        barbershop_id = request.query_params.get('barbershop') or request.query_params.get('barbershop_id')
         
         if not barbershop_id:
             return Response({"detail": "barbershop parameter required"}, status=400)
