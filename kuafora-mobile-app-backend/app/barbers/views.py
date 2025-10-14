@@ -981,6 +981,20 @@ class PartnerServiceCategoryViewSet(viewsets.ModelViewSet):
             raise ValidationError({"detail": "Silme engellendi: bu kategoriye bağlı hizmetler var"})
         return Response(status=204)
 
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        admin_staff = Staff.objects.filter(user=request.user, is_admin=True).order_by('-id').first()
+        if not admin_staff:
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied("No admin barbershop for this user")
+        from django.db import IntegrityError
+        try:
+            serializer.save(barbershop=admin_staff.barbershop)
+        except IntegrityError:
+            return Response({"detail": "Aynı isimde bir hizmet türü zaten var"}, status=400)
+        return Response(serializer.data, status=201, headers=self.get_success_headers(serializer.data))
+
     @action(detail=False, methods=["post"], url_path="reorder")
     def reorder(self, request):
         ids = request.data if isinstance(request.data, list) else request.data.get('ids')
