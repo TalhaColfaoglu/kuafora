@@ -518,6 +518,25 @@ class PartnerServiceViewSet(viewsets.ModelViewSet):
             .distinct()
         )
 
+    def get_object(self):
+        """Avoid MultipleObjectsReturned when joins duplicate rows; fetch by PK safely."""
+        from rest_framework.exceptions import NotFound, PermissionDenied
+        pk = self.kwargs.get(self.lookup_field or 'pk')
+        if pk is None:
+            raise NotFound()
+        user = self.request.user
+        # Constrain to admin's shops and fetch one safely
+        obj = (
+            Service.objects
+            .filter(id=pk, barbershop__staff__user=user, barbershop__staff__is_admin=True)
+            .select_related('category')
+            .order_by('id')
+            .first()
+        )
+        if not obj:
+            raise NotFound()
+        return obj
+
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -969,42 +988,64 @@ class PartnerServiceViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-        return Service.objects.filter(barbershop__staff__user=user, barbershop__staff__is_admin=True).select_related('category')
+        return (
+            Service.objects
+            .filter(barbershop__staff__user=user, barbershop__staff__is_admin=True)
+            .select_related('category')
+            .distinct()
+        )
 
-    def perform_create(self, serializer):
-        # Admin staff'ın barbershop'ını al
-        admin_staff = Staff.objects.get(user=self.request.user, is_admin=True)
-        serializer.save(barbershop=admin_staff.barbershop)
-        # Otomatik duyuru: yeni hizmet eklendi
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        admin_staff = Staff.objects.filter(user=request.user, is_admin=True).order_by('-id').first()
+        if not admin_staff:
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied("No admin barbershop for this user")
+        try:
+            serializer.save(barbershop=admin_staff.barbershop)
+        except Exception as e:
+            from django.db import IntegrityError
+            if isinstance(e, IntegrityError):
+                return Response({"detail": str(e)}, status=400)
+            raise
+        headers = self.get_success_headers(serializer.data)
         try:
             SpecialMessage.objects.create(
                 barbershop=admin_staff.barbershop,
                 source='automatic', target_type='all_shop',
                 title='Yeni hizmet eklendi', content=f"{serializer.instance.name}",
                 start_datetime=timezone.now(), end_datetime=timezone.now() + timedelta(days=30),
-                created_by=self.request.user, is_active=True,
+                created_by=request.user, is_active=True,
             )
         except Exception:
             pass
+        return Response(serializer.data, status=201, headers=headers)
 
     def perform_update(self, serializer):
         super().perform_update(serializer)
         try:
-            admin_staff = Staff.objects.get(user=self.request.user, is_admin=True)
-            SpecialMessage.objects.create(
-                barbershop=admin_staff.barbershop,
-                source='automatic', target_type='all_shop',
-                title='Hizmet güncellendi', content=f"{serializer.instance.name}",
-                start_datetime=timezone.now(), end_datetime=timezone.now() + timedelta(days=14),
-                created_by=self.request.user, is_active=True,
-            )
+            admin_staff = Staff.objects.filter(user=self.request.user, is_admin=True).order_by('-id').first()
+            if admin_staff:
+                SpecialMessage.objects.create(
+                    barbershop=admin_staff.barbershop,
+                    source='automatic', target_type='all_shop',
+                    title='Hizmet güncellendi', content=f"{serializer.instance.name}",
+                    start_datetime=timezone.now(), end_datetime=timezone.now() + timedelta(days=14),
+                    created_by=self.request.user, is_active=True,
+                )
         except Exception:
             pass
 
     def perform_destroy(self, instance):
         name = getattr(instance, 'name', 'Hizmet')
         shop = instance.barbershop
-        super().perform_destroy(instance)
+        from django.db import IntegrityError
+        from rest_framework.exceptions import ValidationError
+        try:
+            super().perform_destroy(instance)
+        except IntegrityError as e:
+            raise ValidationError({"detail": f"Silme engellendi: {e}"})
         try:
             SpecialMessage.objects.create(
                 barbershop=shop,
