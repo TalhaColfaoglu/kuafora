@@ -511,7 +511,12 @@ class PartnerServiceViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-        return Service.objects.filter(barbershop__staff__user=user, barbershop__staff__is_admin=True).select_related('category')
+        return (
+            Service.objects
+            .filter(barbershop__staff__user=user, barbershop__staff__is_admin=True)
+            .select_related('category')
+            .distinct()
+        )
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
@@ -578,13 +583,12 @@ class PartnerServiceViewSet(viewsets.ModelViewSet):
     def perform_destroy(self, instance):
         name = getattr(instance, 'name', 'Hizmet')
         shop = instance.barbershop
+        from django.db import IntegrityError
+        from rest_framework.exceptions import ValidationError
         try:
             super().perform_destroy(instance)
-        except Exception as e:
-            from django.db import IntegrityError
-            if isinstance(e, IntegrityError):
-                return Response({"detail": "Silme engellendi: %s" % str(e)}, status=400)
-            raise
+        except IntegrityError as e:
+            raise ValidationError({"detail": f"Silme engellendi: {e}"})
         try:
             SpecialMessage.objects.create(
                 barbershop=shop,
@@ -904,7 +908,11 @@ class PartnerServiceCategoryViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-        return ServiceCategory.objects.filter(barbershop__staff__user=user, barbershop__staff__is_admin=True)
+        return (
+            ServiceCategory.objects
+            .filter(barbershop__staff__user=user, barbershop__staff__is_admin=True)
+            .distinct()
+        )
 
     def perform_create(self, serializer):
         admin_staff = Staff.objects.filter(user=self.request.user, is_admin=True).order_by('-id').first()
@@ -926,13 +934,12 @@ class PartnerServiceCategoryViewSet(viewsets.ModelViewSet):
 
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()
+        from django.db import IntegrityError
+        from rest_framework.exceptions import ValidationError
         try:
             self.perform_destroy(instance)
-        except Exception as e:
-            from django.db import IntegrityError
-            if isinstance(e, IntegrityError):
-                return Response({"detail": "Silme engellendi: bu kategoriye bağlı hizmetler var"}, status=400)
-            raise
+        except IntegrityError:
+            raise ValidationError({"detail": "Silme engellendi: bu kategoriye bağlı hizmetler var"})
         return Response(status=204)
 
 
@@ -999,9 +1006,8 @@ class PartnerServiceViewSet(viewsets.ModelViewSet):
             return Response({"detail": "barbershop parameter required"}, status=400)
         
         # Admin staff'ın barbershop'ını kontrol et
-        try:
-            admin_staff = Staff.objects.get(user=user, is_admin=True, barbershop_id=barbershop_id)
-        except Staff.DoesNotExist:
+        admin_staff = Staff.objects.filter(user=user, is_admin=True, barbershop_id=barbershop_id).order_by('-id').first()
+        if not admin_staff:
             return Response({"detail": "No permission for this barbershop"}, status=403)
         
         categories = ServiceCategory.objects.filter(barbershop_id=barbershop_id).prefetch_related('services')
