@@ -994,7 +994,9 @@ class ReviewReplyViewSet(viewsets.ModelViewSet):
         
         # Admin staff'ın bu barbershop'ta yetkisi var mı kontrol et
         try:
-            admin_staff = Staff.objects.get(user=request.user, is_admin=True, barbershop=review.barbershop)
+            admin_staff = Staff.objects.filter(user=request.user, is_admin=True, barbershop=review.barbershop).order_by('-id').first()
+            if not admin_staff:
+                return Response({"detail": "No permission to reply to this review"}, status=403)
         except Staff.DoesNotExist:
             return Response({"detail": "No permission to reply to this review"}, status=403)
         
@@ -1018,7 +1020,10 @@ class PartnerShopWorkingHoursViewSet(viewsets.ModelViewSet):
     def create(self, request, *args, **kwargs):
         """Force-inject barbershop and create directly to avoid 400/500."""
         try:
-            admin_staff = Staff.objects.get(user=request.user, is_admin=True)
+            admin_staff = Staff.objects.filter(user=request.user, is_admin=True).order_by('-id').first()
+            if not admin_staff:
+                from rest_framework.exceptions import PermissionDenied
+                raise PermissionDenied("Admin yetkisi gerekli")
         except Staff.DoesNotExist:
             from rest_framework.exceptions import PermissionDenied
             raise PermissionDenied("Admin yetkisi gerekli")
@@ -1086,7 +1091,10 @@ class PartnerShopWorkingHoursViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         try:
-            admin_staff = Staff.objects.get(user=self.request.user, is_admin=True)
+            admin_staff = Staff.objects.filter(user=self.request.user, is_admin=True).order_by('-id').first()
+            if not admin_staff:
+                from rest_framework.exceptions import PermissionDenied
+                raise PermissionDenied("Admin yetkisi gerekli")
         except Staff.DoesNotExist:
             from rest_framework.exceptions import PermissionDenied
             raise PermissionDenied("Admin yetkisi gerekli")
