@@ -513,9 +513,41 @@ class PartnerServiceViewSet(viewsets.ModelViewSet):
         user = self.request.user
         return Service.objects.filter(barbershop__staff__user=user, barbershop__staff__is_admin=True).select_related('category')
 
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        # Resolve admin_staff safely
+        admin_staff = Staff.objects.filter(user=request.user, is_admin=True).order_by('-id').first()
+        if not admin_staff:
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied("No admin barbershop for this user")
+        try:
+            serializer.save(barbershop=admin_staff.barbershop)
+        except Exception as e:
+            from django.db import IntegrityError
+            if isinstance(e, IntegrityError):
+                return Response({"detail": "Integrity error: %s" % str(e)}, status=400)
+            raise
+        headers = self.get_success_headers(serializer.data)
+        # Fire-and-forget message (ignore errors)
+        try:
+            SpecialMessage.objects.create(
+                barbershop=admin_staff.barbershop,
+                source='automatic', target_type='all_shop',
+                title='Yeni hizmet eklendi', content=f"{serializer.instance.name}",
+                start_datetime=timezone.now(), end_datetime=timezone.now() + timedelta(days=30),
+                created_by=request.user, is_active=True,
+            )
+        except Exception:
+            pass
+        return Response(serializer.data, status=201, headers=headers)
+
     def perform_create(self, serializer):
-        # Admin staff'ın barbershop'ını al
-        admin_staff = Staff.objects.get(user=self.request.user, is_admin=True)
+        # Kept for compatibility if DRF calls perform_create via create()
+        admin_staff = Staff.objects.filter(user=self.request.user, is_admin=True).order_by('-id').first()
+        if not admin_staff:
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied("No admin barbershop for this user")
         serializer.save(barbershop=admin_staff.barbershop)
         # Otomatik duyuru: yeni hizmet eklendi
         try:
@@ -546,7 +578,13 @@ class PartnerServiceViewSet(viewsets.ModelViewSet):
     def perform_destroy(self, instance):
         name = getattr(instance, 'name', 'Hizmet')
         shop = instance.barbershop
-        super().perform_destroy(instance)
+        try:
+            super().perform_destroy(instance)
+        except Exception as e:
+            from django.db import IntegrityError
+            if isinstance(e, IntegrityError):
+                return Response({"detail": "Silme engellendi: %s" % str(e)}, status=400)
+            raise
         try:
             SpecialMessage.objects.create(
                 barbershop=shop,
@@ -869,8 +907,10 @@ class PartnerServiceCategoryViewSet(viewsets.ModelViewSet):
         return ServiceCategory.objects.filter(barbershop__staff__user=user, barbershop__staff__is_admin=True)
 
     def perform_create(self, serializer):
-        # Admin staff'ın barbershop'ını al
-        admin_staff = Staff.objects.get(user=self.request.user, is_admin=True)
+        admin_staff = Staff.objects.filter(user=self.request.user, is_admin=True).order_by('-id').first()
+        if not admin_staff:
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied("No admin barbershop for this user")
         serializer.save(barbershop=admin_staff.barbershop)
         # Otomatik duyuru: yeni kategori
         try:
@@ -883,6 +923,17 @@ class PartnerServiceCategoryViewSet(viewsets.ModelViewSet):
             )
         except Exception:
             pass
+
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        try:
+            self.perform_destroy(instance)
+        except Exception as e:
+            from django.db import IntegrityError
+            if isinstance(e, IntegrityError):
+                return Response({"detail": "Silme engellendi: bu kategoriye bağlı hizmetler var"}, status=400)
+            raise
+        return Response(status=204)
 
 
 class PartnerServiceViewSet(viewsets.ModelViewSet):
