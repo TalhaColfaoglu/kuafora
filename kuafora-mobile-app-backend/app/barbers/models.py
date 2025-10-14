@@ -95,9 +95,8 @@ class Staff(models.Model):
         help_text="Randevu aralığı (dakika)"
     )
 
-    class Meta:
-        # Aynı kullanıcı aynı dükkânda birden fazla staff (özellikle admin) kaydına sahip olmasın
-        unique_together = ("user", "barbershop", "is_admin")
+    # Not: Duplicate kayıtlar endpoint seviyesinde güvenli şekilde ele alınıyor (filter().first(), distinct()).
+    # DB seviyesinde unique kısıt eklemek mevcut verilerdeki çoğullardan dolayı deploy sırasında migrate'i kilitliyor.
 
 
 class StaffCatalogImage(models.Model):
