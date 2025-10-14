@@ -95,6 +95,10 @@ class Staff(models.Model):
         help_text="Randevu aralığı (dakika)"
     )
 
+    class Meta:
+        # Aynı kullanıcı aynı dükkânda birden fazla staff (özellikle admin) kaydına sahip olmasın
+        unique_together = ("user", "barbershop", "is_admin")
+
 
 class StaffCatalogImage(models.Model):
     staff = models.ForeignKey(Staff, on_delete=models.CASCADE, related_name="catalog")

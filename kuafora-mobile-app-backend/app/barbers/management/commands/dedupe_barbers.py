@@ -1,5 +1,6 @@
 from django.core.management.base import BaseCommand
 from django.db import transaction
+from django.db.models import Count
 
 from app.barbers.models import (
     Staff,
@@ -25,15 +26,12 @@ class Command(BaseCommand):
 
     def _dedupe_staff(self) -> int:
         merged = 0
-        # Group by (user_id, barbershop_id, is_admin)
-        staff_rows = list(Staff.objects.values('user_id', 'barbershop_id', 'is_admin'))
-        seen = set()
-        for row in staff_rows:
-            key = (row['user_id'], row['barbershop_id'], row['is_admin'])
-            if key in seen:
-                continue
-            seen.add(key)
-            dups = list(Staff.objects.filter(user_id=key[0], barbershop_id=key[1], is_admin=key[2]).order_by('id'))
+        dups_groups = (
+            Staff.objects.values('user_id', 'barbershop_id', 'is_admin')
+            .annotate(c=Count('id')).filter(c__gt=1)
+        )
+        for g in dups_groups:
+            dups = list(Staff.objects.filter(user_id=g['user_id'], barbershop_id=g['barbershop_id'], is_admin=g['is_admin']).order_by('id'))
             if len(dups) <= 1:
                 continue
             survivor = dups[-1]
@@ -50,15 +48,12 @@ class Command(BaseCommand):
 
     def _dedupe_service_categories(self) -> int:
         merged = 0
-        # Find duplicates by (barbershop_id, name)
-        pairs = ServiceCategory.objects.values('barbershop_id', 'name')
-        seen = set()
-        for p in pairs:
-            key = (p['barbershop_id'], p['name'])
-            if key in seen:
-                continue
-            seen.add(key)
-            dups = list(ServiceCategory.objects.filter(barbershop_id=key[0], name=key[1]).order_by('id'))
+        dups_groups = (
+            ServiceCategory.objects.values('barbershop_id', 'name')
+            .annotate(c=Count('id')).filter(c__gt=1)
+        )
+        for g in dups_groups:
+            dups = list(ServiceCategory.objects.filter(barbershop_id=g['barbershop_id'], name=g['name']).order_by('id'))
             if len(dups) <= 1:
                 continue
             survivor = dups[-1]
