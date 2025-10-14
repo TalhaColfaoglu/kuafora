@@ -17,7 +17,10 @@ environ.Env.read_env(env_file=os.path.join(BASE_DIR, env_file_name))
 
 DEBUG = True  # Temporarily enable debug to see real errors
 SECRET_KEY = env("SECRET_KEY", default="change-me")
-ALLOWED_HOSTS = env.list("ALLOWED_HOSTS", default=["*"])
+# Extend ALLOWED_HOSTS with safe defaults to avoid DisallowedHost in EC2 and container
+_allowed = set(env.list("ALLOWED_HOSTS", default=[]))
+_allowed.update({"*", "0.0.0.0", "localhost", "127.0.0.1", ".compute.amazonaws.com"})
+ALLOWED_HOSTS = list(_allowed)
 
 # CORS settings for Flutter frontend
 CORS_ALLOWED_ORIGINS= [
