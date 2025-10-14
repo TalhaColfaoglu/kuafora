@@ -1015,7 +1015,7 @@ class PartnerShopWorkingHoursViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-        return ShopWorkingHours.objects.filter(barbershop__staff__user=user, barbershop__staff__is_admin=True)
+        return ShopWorkingHours.objects.filter(barbershop__staff__user=user, barbershop__staff__is_admin=True).distinct()
 
     def create(self, request, *args, **kwargs):
         """Force-inject barbershop and create directly to avoid 400/500."""
