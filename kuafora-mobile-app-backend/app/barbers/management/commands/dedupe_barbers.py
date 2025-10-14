@@ -1,5 +1,6 @@
 from django.core.management.base import BaseCommand
 from django.db import transaction
+from django.db.utils import ProgrammingError
 from django.db.models import Count
 
 from app.barbers.models import (
@@ -83,8 +84,12 @@ class Command(BaseCommand):
                         sc.staff = survivor
                         sc.save(update_fields=["staff"])
 
-                # Overrides: straightforward reassign
-                Override.objects.filter(staff=loser).update(staff=survivor)
+                # Overrides: straightforward reassign; skip if table missing
+                try:
+                    Override.objects.filter(staff=loser).update(staff=survivor)
+                except ProgrammingError:
+                    # Older DBs may not have 'Override' yet; safe to skip
+                    pass
 
                 loser.delete()
                 merged += 1
