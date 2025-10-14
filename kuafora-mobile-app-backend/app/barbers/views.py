@@ -911,6 +911,7 @@ class PartnerServiceCategoryViewSet(viewsets.ModelViewSet):
         return (
             ServiceCategory.objects
             .filter(barbershop__staff__user=user, barbershop__staff__is_admin=True)
+            .order_by('position','id')
             .distinct()
         )
 
@@ -941,6 +942,25 @@ class PartnerServiceCategoryViewSet(viewsets.ModelViewSet):
         except IntegrityError:
             raise ValidationError({"detail": "Silme engellendi: bu kategoriye bağlı hizmetler var"})
         return Response(status=204)
+
+    @action(detail=False, methods=["post"], url_path="reorder")
+    def reorder(self, request):
+        ids = request.data if isinstance(request.data, list) else request.data.get('ids')
+        if not isinstance(ids, list) or not ids:
+            return Response({"detail": "ids list required"}, status=400)
+        admin_staff = Staff.objects.filter(user=request.user, is_admin=True).order_by('-id').first()
+        if not admin_staff:
+            return Response({"detail": "No admin barbershop"}, status=403)
+        qs = ServiceCategory.objects.filter(barbershop=admin_staff.barbershop, id__in=ids)
+        pos_map = {int(cid): i for i, cid in enumerate(ids)}
+        updated = 0
+        for c in qs:
+            new_pos = pos_map.get(int(c.id))
+            if new_pos is not None and c.position != new_pos:
+                c.position = new_pos
+                c.save(update_fields=["position"])
+                updated += 1
+        return Response({"detail": "ok", "updated": updated})
 
 
 class PartnerServiceViewSet(viewsets.ModelViewSet):

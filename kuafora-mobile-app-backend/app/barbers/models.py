@@ -381,10 +381,12 @@ class ReviewReply(models.Model):
 class ServiceCategory(models.Model):
     barbershop = models.ForeignKey(Barbershop, on_delete=models.CASCADE, related_name="service_categories")
     name = models.CharField(max_length=100)
+    position = models.PositiveIntegerField(default=0, db_index=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         unique_together = ("barbershop", "name")
+        ordering = ["position", "id"]
 
     def __str__(self) -> str:
         return f"{self.barbershop.name} - {self.name}"
