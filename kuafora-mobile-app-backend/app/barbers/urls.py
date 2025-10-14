@@ -9,7 +9,7 @@ from .views import (
     ReviewHighlightsApi,
     BarbershopReviewsListApi,
     PartnerBarbershopViewSet,
-    PartnerServiceViewSet,
+    PartnerServiceViewSetSecure,
     PartnerServiceCategoryViewSet,
     PartnerStaffViewSet,
     StaffServiceViewSet,
@@ -34,7 +34,7 @@ router.register(r"reviews", ReviewViewSet, basename="review")
 router.register(r"partner/barbershops", PartnerBarbershopViewSet, basename="partner-barbershop")
 # Kategori route'unu, service route'u ile çakışmayı önlemek için ayrı prefix ile tanımla
 router.register(r"partner/service-categories", PartnerServiceCategoryViewSet, basename="partner-service-category")
-router.register(r"partner/services", PartnerServiceViewSet, basename="partner-service")
+router.register(r"partner/services", PartnerServiceViewSetSecure, basename="partner-service")
 router.register(r"partner/staff", PartnerStaffViewSet, basename="partner-staff")
 router.register(r"partner/staff-services", StaffServiceViewSet, basename="partner-staff-services")
 router.register(r"partner/staff-categories", StaffServiceCategoryViewSet, basename="partner-staff-categories")

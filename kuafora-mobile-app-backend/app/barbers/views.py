@@ -505,7 +505,7 @@ class PartnerBarbershopViewSet(viewsets.ModelViewSet):
         return Response({'detail': 'ok'})
 
 
-class PartnerServiceViewSet(viewsets.ModelViewSet):
+class PartnerServiceViewSetSecure(viewsets.ModelViewSet):
     serializer_class = ServiceSerializer
     permission_classes = [permissions.IsAuthenticated, IsShopAdmin]
 
@@ -618,6 +618,25 @@ class PartnerServiceViewSet(viewsets.ModelViewSet):
             )
         except Exception:
             pass
+
+    @action(detail=False, methods=["get"], url_path="tree")
+    def tree(self, request):
+        user = request.user
+        barbershop_id = request.query_params.get('barbershop') or request.query_params.get('barbershop_id')
+        if not barbershop_id:
+            return Response({"detail": "barbershop parameter required"}, status=400)
+        admin_staff = Staff.objects.filter(user=user, is_admin=True, barbershop_id=barbershop_id).order_by('-id').first()
+        if not admin_staff:
+            return Response({"detail": "No permission for this barbershop"}, status=403)
+        categories = ServiceCategory.objects.filter(barbershop_id=barbershop_id).prefetch_related('services')
+        result = []
+        for category in categories:
+            result.append({
+                'id': category.id,
+                'name': category.name,
+                'services': ServiceSerializer(category.services.filter(is_active=True), many=True).data,
+            })
+        return Response(result)
 
 
 class ReviewThrottle(UserRateThrottle):
