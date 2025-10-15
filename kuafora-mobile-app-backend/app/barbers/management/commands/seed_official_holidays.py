@@ -1,4 +1,6 @@
+import datetime
 from django.core.management.base import BaseCommand
+from django.utils import timezone
 from app.barbers.models import OfficialHoliday
 
 
@@ -7,21 +9,44 @@ TR_STATIC = {
     (1, 1): ("Yılbaşı", "national"),
     (4, 23): ("Ulusal Egemenlik ve Çocuk Bayramı", "national"),
     (5, 1): ("Emek ve Dayanışma Günü", "national"),
-    (5, 19): ("Atatürk’ü Anma, Gençlik ve Spor Bayramı", "national"),
+    (5, 19): ("Atatürk'ü Anma, Gençlik ve Spor Bayramı", "national"),
     (8, 30): ("Zafer Bayramı", "national"),
     (10, 29): ("Cumhuriyet Bayramı", "national"),
 }
 
 
 class Command(BaseCommand):
-    help = "Seed TR official holidays for a given year (static + optional movable days)"
+    help = "Seed TR official holidays automatically for current and next year"
 
     def add_arguments(self, parser):
-        parser.add_argument('--year', type=int, required=True)
+        parser.add_argument('--year', type=int, help='Specific year to seed (default: auto)')
+        parser.add_argument('--auto', action='store_true', help='Auto-seed current and next year')
 
     def handle(self, *args, **opts):
-        year = int(opts['year'])
+        if opts.get('year'):
+            # Manuel yıl belirtilmişse
+            years = [opts['year']]
+        else:
+            # Otomatik: mevcut yıl ve gelecek yıl
+            current_year = timezone.now().year
+            years = [current_year, current_year + 1]
+            self.stdout.write(f"Auto-seeding holidays for years: {years}")
+
+        total_created, total_updated = 0, 0
+        
+        for year in years:
+            created, updated = self._seed_year(year)
+            total_created += created
+            total_updated += updated
+
+        self.stdout.write(self.style.SUCCESS(
+            f"Seeded TR holidays for {len(years)} year(s) (total created={total_created}, updated={total_updated})"
+        ))
+
+    def _seed_year(self, year):
+        """Belirli bir yıl için tatilleri seed et"""
         created, updated = 0, 0
+        
         # Sabit günler
         for (month, day), (name, typ) in TR_STATIC.items():
             date_str = f"{year:04d}-{month:02d}-{day:02d}"
@@ -39,6 +64,7 @@ class Command(BaseCommand):
         # İhtiyaca göre bir takvim servisi entegre edilebilir.
         # Şimdilik bu komut yalnızca sabit günleri doldurur.
 
-        self.stdout.write(self.style.SUCCESS(f"Seeded TR holidays for {year} (created={created}, updated={updated})"))
+        self.stdout.write(f"  Year {year}: created={created}, updated={updated}")
+        return created, updated
 
 

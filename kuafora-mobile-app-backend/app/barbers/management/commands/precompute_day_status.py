@@ -1,20 +1,25 @@
+import datetime
 from django.core.management.base import BaseCommand
-from django.core.cache import cache
 from django.utils import timezone
-from datetime import datetime
 from app.barbers.models import Barbershop
 from app.barbers.views import _compute_shop_status
 
-
 class Command(BaseCommand):
-    help = "Precompute and cache today's effective status for all shops"
+    help = 'Precomputes and caches shop statuses for upcoming days.'
+
+    def add_arguments(self, parser):
+        parser.add_argument('--days', type=int, default=30,
+                            help='Number of upcoming days to precompute status for.')
 
     def handle(self, *args, **options):
-        now = timezone.localtime()
-        count = 0
-        for shop in Barbershop.objects.all().only('id'):
-            _ = _compute_shop_status(shop.id, now)
-            count += 1
-        self.stdout.write(self.style.SUCCESS(f"Precomputed status for {count} shops"))
+        num_days = options['days']
+        self.stdout.write(self.style.SUCCESS(f'Precomputing shop statuses for the next {num_days} days...'))
 
+        today = timezone.now().date()
+        for shop in Barbershop.objects.all():
+            for i in range(num_days):
+                date = today + datetime.timedelta(days=i)
+                _compute_shop_status(shop.id, date, force_recompute=True)
+                self.stdout.write(self.style.SUCCESS(f'  Precomputed status for {shop.name} on {date}.'))
 
+        self.stdout.write(self.style.SUCCESS(f'Finished precomputing shop statuses.'))

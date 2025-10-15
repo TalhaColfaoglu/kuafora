@@ -2399,6 +2399,16 @@ class CalendarStatusViewSet(viewsets.ReadOnlyModelViewSet):
         except Barbershop.DoesNotExist:
             return Response({"detail": "Barbershop not found"}, status=404)
 
+        # Otomatik tatil seed kontrolü
+        current_year = timezone.now().year
+        if year in [current_year, current_year + 1]:
+            # Mevcut yıl veya gelecek yıl için tatil sayısını kontrol et
+            holiday_count = OfficialHoliday.objects.filter(country_code='TR', year=year).count()
+            if holiday_count < 6:  # TR'de 6 sabit tatil var
+                # Eksik tatilleri otomatik seed et
+                from django.core.management import call_command
+                call_command('seed_official_holidays', year=year, verbosity=0)
+
         officials = OfficialHoliday.objects.filter(country_code='TR', year=year)
         overrides = ShopHolidayOverride.objects.filter(barbershop=barbershop, date__year=year)
         data = {
