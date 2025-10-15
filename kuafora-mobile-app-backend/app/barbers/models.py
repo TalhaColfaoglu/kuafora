@@ -467,6 +467,31 @@ class ShopHolidayOverride(models.Model):
     def __str__(self) -> str:
         return f"{self.barbershop.name} - {self.date} - {self.status}"
 
+
+class DailyOverride(models.Model):
+    """Bugüne özel manuel şalter. En yüksek öncelik. Gün sonunda süre aşımıyla geçersiz.
+
+    Not: Sadece gün bazlı çalışır; saatlik değil. status=open/closed.
+    """
+    class Status(models.TextChoices):
+        OPEN = "open", "Open"
+        CLOSED = "closed", "Closed"
+
+    barbershop = models.ForeignKey(Barbershop, on_delete=models.CASCADE, related_name="daily_overrides")
+    date = models.DateField(db_index=True)
+    status = models.CharField(max_length=10, choices=Status.choices)
+    note = models.CharField(max_length=200, blank=True)
+    expires_at = models.DateTimeField(help_text="Genellikle gün sonu 23:59:59")
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="created_daily_overrides")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ("barbershop", "date")
+        indexes = [models.Index(fields=["barbershop", "-date"]) ]
+
+    def __str__(self) -> str:
+        return f"{self.barbershop.name} - {self.date} - {self.status}"
+
 class LastViewed(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="last_viewed")
     barbershop = models.ForeignKey(Barbershop, on_delete=models.CASCADE, related_name="viewed_by")

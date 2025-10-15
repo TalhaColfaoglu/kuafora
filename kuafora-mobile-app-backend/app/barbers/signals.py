@@ -4,7 +4,21 @@ from django.db.models.signals import post_save, post_delete
 from django.dispatch import receiver
 from django.db import transaction
 
-from .models import Review, Barbershop
+from .models import Review, Barbershop, DailyOverride, ShopHolidayOverride, Override
+from django.core.cache import cache
+from django.utils import timezone
+
+
+def _status_cache_key(shop_id: int, date_str: str) -> str:
+    return f"shop_status:{shop_id}:{date_str}"
+
+
+def _bust_shop_status_cache(shop_id: int, date):
+    try:
+        key = _status_cache_key(shop_id, date.strftime('%Y-%m-%d'))
+        cache.delete(key)
+    except Exception:
+        pass
 
 
 def _recompute_aggregates(shop_id: int) -> None:
@@ -38,4 +52,34 @@ def on_review_saved(sender, instance: Review, created, **kwargs):
 def on_review_deleted(sender, instance: Review, **kwargs):
     transaction.on_commit(lambda: _recompute_aggregates(instance.barbershop_id))
 
+
+@receiver(post_save, sender=DailyOverride)
+def on_daily_override_saved(sender, instance: DailyOverride, created, **kwargs):
+    transaction.on_commit(lambda: _bust_shop_status_cache(instance.barbershop_id, instance.date))
+
+
+@receiver(post_delete, sender=DailyOverride)
+def on_daily_override_deleted(sender, instance: DailyOverride, **kwargs):
+    transaction.on_commit(lambda: _bust_shop_status_cache(instance.barbershop_id, instance.date))
+
+
+@receiver(post_save, sender=ShopHolidayOverride)
+def on_shop_holiday_override_saved(sender, instance: ShopHolidayOverride, created, **kwargs):
+    transaction.on_commit(lambda: _bust_shop_status_cache(instance.barbershop_id, instance.date))
+
+
+@receiver(post_delete, sender=ShopHolidayOverride)
+def on_shop_holiday_override_deleted(sender, instance: ShopHolidayOverride, **kwargs):
+    transaction.on_commit(lambda: _bust_shop_status_cache(instance.barbershop_id, instance.date))
+
+
+@receiver(post_save, sender=Override)
+def on_override_saved(sender, instance: Override, created, **kwargs):
+    # For simplicity, bust at start_date; clients cache is short-lived (60s)
+    transaction.on_commit(lambda: _bust_shop_status_cache(instance.barbershop_id, instance.start_date))
+
+
+@receiver(post_delete, sender=Override)
+def on_override_deleted(sender, instance: Override, **kwargs):
+    transaction.on_commit(lambda: _bust_shop_status_cache(instance.barbershop_id, instance.start_date))
 

@@ -329,7 +329,7 @@ class StaffWorkingHoursSerializer(serializers.ModelSerializer):
 
 
 # --- Holidays & Special Days ---
-from .models import OfficialHoliday, ShopHolidayOverride
+from .models import OfficialHoliday, ShopHolidayOverride, DailyOverride
 
 
 class OfficialHolidaySerializer(serializers.ModelSerializer):
@@ -357,6 +357,24 @@ class ShopHolidayOverrideSerializer(serializers.ModelSerializer):
         read_only_fields = ("created_by", "created_at", "updated_at")
         read_only_fields = ("created_at", "updated_at")
 
+
+class DailyOverrideSerializer(serializers.ModelSerializer):
+    created_by_name = serializers.CharField(source='created_by.email', read_only=True)
+
+    class Meta:
+        model = DailyOverride
+        fields = (
+            "id",
+            "barbershop",
+            "date",
+            "status",
+            "note",
+            "expires_at",
+            "created_by",
+            "created_by_name",
+            "created_at",
+        )
+        read_only_fields = ("created_by", "created_by_name", "created_at")
 
 class OverrideSerializer(serializers.ModelSerializer):
     created_by_name = serializers.CharField(source='created_by.email', read_only=True)
