@@ -57,6 +57,10 @@ RUN mkdir -p /app/staticfiles /app/mediafiles /app/logs
 
 ENV DJANGO_SETTINGS_MODULE=config.settings.production
 
+# Ensure entrypoint exists and is executable before switching user
+COPY entrypoint.sh /app/entrypoint.sh
+RUN chmod +x /app/entrypoint.sh
+
 # Create non-root user
 RUN groupadd -r django && useradd -r -g django django
 
@@ -74,6 +78,4 @@ HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:8001/health/ || exit 1
 
 # Entrypoint: collectstatic at container startup then run gunicorn
-COPY entrypoint.sh /app/entrypoint.sh
-RUN chmod +x /app/entrypoint.sh
 ENTRYPOINT ["/app/entrypoint.sh"]
