@@ -355,7 +355,6 @@ class ShopHolidayOverrideSerializer(serializers.ModelSerializer):
             "updated_at",
         )
         read_only_fields = ("created_by", "created_at", "updated_at")
-        read_only_fields = ("created_at", "updated_at")
 
 
 class DailyOverrideSerializer(serializers.ModelSerializer):
