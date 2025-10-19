@@ -113,6 +113,47 @@ class BarbershopViewSet(viewsets.ReadOnlyModelViewSet):
         serializer = ServiceSerializer(services, many=True)
         return Response(serializer.data)
 
+    @action(detail=False, methods=["post"], url_path="today-toggle", permission_classes=[permissions.IsAuthenticated])
+    def today_toggle(self, request):
+        """Adminler için bugünlük manuel şalter (open/closed).
+        BarbershopViewSet.toggle ile aynı mantık; prod router uyuşmazlıkları için güvenli rota.
+        Döner: {ok: bool, error?: {code,message}}
+        """
+        try:
+            shop_id = request.data.get('barbershop_id') or request.query_params.get('barbershop_id')
+            status_val = (request.data.get('status') or '').lower()
+            note = request.data.get('note', '')
+            if not shop_id:
+                return Response({'ok': False, 'error': {'code': 'bad_request', 'message': 'barbershop_id gerekli'}}, status=200)
+            try:
+                shop = Barbershop.objects.get(id=int(shop_id))
+            except Barbershop.DoesNotExist:
+                return Response({'ok': False, 'error': {'code': 'not_found', 'message': 'Dükkan bulunamadı'}}, status=200)
+            # izin: dükkan admini olmalı
+            is_admin = Staff.objects.filter(user=request.user, barbershop=shop, is_admin=True).exists()
+            if not is_admin:
+                return Response({'ok': False, 'error': {'code': 'forbidden', 'message': 'Bu işlem için yetkiniz yok.'}}, status=200)
+            if status_val not in ('open','closed'):
+                return Response({'ok': False, 'error': {'code': 'invalid_status', 'message': "Geçersiz durum. 'open' veya 'closed' olmalı."}}, status=200)
+
+            local_now = timezone.localtime()
+            today = local_now.date()
+            expires_at = timezone.make_aware(datetime.combine(today, datetime.max.time())).replace(hour=23, minute=59, second=59, microsecond=0)
+            obj, _ = DailyOverride.objects.update_or_create(
+                barbershop=shop,
+                date=today,
+                defaults={
+                    'status': status_val,
+                    'note': note or ("Manuel kapatma" if status_val=='closed' else "Manuel açma"),
+                    'expires_at': expires_at,
+                    'created_by': request.user,
+                }
+            )
+            # Sinyaller cache'i temizleyecek
+            return Response({'ok': True, 'data': DailyOverrideSerializer(obj).data}, status=200)
+        except Exception as e:
+            return Response({'ok': False, 'error': {'code': 'unknown', 'message': str(e)}}, status=200)
+
     @action(detail=True, methods=["get"], url_path="staff")
     def staff(self, request, pk=None):
         staff = Staff.objects.filter(barbershop_id=pk)
@@ -402,8 +443,8 @@ class BarbershopViewSet(viewsets.ReadOnlyModelViewSet):
         try:
             from .models import SpecialMessage
             from django.utils import timezone as dj_tz
-            title = 'Bugün Salon Kapalı' if status_val == 'closed' else 'Bugün Salon Açık'
-            content = (note or ("Manuel kapatma" if status_val=='closed' else "Manuel açma")).strip()
+            title = 'Dükkan Kapatıldı' if status_val == 'closed' else 'Dükkan Açıldı'
+            content = (note or ("Bugünlük durum değiştirildi" if status_val=='closed' else "Bugünlük durum açıldı")).strip()
             SpecialMessage.objects.create(
                 barbershop=shop,
                 source='manual' if note else 'automatic',
@@ -1401,17 +1442,7 @@ class PartnerShopWorkingHoursViewSet(viewsets.ModelViewSet):
         
         serializer.save(barbershop=admin_staff.barbershop)
         self._log_action('create', 'ShopWorkingHours', serializer.instance.id, serializer.validated_data)
-        # Duyuru
-        try:
-            SpecialMessage.objects.create(
-                barbershop=admin_staff.barbershop,
-                source='automatic', target_type='all_shop',
-                title='Çalışma saatleri güncellendi', content='Dükkan çalışma saatleri düzenlendi',
-                start_datetime=timezone.now(), end_datetime=timezone.now() + timedelta(days=14),
-                created_by=self.request.user, is_active=True,
-            )
-        except Exception:
-            pass
+        # Duyuru gönderme devre dışı
 
     def perform_update(self, serializer):
         old_data = ShopWorkingHoursSerializer(serializer.instance).data
@@ -1420,33 +1451,13 @@ class PartnerShopWorkingHoursViewSet(viewsets.ModelViewSet):
             'old': old_data,
             'new': serializer.validated_data
         })
-        try:
-            admin_staff = Staff.objects.get(user=self.request.user, is_admin=True)
-            SpecialMessage.objects.create(
-                barbershop=admin_staff.barbershop,
-                source='automatic', target_type='all_shop',
-                title='Çalışma saatleri güncellendi', content='Dükkan çalışma saatleri düzenlendi',
-                start_datetime=timezone.now(), end_datetime=timezone.now() + timedelta(days=14),
-                created_by=self.request.user, is_active=True,
-            )
-        except Exception:
-            pass
+        # Duyuru gönderme devre dışı
 
     def perform_destroy(self, instance):
         old_data = ShopWorkingHoursSerializer(instance).data
         self._log_action('delete', 'ShopWorkingHours', instance.id, old_data)
         super().perform_destroy(instance)
-        try:
-            admin_staff = Staff.objects.get(user=self.request.user, is_admin=True)
-            SpecialMessage.objects.create(
-                barbershop=admin_staff.barbershop,
-                source='automatic', target_type='all_shop',
-                title='Çalışma saatleri kaldırıldı', content='Bazı çalışma saatleri kaldırıldı',
-                start_datetime=timezone.now(), end_datetime=timezone.now() + timedelta(days=7),
-                created_by=self.request.user, is_active=True,
-            )
-        except Exception:
-            pass
+        # Duyuru gönderme devre dışı
 
     def _log_action(self, action_type, target_model, target_id, changes):
         try:
