@@ -378,13 +378,8 @@ class BarbershopViewSet(viewsets.ReadOnlyModelViewSet):
             return Response({'ok': False, 'error': {'code': 'invalid_status', 'message': "Geçersiz durum. 'open' veya 'closed' olmalı."}})
         local_now = timezone.localtime()
         today = local_now.date()
-        # Çakışma: bugün shop_global full_day_closed override varsa 'open' isteği reddedilir (ok=false)
-        conflict_ov = Override.objects.filter(
-            barbershop=shop, override_type='shop_global', is_active=True,
-            start_date__lte=today, end_date__gte=today
-        ).order_by('-created_at').first()
-        if conflict_ov and conflict_ov.override_scope == 'full_day_closed' and status_val == 'open':
-            return Response({'ok': False, 'error': {'code': 'conflict_special_day', 'message': 'Dükkan durumu güncellenemedi. Lütfen özel gün ve tatil çakışmalarını kontrol edin.', 'redirect': 'shop_special_days'}})
+        # Öncelik politikası: Günlük manuel şalter (DailyOverride) her zaman en üstte olmalı.
+        # Bu nedenle özel gün/haftalık saat çakışmalarına bakıp reddetme YAPMAYIZ.
         expires_at = timezone.make_aware(datetime.combine(today, datetime.max.time())).replace(hour=23, minute=59, second=59, microsecond=0)
         obj, _ = DailyOverride.objects.update_or_create(
             barbershop=shop,
@@ -396,6 +391,33 @@ class BarbershopViewSet(viewsets.ReadOnlyModelViewSet):
                 'created_by': user,
             }
         )
+        # Cache temizle: bugünün durumunu yeniden hesaplansın
+        try:
+            from django.core.cache import cache
+            key = f"shop_status:{shop.id}:{today.strftime('%Y-%m-%d')}"
+            cache.delete(key)
+        except Exception:
+            pass
+        # Duyuru oluştur: kısa açıklama varsa içerik olarak kullan; yoksa otomatik mesaj
+        try:
+            from .models import SpecialMessage
+            from django.utils import timezone as dj_tz
+            title = 'Bugün Salon Kapalı' if status_val == 'closed' else 'Bugün Salon Açık'
+            content = (note or ("Manuel kapatma" if status_val=='closed' else "Manuel açma")).strip()
+            SpecialMessage.objects.create(
+                barbershop=shop,
+                source='manual' if note else 'automatic',
+                display_type='banner',
+                target_type='all_shop',
+                title=title,
+                content=content,
+                start_datetime=dj_tz.now(),
+                end_datetime=dj_tz.now() + timedelta(days=2),
+                created_by=user,
+                is_active=True,
+            )
+        except Exception:
+            pass
         return Response({'ok': True, 'data': DailyOverrideSerializer(obj).data})
 def _compute_shop_status(barbershop_id: int, ts: datetime) -> dict:
     """DailyOverride > SpecialDay(Override) > OfficialHoliday(is_shop_closed) > WeeklySchedule
@@ -1840,7 +1862,28 @@ class PartnerOverrideViewSet(viewsets.ModelViewSet):
                     msg.target_staff.add(ov.staff)
                 msg.save()
 
-    def create(self, request, *args, **kwargs):
+ubuntu@ip-172-31-37-162:~/kuafora$ JWT=$(curl -sS -k -H 'Host: api.kuafora.com' -H 'Content-Type: application/json' \
+  -X POST https://127.0.0.1/api/auth/login/ \
+  --data '{"email":"talperen1040@gmail.com","password":"tTalperen1040*t"}' | jq -r .access)
+echo "$JWT"
+eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzkyMzU1MTg0LCJpYXQiOjE3NjA4MTkxODQsImp0aSI6ImNkNGE2OGI1Y2M1MTQ5MTM4MWRiODI1ZjlmYWNmMmUwIiwidXNlcl9pZCI6ImFlOTMzNjY0LTdhZTQtNGQwMS05NzhkLTU5MzNlNTQ3Y2I3MCJ9.aWs8JdnDFbCD24GlJs5XOo744DLozl0OSFGfuAzJ6IQ
+ubuntu@ip-172-31-37-162:~/kuafora$ curl -sS -k -X POST \
+  -H 'Host: api.kuafora.com' \
+  -H "Authorization: Bearer $JWT" \
+  -H 'Content-Type: application/json' \
+  https://127.0.0.1/api/barbershops/1/toggle/ \
+  --data-raw '{"status":"closed"}' | jq
+parse error: Invalid numeric literal at line 1, column 10
+ubuntu@ip-172-31-37-162:~/kuafora$ 
+ubuntu@ip-172-31-37-162:~/kuafora$ curl -sS -k \
+  -H 'Host: api.kuafora.com' \
+  -H "Authorization: Bearer $JWT" \
+  https://127.0.0.1/api/barbershops/1/status/ | jq
+{
+  "is_open_now": false,
+  "opens_at": null,
+  "closes_at": null
+}    def create(self, request, *args, **kwargs):
         try:
             serializer = self.get_serializer(data=request.data)
             if not serializer.is_valid():
