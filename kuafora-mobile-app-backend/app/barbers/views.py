@@ -469,7 +469,12 @@ def _compute_shop_status(barbershop_id: int, ts: datetime) -> dict:
     key = f"shop_status:{barbershop_id}:{ts.date().strftime('%Y-%m-%d')}"
     cached = cache.get(key)
     if cached:
-        return cached
+        # Eğer DailyOverride varsa ve cache eski olabilir; 5 sn içinde recheck yap
+        do = DailyOverride.objects.filter(barbershop_id=barbershop_id, date=ts.date()).first()
+        if do and ((ts - timezone.now()).total_seconds() < 5):
+            cache.delete(key)
+        else:
+            return cached
     # 1) DailyOverride (bugün)
     local_ts = timezone.localtime(ts)
     date = local_ts.date()

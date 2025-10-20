@@ -25,6 +25,7 @@ from .views import (
     ToggleTodayApi,
     AnnouncementsPublicApi,
     PartnerHolidayOverrideViewSet,
+    ToggleTodayApi,
 )
 
 router = DefaultRouter()
@@ -49,7 +50,8 @@ router.register(r"partner/holidayoverride", PartnerHolidayOverrideViewSet, basen
 router.register(r"calendar", CalendarStatusViewSet, basename="calendar-status")
 
 urlpatterns = [
-    # Legacy/fallback toggle (collection-level) – explicit APIView to avoid 405 on ViewSet
+    # Robust toggle endpoints (avoid router clashes)
+    path("toggle-today/", ToggleTodayApi.as_view(), name="toggle-today"),
     path("calendar/toggle/", ToggleTodayApi.as_view(), name="calendar-toggle"),
 
     # Koruma: hem ViewSet action hem de ayrı list api mevcut; upsert da ayrıca açık
