@@ -53,6 +53,8 @@ urlpatterns = [
     # Robust toggle endpoints (avoid router clashes)
     path("toggle-today/", ToggleTodayApi.as_view(), name="toggle-today"),
     path("calendar/toggle/", ToggleTodayApi.as_view(), name="calendar-toggle"),
+    path("barbershops/today-toggle/", ToggleTodayApi.as_view(), name="barbershops-today-toggle"),
+    path("barbershops/<int:barbershop_id>/toggle/", ToggleTodayApi.as_view(), name="barbershops-toggle-by-id"),
 
     # Koruma: hem ViewSet action hem de ayrı list api mevcut; upsert da ayrıca açık
     path("barbershops/<int:barber_id>/reviews/upsert/", ReviewUpsertApi.as_view(), name="barber-review-upsert"),

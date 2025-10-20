@@ -2647,14 +2647,18 @@ class CalendarStatusViewSet(viewsets.ReadOnlyModelViewSet):
 class ToggleTodayApi(generics.GenericAPIView):
     permission_classes = [permissions.IsAuthenticated]
 
-    def post(self, request):
+    def _handle(self, request, **kwargs):
         try:
             try:
                 payload = request.data if isinstance(request.data, (dict,)) else {}
             except Exception:
                 payload = {}
-            barbershop_id = payload.get('barbershop_id') or request.query_params.get('barbershop_id')
-            status_val = payload.get('status') or request.query_params.get('status')
+            barbershop_id = (
+                payload.get('barbershop_id')
+                or request.query_params.get('barbershop_id')
+                or kwargs.get('barbershop_id')
+            )
+            status_val = (payload.get('status') or request.query_params.get('status') or '').lower()
             note = payload.get('note', '')
             if not barbershop_id:
                 return Response({'ok': False, 'error': {'code': 'bad_request', 'message': 'barbershop_id gerekli'}})
@@ -2689,6 +2693,19 @@ class ToggleTodayApi(generics.GenericAPIView):
             return Response({'ok': True, 'data': DailyOverrideSerializer(obj).data})
         except Exception:
             return Response({'ok': False, 'error': {'code': 'unknown', 'message': 'İşlem tamamlanamadı'}})
+
+    def post(self, request, *args, **kwargs):
+        return self._handle(request, **kwargs)
+
+    def put(self, request, *args, **kwargs):
+        return self._handle(request, **kwargs)
+
+    def patch(self, request, *args, **kwargs):
+        return self._handle(request, **kwargs)
+
+    def get(self, request, *args, **kwargs):
+        # GET'e 405 yerine açıklayıcı ok=false dön (legacy clientlar 405 üretmesin)
+        return Response({'ok': False, 'error': {'code': 'method_not_allowed', 'message': 'Sadece POST/PUT/PATCH desteklenir'}})
 
 
 class StaffServiceViewSet(viewsets.ModelViewSet):
