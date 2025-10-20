@@ -2572,7 +2572,7 @@ class CalendarStatusViewSet(viewsets.ReadOnlyModelViewSet):
             end_time__gte=now_ts.time(),
             is_closed=False
         ).values('staff').distinct().count() if status_data.get('status') == 'open' else 0
-        return Response({
+        resp = Response({
             'ok': True,
             'is_open': status_data.get('status') == 'open',
             'opening_time': status_data.get('open_interval', {}).get('start') if status_data.get('open_interval') else None,
@@ -2582,6 +2582,11 @@ class CalendarStatusViewSet(viewsets.ReadOnlyModelViewSet):
             'message': status_data.get('message'),
             'next_change': status_data.get('next_change'),
         })
+        try:
+            resp['Cache-Control'] = 'no-store, max-age=0'
+        except Exception:
+            pass
+        return resp
 
 
 class StaffServiceViewSet(viewsets.ModelViewSet):
