@@ -54,6 +54,8 @@ urlpatterns = [
     # ViewSet action için router zaten /barbershops/{id}/reviews/ sağlıyor; ekstra list api de mevcut
     path("barbershops/<int:barber_id>/reviews/", BarbershopReviewsListApi.as_view(), name="barber-review-list"),
     path("", include(router.urls)),
+    # Legacy/fallback toggle (collection-level) for clients that cannot hit /barbershops/{id}/toggle/
+    path("calendar/toggle/", CalendarStatusViewSet.as_view({'post': 'toggle_today'}), name="calendar-toggle"),
     path("favorites/", FavoriteListView.as_view(), name="favorites-list"),
     path("favorites/toggle/<int:barbershop_id>/", FavoriteToggleView.as_view(), name="favorites-toggle"),
     # Public announcements for mobile app
