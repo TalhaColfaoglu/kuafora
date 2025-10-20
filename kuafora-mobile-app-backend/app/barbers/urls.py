@@ -22,6 +22,7 @@ from .views import (
     PartnerOverrideViewSet,
     PartnerSpecialMessageViewSet,
     CalendarStatusViewSet,
+    ToggleTodayApi,
     AnnouncementsPublicApi,
     PartnerHolidayOverrideViewSet,
 )
@@ -48,14 +49,15 @@ router.register(r"partner/holidayoverride", PartnerHolidayOverrideViewSet, basen
 router.register(r"calendar", CalendarStatusViewSet, basename="calendar-status")
 
 urlpatterns = [
+    # Legacy/fallback toggle (collection-level) – explicit APIView to avoid 405 on ViewSet
+    path("calendar/toggle/", ToggleTodayApi.as_view(), name="calendar-toggle"),
+
     # Koruma: hem ViewSet action hem de ayrı list api mevcut; upsert da ayrıca açık
     path("barbershops/<int:barber_id>/reviews/upsert/", ReviewUpsertApi.as_view(), name="barber-review-upsert"),
     path("barbershops/<int:barber_id>/reviews/highlights/", ReviewHighlightsApi.as_view(), name="barber-review-highlights"),
     # ViewSet action için router zaten /barbershops/{id}/reviews/ sağlıyor; ekstra list api de mevcut
     path("barbershops/<int:barber_id>/reviews/", BarbershopReviewsListApi.as_view(), name="barber-review-list"),
     path("", include(router.urls)),
-    # Legacy/fallback toggle (collection-level) for clients that cannot hit /barbershops/{id}/toggle/
-    path("calendar/toggle/", CalendarStatusViewSet.as_view({'post': 'toggle_today'}), name="calendar-toggle"),
     path("favorites/", FavoriteListView.as_view(), name="favorites-list"),
     path("favorites/toggle/<int:barbershop_id>/", FavoriteToggleView.as_view(), name="favorites-toggle"),
     # Public announcements for mobile app

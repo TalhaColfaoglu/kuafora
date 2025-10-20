@@ -2639,6 +2639,53 @@ class CalendarStatusViewSet(viewsets.ReadOnlyModelViewSet):
             return Response({'ok': False, 'error': {'code': 'unknown', 'message': 'İşlem tamamlanamadı'}})
 
 
+class ToggleTodayApi(generics.GenericAPIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        try:
+            try:
+                payload = request.data if isinstance(request.data, (dict,)) else {}
+            except Exception:
+                payload = {}
+            barbershop_id = payload.get('barbershop_id') or request.query_params.get('barbershop_id')
+            status_val = payload.get('status') or request.query_params.get('status')
+            note = payload.get('note', '')
+            if not barbershop_id:
+                return Response({'ok': False, 'error': {'code': 'bad_request', 'message': 'barbershop_id gerekli'}})
+            try:
+                shop = Barbershop.objects.get(id=int(barbershop_id))
+            except Exception:
+                return Response({'ok': False, 'error': {'code': 'not_found', 'message': 'Dükkan bulunamadı'}})
+            if status_val not in ('open','closed'):
+                return Response({'ok': False, 'error': {'code': 'invalid_status', 'message': "Geçersiz durum. 'open' veya 'closed' olmalı."}})
+            user = request.user
+            if not Staff.objects.filter(user=user, barbershop=shop).exists():
+                return Response({'ok': False, 'error': {'code': 'forbidden', 'message': 'Bu işlem için yetkiniz yok.'}})
+            local_now = timezone.localtime()
+            today = local_now.date()
+            expires_at = timezone.make_aware(datetime.combine(today, datetime.max.time())).replace(hour=23, minute=59, second=59, microsecond=0)
+            obj, _ = DailyOverride.objects.update_or_create(
+                barbershop=shop,
+                date=today,
+                defaults={
+                    'status': status_val,
+                    'note': note or ("Manuel kapatma" if status_val=='closed' else "Manuel açma"),
+                    'expires_at': expires_at,
+                    'created_by': user,
+                }
+            )
+            try:
+                from django.core.cache import cache
+                key = f"shop_status:{shop.id}:{today.strftime('%Y-%m-%d')}"
+                cache.delete(key)
+            except Exception:
+                pass
+            return Response({'ok': True, 'data': DailyOverrideSerializer(obj).data})
+        except Exception:
+            return Response({'ok': False, 'error': {'code': 'unknown', 'message': 'İşlem tamamlanamadı'}})
+
+
 class StaffServiceViewSet(viewsets.ModelViewSet):
     """
     Personellerin kendi hizmetlerini yönetmesi için.
