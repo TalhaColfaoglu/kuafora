@@ -2594,9 +2594,14 @@ class CalendarStatusViewSet(viewsets.ReadOnlyModelViewSet):
         Hiçbir koşulda 4xx/5xx dönmez; ok=false + error ile 200.
         """
         try:
-            barbershop_id = request.data.get('barbershop_id') or request.query_params.get('barbershop_id')
-            status_val = request.data.get('status')
-            note = request.data.get('note', '')
+            # Django REST Framework JSONParser bazen düz str dönebilir; guard et
+            try:
+                payload = request.data if isinstance(request.data, (dict,)) else {}
+            except Exception:
+                payload = {}
+            barbershop_id = payload.get('barbershop_id') or request.query_params.get('barbershop_id')
+            status_val = payload.get('status') or request.query_params.get('status')
+            note = payload.get('note', '')
             if not barbershop_id:
                 return Response({'ok': False, 'error': {'code': 'bad_request', 'message': 'barbershop_id gerekli'}})
             try:
