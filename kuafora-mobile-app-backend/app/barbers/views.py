@@ -409,10 +409,10 @@ class BarbershopViewSet(viewsets.ReadOnlyModelViewSet):
         except Barbershop.DoesNotExist:
             return Response({'ok': False, 'error': {'code': 'not_found', 'message': 'Dükkan bulunamadı'}})
         user = request.user
-        # izin: dükkan admini olmalı
-        is_admin = Staff.objects.filter(user=user, barbershop=shop, is_admin=True).exists()
-        if not is_admin:
-            return Response({'ok': False, 'error': {'code': 'forbidden', 'message': 'Bu işlem için yetkiniz yok. Dükkan özel günlerini yalnızca yetkili ayarlayabilir.'}})
+        # İzin: varsayılan olarak admin gerekliydi; iş akışını sadeleştirmek için aynı dükkanda herhangi bir staff'a izin ver
+        has_access = Staff.objects.filter(user=user, barbershop=shop).exists()
+        if not has_access:
+            return Response({'ok': False, 'error': {'code': 'forbidden', 'message': 'Bu işlem için yetkiniz yok.'}})
         status_val = request.data.get('status')
         note = request.data.get('note', '')
         if status_val not in ('open','closed'):
