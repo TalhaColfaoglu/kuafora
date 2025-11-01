@@ -4,6 +4,7 @@ from datetime import datetime, timedelta, time
 from typing import List, Tuple
 
 from django.utils import timezone
+from django.db import models
 
 from app.barbers.models import Staff, StaffWorkingHours, Override, Barbershop
 from app.appointments.models import Appointment

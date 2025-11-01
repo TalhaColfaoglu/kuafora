@@ -1780,28 +1780,7 @@ class PartnerOverrideViewSet(viewsets.ModelViewSet):
                     msg.target_staff.add(ov.staff)
                 msg.save()
 
-ubuntu@ip-172-31-37-162:~/kuafora$ JWT=$(curl -sS -k -H 'Host: api.kuafora.com' -H 'Content-Type: application/json' \
-  -X POST https://127.0.0.1/api/auth/login/ \
-  --data '{"email":"talperen1040@gmail.com","password":"tTalperen1040*t"}' | jq -r .access)
-echo "$JWT"
-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzkyMzU1MTg0LCJpYXQiOjE3NjA4MTkxODQsImp0aSI6ImNkNGE2OGI1Y2M1MTQ5MTM4MWRiODI1ZjlmYWNmMmUwIiwidXNlcl9pZCI6ImFlOTMzNjY0LTdhZTQtNGQwMS05NzhkLTU5MzNlNTQ3Y2I3MCJ9.aWs8JdnDFbCD24GlJs5XOo744DLozl0OSFGfuAzJ6IQ
-ubuntu@ip-172-31-37-162:~/kuafora$ curl -sS -k -X POST \
-  -H 'Host: api.kuafora.com' \
-  -H "Authorization: Bearer $JWT" \
-  -H 'Content-Type: application/json' \
-  https://127.0.0.1/api/barbershops/1/toggle/ \
-  --data-raw '{"status":"closed"}' | jq
-parse error: Invalid numeric literal at line 1, column 10
-ubuntu@ip-172-31-37-162:~/kuafora$ 
-ubuntu@ip-172-31-37-162:~/kuafora$ curl -sS -k \
-  -H 'Host: api.kuafora.com' \
-  -H "Authorization: Bearer $JWT" \
-  https://127.0.0.1/api/barbershops/1/status/ | jq
-{
-  "is_open_now": false,
-  "opens_at": null,
-  "closes_at": null
-}    def create(self, request, *args, **kwargs):
+    def create(self, request, *args, **kwargs):
         try:
             serializer = self.get_serializer(data=request.data)
             if not serializer.is_valid():

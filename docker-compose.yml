@@ -74,6 +74,20 @@ services:
         crond -f -l 2
       "
 
+  notify_worker:
+    build:
+      context: ./kuafora-mobile-app-backend
+      dockerfile: Dockerfile.prod
+    container_name: kuafora_notify
+    restart: unless-stopped
+    env_file:
+      - ./env/backend.env
+    networks: [kuafora_net]
+    depends_on:
+      - db
+      - backend
+    command: python manage.py process_notifications
+
   nginx:
     image: nginx:alpine
     container_name: kuafora_nginx
