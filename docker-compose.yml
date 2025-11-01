@@ -67,12 +67,11 @@ services:
     depends_on:
       - db
       - backend
-    command: >
-      sh -c "
-        echo '0 0 * * * cd /app && python manage.py daily_maintenance' > /etc/crontabs/root &&
-        echo '0 1 * * * cd /app && python manage.py precompute_day_status --days 7' >> /etc/crontabs/root &&
-        crond -f -l 2
-      "
+    entrypoint: ["sh","-c"]
+    command: |
+      echo '0 0 * * * cd /app && python manage.py daily_maintenance' > /etc/crontabs/root && 
+      echo '0 1 * * * cd /app && python manage.py precompute_day_status --days 7' >> /etc/crontabs/root && 
+      crond -f -l 2
 
   notify_worker:
     build:
@@ -86,7 +85,7 @@ services:
     depends_on:
       - db
       - backend
-    command: python manage.py process_notifications
+    entrypoint: ["python","manage.py","process_notifications"]
 
   nginx:
     image: nginx:alpine
