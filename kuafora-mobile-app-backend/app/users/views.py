@@ -281,6 +281,35 @@ class CheckEmailView(generics.GenericAPIView):
         })
 
 
+class ResolveUserView(generics.GenericAPIView):
+    """Resolve user by email for onboarding flows.
+    GET /users/resolve/?email=foo@bar.com -> {exists, user_id, attached_shop_id}
+    """
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, *args, **kwargs):
+        email = request.query_params.get('email')
+        if not email:
+            return Response({"detail": "email query param required"}, status=400)
+        user = User.objects.filter(email=email).first()
+        if not user:
+            return Response({
+                "exists": False,
+                "user_id": None,
+                "attached_shop_id": None,
+            })
+        # Check staff attachment
+        from app.barbers.models import Staff  # lazy import
+        staff = Staff.objects.filter(user=user).select_related('barbershop').first()
+        attached_shop_id = getattr(getattr(staff, 'barbershop', None), 'id', None)
+        return Response({
+            "exists": True,
+            "user_id": user.id,
+            "attached_shop_id": attached_shop_id,
+        })
+
+
 class CheckPhoneView(generics.GenericAPIView):
     serializer_class = PhoneSerializer
 

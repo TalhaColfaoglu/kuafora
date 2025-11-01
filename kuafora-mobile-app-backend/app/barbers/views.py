@@ -782,31 +782,11 @@ class PartnerServiceViewSetSecure(viewsets.ModelViewSet):
             from rest_framework.exceptions import PermissionDenied
             raise PermissionDenied("No admin barbershop for this user")
         serializer.save(barbershop=admin_staff.barbershop)
-        # Otomatik duyuru: yeni hizmet eklendi
-        try:
-            SpecialMessage.objects.create(
-                barbershop=admin_staff.barbershop,
-                source='automatic', target_type='all_shop',
-                title='Yeni hizmet eklendi', content=f"{serializer.instance.name}",
-                start_datetime=timezone.now(), end_datetime=timezone.now() + timedelta(days=30),
-                created_by=self.request.user, is_active=True,
-            )
-        except Exception:
-            pass
+        # Duyuru gönderme devre dışı
 
     def perform_update(self, serializer):
         super().perform_update(serializer)
-        try:
-            admin_staff = Staff.objects.get(user=self.request.user, is_admin=True)
-            SpecialMessage.objects.create(
-                barbershop=admin_staff.barbershop,
-                source='automatic', target_type='all_shop',
-                title='Hizmet güncellendi', content=f"{serializer.instance.name}",
-                start_datetime=timezone.now(), end_datetime=timezone.now() + timedelta(days=14),
-                created_by=self.request.user, is_active=True,
-            )
-        except Exception:
-            pass
+        # Duyuru gönderme devre dışı
 
     def perform_destroy(self, instance):
         name = getattr(instance, 'name', 'Hizmet')
@@ -817,16 +797,7 @@ class PartnerServiceViewSetSecure(viewsets.ModelViewSet):
             super().perform_destroy(instance)
         except IntegrityError as e:
             raise ValidationError({"detail": f"Silme engellendi: {e}"})
-        try:
-            SpecialMessage.objects.create(
-                barbershop=shop,
-                source='automatic', target_type='all_shop',
-                title='Hizmet kaldırıldı', content=name,
-                start_datetime=timezone.now(), end_datetime=timezone.now() + timedelta(days=7),
-                created_by=self.request.user, is_active=True,
-            )
-        except Exception:
-            pass
+        # Duyuru gönderme devre dışı
 
     @action(detail=False, methods=["get"], url_path="tree")
     def tree(self, request):
@@ -1168,17 +1139,7 @@ class PartnerServiceCategoryViewSet(viewsets.ModelViewSet):
             from rest_framework.exceptions import PermissionDenied
             raise PermissionDenied("No admin barbershop for this user")
         serializer.save(barbershop=admin_staff.barbershop)
-        # Otomatik duyuru: yeni kategori
-        try:
-            SpecialMessage.objects.create(
-                barbershop=admin_staff.barbershop,
-                source='automatic', target_type='all_shop',
-                title='Yeni kategori eklendi', content=f"{serializer.instance.name}",
-                start_datetime=timezone.now(), end_datetime=timezone.now() + timedelta(days=30),
-                created_by=self.request.user, is_active=True,
-            )
-        except Exception:
-            pass
+        # Otomatik duyuru devre dışı
 
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()
@@ -1238,32 +1199,12 @@ class PartnerServiceViewSet(viewsets.ModelViewSet):
                 return Response({"detail": str(e)}, status=400)
             raise
         headers = self.get_success_headers(serializer.data)
-        try:
-            SpecialMessage.objects.create(
-                barbershop=admin_staff.barbershop,
-                source='automatic', target_type='all_shop',
-                title='Yeni hizmet eklendi', content=f"{serializer.instance.name}",
-                start_datetime=timezone.now(), end_datetime=timezone.now() + timedelta(days=30),
-                created_by=request.user, is_active=True,
-            )
-        except Exception:
-            pass
+        # Otomatik duyuru devre dışı
         return Response(serializer.data, status=201, headers=headers)
 
     def perform_update(self, serializer):
         super().perform_update(serializer)
-        try:
-            admin_staff = Staff.objects.filter(user=self.request.user, is_admin=True).order_by('-id').first()
-            if admin_staff:
-                SpecialMessage.objects.create(
-                    barbershop=admin_staff.barbershop,
-                    source='automatic', target_type='all_shop',
-                    title='Hizmet güncellendi', content=f"{serializer.instance.name}",
-                    start_datetime=timezone.now(), end_datetime=timezone.now() + timedelta(days=14),
-                    created_by=self.request.user, is_active=True,
-                )
-        except Exception:
-            pass
+        # Otomatik duyuru devre dışı
 
     def perform_destroy(self, instance):
         name = getattr(instance, 'name', 'Hizmet')
@@ -1274,16 +1215,7 @@ class PartnerServiceViewSet(viewsets.ModelViewSet):
             super().perform_destroy(instance)
         except IntegrityError as e:
             raise ValidationError({"detail": f"Silme engellendi: {e}"})
-        try:
-            SpecialMessage.objects.create(
-                barbershop=shop,
-                source='automatic', target_type='all_shop',
-                title='Hizmet kaldırıldı', content=name,
-                start_datetime=timezone.now(), end_datetime=timezone.now() + timedelta(days=7),
-                created_by=self.request.user, is_active=True,
-            )
-        except Exception:
-            pass
+        # Duyuru gönderme devre dışı
 
     @action(detail=False, methods=["get"], url_path="tree")
     def tree(self, request):
@@ -1609,17 +1541,7 @@ class PartnerStaffWorkingHoursViewSet(viewsets.ModelViewSet):
             raise drf_serializers.ValidationError("Yetkisiz işlem: sadece kendi saatlerinizi düzenleyebilirsiniz")
         serializer.save()
         self._log_action('create', 'StaffWorkingHours', serializer.instance.id, serializer.validated_data)
-        try:
-            admin_staff = Staff.objects.get(user=self.request.user, is_admin=True)
-            SpecialMessage.objects.create(
-                barbershop=admin_staff.barbershop,
-                source='automatic', target_type='all_shop',
-                title='Personel çalışma saatleri güncellendi', content=f"{getattr(serializer.instance.staff.user, 'email', 'Personel')}",
-                start_datetime=timezone.now(), end_datetime=timezone.now() + timedelta(days=14),
-                created_by=self.request.user, is_active=True,
-            )
-        except Exception:
-            pass
+        # Duyuru gönderme devre dışı
 
     def perform_update(self, serializer):
         old = StaffWorkingHoursSerializer(serializer.instance).data
@@ -1628,33 +1550,13 @@ class PartnerStaffWorkingHoursViewSet(viewsets.ModelViewSet):
             'old': old,
             'new': StaffWorkingHoursSerializer(serializer.instance).data
         })
-        try:
-            admin_staff = Staff.objects.get(user=self.request.user, is_admin=True)
-            SpecialMessage.objects.create(
-                barbershop=admin_staff.barbershop,
-                source='automatic', target_type='all_shop',
-                title='Personel çalışma saatleri güncellendi', content=f"{getattr(serializer.instance.staff.user, 'email', 'Personel')}",
-                start_datetime=timezone.now(), end_datetime=timezone.now() + timedelta(days=14),
-                created_by=self.request.user, is_active=True,
-            )
-        except Exception:
-            pass
+        # Duyuru gönderme devre dışı
 
     def perform_destroy(self, instance):
         old = StaffWorkingHoursSerializer(instance).data
         self._log_action('delete', 'StaffWorkingHours', instance.id, old)
         super().perform_destroy(instance)
-        try:
-            admin_staff = Staff.objects.get(user=self.request.user, is_admin=True)
-            SpecialMessage.objects.create(
-                barbershop=admin_staff.barbershop,
-                source='automatic', target_type='all_shop',
-                title='Personel çalışma saatleri kaldırıldı', content=f"{getattr(instance.staff.user, 'email', 'Personel')}",
-                start_datetime=timezone.now(), end_datetime=timezone.now() + timedelta(days=7),
-                created_by=self.request.user, is_active=True,
-            )
-        except Exception:
-            pass
+        # Otomatik duyuru devre dışı
 
     def _log_action(self, action_type, target_model, target_id, changes):
         try:
@@ -2795,6 +2697,51 @@ class StaffServiceViewSet(viewsets.ModelViewSet):
                 out = self.get_serializer(instance)
                 return Response(out.data, status=200)
             return Response({"detail": "Duplicate staff-service combination"}, status=409)
+
+    @action(detail=False, methods=["post"], url_path="bulk-upsert")
+    def bulk_upsert(self, request):
+        """Upsert multiple staff services in a single call.
+        Payload: { staff: <id>|optional (infer by user+barbershop), items: [{service, use_shop_price|price}]}"""
+        items = request.data.get('items', [])
+        if not isinstance(items, list) or not items:
+            return Response({"detail": "items list required"}, status=400)
+        staff_id = request.data.get('staff')
+        staff = None
+        if staff_id:
+            staff = Staff.objects.filter(id=staff_id, user=request.user).first()
+        if not staff:
+            # Infer from first item's service barbershop
+            first_service_id = items[0].get('service')
+            try:
+                svc = Service.objects.get(id=first_service_id)
+            except Service.DoesNotExist:
+                return Response({"detail": "service not found"}, status=404)
+            staff = Staff.objects.filter(user=request.user, barbershop=svc.barbershop).order_by('-is_admin','-id').first()
+        if not staff:
+            return Response({"detail": "staff not found for barbershop"}, status=403)
+        updated = []
+        for it in items:
+            sid = it.get('service')
+            if not sid:
+                continue
+            try:
+                svc = Service.objects.get(id=sid)
+            except Service.DoesNotExist:
+                continue
+            if svc.barbershop_id != staff.barbershop_id:
+                continue
+            use_shop = bool(it.get('use_shop_price', False))
+            price = svc.price if use_shop else it.get('price', svc.price)
+            # Upsert
+            ss = StaffService.objects.filter(staff=staff, service=svc).order_by('created_at','id')
+            if ss.exists():
+                inst = ss.first(); ss.exclude(id=inst.id).delete()
+                inst.price = price; inst.is_active = True; inst.save(update_fields=['price','is_active','updated_at'])
+                updated.append(inst.id)
+            else:
+                inst = StaffService.objects.create(staff=staff, service=svc, price=price, duration_minutes=svc.duration or 30, is_active=True)
+                updated.append(inst.id)
+        return Response({"detail": "ok", "updated_count": len(updated)})
 
 
 class StaffServiceCategoryViewSet(viewsets.ModelViewSet):

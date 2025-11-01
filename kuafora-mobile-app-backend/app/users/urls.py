@@ -15,6 +15,7 @@ from .views import (
     UserAddressViewSet,
     BarbershopStatsView,
     ProfilePhotoUploadView,
+    ResolveUserView,
 )
 
 router = DefaultRouter()
@@ -34,5 +35,6 @@ urlpatterns = [
     path('reset-password/', ResetPasswordView.as_view(), name='reset-password'),
     path('check-email/', CheckEmailView.as_view(), name='check-email'),
     path('check-phone/', CheckPhoneView.as_view(), name='check-phone'),
+    path('resolve/', ResolveUserView.as_view(), name='user-resolve'),
     path('barbershop-stats/<int:barbershop_id>/', BarbershopStatsView.as_view(), name='barbershop-stats'),
 ]
