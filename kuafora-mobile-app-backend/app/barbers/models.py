@@ -22,6 +22,12 @@ class Barbershop(models.Model):
     longitude = models.FloatField(null=True, blank=True)
     is_verified = models.BooleanField(default=False)
     description = models.TextField(blank=True)
+    system_type = models.CharField(
+        max_length=10,
+        choices=[("info", "Information"), ("booking", "Booking")],
+        default="info",
+        help_text="Isletme sistem modu: info veya booking"
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

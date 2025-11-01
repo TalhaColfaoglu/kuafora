@@ -56,6 +56,7 @@ INSTALLED_APPS = [
     "app.users",
     "app.barbers",
     "app.uploads",
+    "app.appointments",
 ]
 
 MIDDLEWARE = [

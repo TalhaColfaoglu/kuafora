@@ -42,6 +42,7 @@ class BarbershopSerializer(serializers.ModelSerializer):
             "name",
             "gender",
             "address",
+            "system_type",
             "latitude","longitude",
             "city",
             "district",
