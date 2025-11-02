@@ -20,6 +20,7 @@ services:
       dockerfile: Dockerfile.prod
     container_name: kuafora_backend
     restart: unless-stopped
+    user: "root"
     env_file:
       - ./env/backend.env
     environment:
