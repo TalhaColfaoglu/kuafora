@@ -26,7 +26,8 @@ COPY . /app/
 RUN mkdir -p /app/staticfiles /app/media
 
 COPY entrypoint.prod.sh /app/entrypoint.prod.sh
-RUN chmod +x /app/entrypoint.prod.sh
+COPY cron_entrypoint.sh /app/cron_entrypoint.sh
+RUN chmod +x /app/entrypoint.prod.sh /app/cron_entrypoint.sh
 
 RUN groupadd -r django && useradd -r -g django django
 RUN chown -R django:django /app
