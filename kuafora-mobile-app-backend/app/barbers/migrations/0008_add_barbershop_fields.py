@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from django.db import migrations, models
+from django.db import migrations
 
 
 class Migration(migrations.Migration):
@@ -10,26 +10,30 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.AddField(
-            model_name="barbershop",
-            name="latitude",
-            field=models.FloatField(null=True, blank=True),
-        ),
-        migrations.AddField(
-            model_name="barbershop",
-            name="longitude",
-            field=models.FloatField(null=True, blank=True),
-        ),
-        migrations.AddField(
-            model_name="barbershop",
-            name="system_type",
-            field=models.CharField(
-                max_length=10,
-                choices=[("info", "Information"), ("booking", "Booking")],
-                default="info",
-                help_text="Isletme sistem modu: info veya booking",
+        # Idempotent field adds to avoid DuplicateColumn errors on existing DBs
+        migrations.RunSQL(
+            sql=(
+                "ALTER TABLE barbers_barbershop ADD COLUMN IF NOT EXISTS latitude double precision;"
             ),
-            preserve_default=True,
+            reverse_sql=(
+                "ALTER TABLE barbers_barbershop DROP COLUMN IF EXISTS latitude;"
+            ),
+        ),
+        migrations.RunSQL(
+            sql=(
+                "ALTER TABLE barbers_barbershop ADD COLUMN IF NOT EXISTS longitude double precision;"
+            ),
+            reverse_sql=(
+                "ALTER TABLE barbers_barbershop DROP COLUMN IF EXISTS longitude;"
+            ),
+        ),
+        migrations.RunSQL(
+            sql=(
+                "ALTER TABLE barbers_barbershop ADD COLUMN IF NOT EXISTS system_type varchar(10) DEFAULT 'info' NOT NULL;"
+            ),
+            reverse_sql=(
+                "ALTER TABLE barbers_barbershop DROP COLUMN IF EXISTS system_type;"
+            ),
         ),
     ]
 
