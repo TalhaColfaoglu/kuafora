@@ -24,7 +24,8 @@ if [ "$(id -u)" = "0" ]; then
   # Ensure volume ownerships for named volumes
   chown -R django:django /app/staticfiles /app/media || true
   
-  su -s /bin/sh -c "python manage.py migrate --noinput" django
+  # Temporarily disabled auto-migration to fix 0010 conflict
+  # su -s /bin/sh -c "python manage.py migrate --noinput" django
   su -s /bin/sh -c "python manage.py collectstatic --noinput --clear" django
   
   exec su -s /bin/sh -c "exec gunicorn config.wsgi:application \
@@ -36,7 +37,8 @@ if [ "$(id -u)" = "0" ]; then
     --access-logfile - \
     --error-logfile -" django
 else
-  python manage.py migrate --noinput
+  # Temporarily disabled auto-migration to fix 0010 conflict
+  # python manage.py migrate --noinput
   python manage.py collectstatic --noinput --clear
   exec gunicorn config.wsgi:application \
     --bind 0.0.0.0:8000 \
