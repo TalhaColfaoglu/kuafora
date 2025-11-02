@@ -6,8 +6,8 @@ from dotenv import load_dotenv
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
-# Load production environment variables
-load_dotenv(BASE_DIR / '.env.prod')
+# Load production environment variables without overriding existing env
+load_dotenv(BASE_DIR / '.env.prod', override=False)
 
 # Base Django apps
 DJANGO_APPS = [
@@ -38,9 +38,27 @@ SECRET_KEY = os.getenv('SECRET_KEY')
 ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '').split(',')
 
 # Database
-DATABASES = {
-    'default': dj_database_url.parse(os.getenv('DATABASE_URL'))
-}
+# Prefer DATABASE_URL if provided and looks like a URL; otherwise fall back to discrete POSTGRES_* vars
+_db_url = os.getenv('DATABASE_URL', '').strip()
+
+def _is_probably_url(value: str) -> bool:
+    return '://' in value and '@' in value
+
+if _db_url and _is_probably_url(_db_url):
+    DATABASES = {
+        'default': dj_database_url.parse(_db_url)
+    }
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': os.getenv('POSTGRES_DB', 'kuafora_website'),
+            'USER': os.getenv('POSTGRES_USER', 'kuafora_website_user'),
+            'PASSWORD': os.getenv('POSTGRES_PASSWORD', ''),
+            'HOST': os.getenv('POSTGRES_HOST', 'db'),
+            'PORT': os.getenv('POSTGRES_PORT', '5432'),
+        }
+    }
 
 # Static files
 STATIC_URL = os.getenv('STATIC_URL', '/static/')
