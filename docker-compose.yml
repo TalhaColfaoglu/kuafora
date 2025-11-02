@@ -68,6 +68,11 @@ services:
     depends_on:
       - db
       - backend
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
     entrypoint: ["sh","-c"]
     command: |
       set -e; \
