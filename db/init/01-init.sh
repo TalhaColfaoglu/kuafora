@@ -2,7 +2,7 @@
 set -e
 
 psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-EOSQL
-  DO $$
+  DO \$\$
   BEGIN
     IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = '$BACKEND_USER') THEN
       EXECUTE format('CREATE USER %I WITH PASSWORD %L;', '$BACKEND_USER', '$BACKEND_PASSWORD');
@@ -18,7 +18,7 @@ psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-E
       EXECUTE format('CREATE DATABASE %I OWNER %I;', '$WEBSITE_DB', '$WEBSITE_USER');
     END IF;
   END
-  $$;
+  \$\$;
 EOSQL
 
 
