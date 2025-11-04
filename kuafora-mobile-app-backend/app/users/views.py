@@ -5,6 +5,7 @@ from django.contrib.auth.tokens import default_token_generator
 from django.utils.encoding import force_bytes, force_str
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from rest_framework import generics, permissions, status, viewsets
+from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -41,7 +42,27 @@ class LoginView(generics.GenericAPIView):
 
     def post(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
+        try:
+            serializer.is_valid(raise_exception=True)
+        except ValidationError as exc:
+            # Yanlış kimlik bilgileri için 401 döndür (400 yerine)
+            msgs = exc.detail if hasattr(exc, 'detail') else exc.args
+            text = ""
+            if isinstance(msgs, dict):
+                # {'non_field_errors': ['Invalid email or password.']}
+                for v in msgs.values():
+                    if isinstance(v, list) and v:
+                        text = str(v[0])
+                        break
+            elif isinstance(msgs, list) and msgs:
+                text = str(msgs[0])
+            else:
+                text = "Invalid email or password."
+            if "Invalid email or password" in text:
+                return Response({"detail": text}, status=status.HTTP_401_UNAUTHORIZED)
+            # Alan eksikliği gibi durumlar için standart 400
+            return Response({"detail": text or "Bad request"}, status=status.HTTP_400_BAD_REQUEST)
+
         user = serializer.validated_data["user"]
         refresh = RefreshToken.for_user(user)
         return Response({
@@ -254,14 +275,17 @@ class CheckEmailView(generics.GenericAPIView):
     def post(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        email = serializer.validated_data["email"]
+        # Normalize et: küçük harfe çevir, boşlukları kes
+        email = (serializer.validated_data.get("email") or "").strip().lower()
 
         try:
-            exists = User.objects.filter(email=email).exists()
+            # Login'deki davranışla uyum: iexact
+            exists = User.objects.filter(email__iexact=email).exists()
         except Exception:
             # DB hazır değilse veya geçici hata varsa 500 yerine güvenli yanıt
             return Response({
                 "exists": False,
+                "is_registered": False,
                 "is_staff": False,
                 "barbershop_id": None,
                 "barbershop_name": None,
@@ -290,6 +314,7 @@ class CheckEmailView(generics.GenericAPIView):
 
         return Response({
             "exists": exists,
+            "is_registered": exists,  # frontend toleransı için
             "is_staff": is_staff_attached,
             "barbershop_id": attached_barbershop_id,
             "barbershop_name": attached_barbershop_name,

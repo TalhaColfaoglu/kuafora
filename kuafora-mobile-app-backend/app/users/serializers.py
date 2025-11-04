@@ -45,8 +45,8 @@ class LoginSerializer(serializers.Serializer):
     password = serializers.CharField()
 
     def validate(self, attrs):
-        email = attrs.get("email")
-        password = attrs.get("password")
+        email = (attrs.get("email") or "").strip().lower()
+        password = (attrs.get("password") or "")
         if email and password:
             user = authenticate(request=self.context.get("request"), email=email, password=password)
             if not user:
@@ -54,6 +54,7 @@ class LoginSerializer(serializers.Serializer):
         else:
             raise serializers.ValidationError("Must include email and password.")
         attrs["user"] = user
+        attrs["email"] = email
         return attrs
 
 
