@@ -61,6 +61,22 @@ class BarbershopSerializer(serializers.ModelSerializer):
             "favorites_count",
         )
         read_only_fields = ("rating_avg", "total_reviews", "views_weekly", "favorites_count", "created_at", "updated_at")
+        extra_kwargs = {
+            # Alias kullandığımız için phone_number'ı zorunlu yapma; 'phone' ile beslenecek
+            'phone_number': {'required': False, 'allow_blank': True},
+        }
+
+    def validate(self, attrs):
+        # phone aliası ile gelen değeri yakala; en az birinin dolu olması zorunlu
+        # attrs burada internal değerleri taşır; phone_number beklenir
+        phone_val = attrs.get('phone_number')
+        # Bazı durumlarda initial_data üzerinden okumak gerekebilir
+        if (not phone_val or str(phone_val).strip() == ''):
+            raw = getattr(self, 'initial_data', {}) or {}
+            phone_val = raw.get('phone') or raw.get('phone_number')
+        if (not phone_val or str(phone_val).strip() == ''):
+            raise serializers.ValidationError({'phone': 'Bu alan zorunlu.'})
+        return attrs
 
 
 class StaffCatalogSerializer(serializers.ModelSerializer):
