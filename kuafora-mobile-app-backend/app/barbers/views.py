@@ -221,9 +221,13 @@ class BarbershopViewSet(viewsets.ReadOnlyModelViewSet):
                     shop_hours = ShopWorkingHours.objects.filter(barbershop=shop, day_of_week=code).first()
 
                     if not staff_hours.exists():
-                        if not shop_hours or shop_hours.is_closed:
+                        # StaffWorkingHours yoksa, ShopWorkingHours'a bak
+                        if not shop_hours:
+                            result.append({'day_of_week': code,'start_time': None,'end_time': None,'is_closed': True})
+                        elif shop_hours.is_closed:
                             result.append({'day_of_week': code,'start_time': None,'end_time': None,'is_closed': True})
                         else:
+                            # ShopWorkingHours var ve açık, saatleri döndür
                             result.append({'day_of_week': code,'start_time': shop_hours.start_time,'end_time': shop_hours.end_time,'is_closed': False})
                         continue
 
