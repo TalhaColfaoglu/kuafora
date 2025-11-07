@@ -388,7 +388,10 @@ class SystemSwitchApi(APIView):
             shop.save(update_fields=["system_type"])
         else:
             # booking target: require working hours presence for at least one staff
-            has_hours = Staff.objects.filter(barbershop=shop, work_schedules__isnull=False).exists() or Staff.objects.filter(barbershop=shop, staffworkinghours__isnull=False).exists()
+            has_hours = (
+                Staff.objects.filter(barbershop=shop, work_schedules__isnull=False).exists()
+                or Staff.objects.filter(barbershop=shop, staff_working_hours__isnull=False).exists()
+            )
             if not has_hours:
                 return Response({"code": "400_NO_WORKING_HOURS"}, status=status.HTTP_400_BAD_REQUEST)
             shop.system_type = "booking"
