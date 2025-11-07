@@ -66,8 +66,8 @@ def compute_staff_day_slots(*, staff: Staff, shop: Barbershop, date: datetime, d
     for wh in StaffWorkingHours.objects.filter(staff=staff, day_of_week=weekday, is_closed=False):
         if not wh.start_time or not wh.end_time:
             continue
-        start_dt = tz.localize(datetime.combine(day, wh.start_time))
-        end_dt = tz.localize(datetime.combine(day, wh.end_time))
+        start_dt = timezone.make_aware(datetime.combine(day, wh.start_time), tz)
+        end_dt = timezone.make_aware(datetime.combine(day, wh.end_time), tz)
         if start_dt < end_dt:
             base_intervals.append((start_dt, end_dt))
     base_intervals = _merge(base_intervals)
@@ -86,8 +86,8 @@ def compute_staff_day_slots(*, staff: Staff, shop: Barbershop, date: datetime, d
             # entire day closed
             return []
         if ov.start_time and ov.end_time:
-            sdt = tz.localize(datetime.combine(day, ov.start_time))
-            edt = tz.localize(datetime.combine(day, ov.end_time))
+            sdt = timezone.make_aware(datetime.combine(day, ov.start_time), tz)
+            edt = timezone.make_aware(datetime.combine(day, ov.end_time), tz)
             if sdt < edt:
                 override_blocks.append((sdt, edt))
     if override_blocks:
