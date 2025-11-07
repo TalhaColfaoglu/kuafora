@@ -60,9 +60,12 @@ def compute_staff_day_slots(*, staff: Staff, shop: Barbershop, date: datetime, d
     grid_minutes = grid or staff.appointment_interval
 
     # Base working windows from StaffWorkingHours on the weekday
-    weekday = date.strftime("%a")  # Mon/Tue...
+    # Our StaffWorkingHours stores codes as MON..SUN, not Mon/Tue...
+    weekday = date.strftime("%a").upper()  # MON/TUE/...
     base_intervals: List[Interval] = []
-    for wh in StaffWorkingHours.objects.filter(staff=staff, day_of_week=weekday):
+    for wh in StaffWorkingHours.objects.filter(staff=staff, day_of_week=weekday, is_closed=False):
+        if not wh.start_time or not wh.end_time:
+            continue
         start_dt = tz.localize(datetime.combine(day, wh.start_time))
         end_dt = tz.localize(datetime.combine(day, wh.end_time))
         if start_dt < end_dt:
