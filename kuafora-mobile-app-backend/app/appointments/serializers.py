@@ -28,6 +28,7 @@ class HoldCreateSerializer(serializers.Serializer):
 class HoldResponseSerializer(serializers.Serializer):
     hold_id = serializers.UUIDField()
     expires_in = serializers.IntegerField()
+    price_total = serializers.DecimalField(max_digits=10, decimal_places=2)
 
 
 class AppointmentCreateSerializer(serializers.Serializer):
@@ -40,6 +41,7 @@ class AppointmentSerializer(serializers.ModelSerializer):
     staff_grid = serializers.IntegerField(source="staff.appointment_interval", read_only=True)
     staff_name = serializers.SerializerMethodField()
     shop_name = serializers.SerializerMethodField()
+    customer_name = serializers.SerializerMethodField()
     class Meta:
         model = Appointment
         fields = (
@@ -58,6 +60,7 @@ class AppointmentSerializer(serializers.ModelSerializer):
             "staff_grid",
             "staff_name",
             "shop_name",
+            "customer_name",
         )
 
     def get_staff_name(self, obj):
@@ -66,6 +69,12 @@ class AppointmentSerializer(serializers.ModelSerializer):
 
     def get_shop_name(self, obj):
         return getattr(obj.shop, "name", "")
+
+    def get_customer_name(self, obj):
+        u = getattr(obj, "customer", None)
+        if not u:
+            return ""
+        return getattr(u, "full_name", None) or getattr(u, "email", "")
 
 
 class ShiftSerializer(serializers.Serializer):

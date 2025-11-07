@@ -4,6 +4,7 @@ from django.conf import settings
 from django.conf.urls.static import static
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 from app.barbers.views import ToggleTodayApi
+from app.users.views import ResolveUserView
 
 from django.http import JsonResponse
 def health(request):
@@ -21,6 +22,8 @@ urlpatterns = [
     path("api/auth/", include("app.users.urls")),
     path("api/", include("app.barbers.urls")),
     path("api/", include("app.uploads.urls")),
+    # Legacy alias: eski istemciler /api/users/resolve/ beklediği için
+    path("api/users/resolve/", ResolveUserView.as_view(), name="api-users-resolve-legacy"),
     path("", include("app.appointments.urls")),
     path("health/", health),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta
+from decimal import Decimal
 
 from django.db import transaction
 from django.utils import timezone
@@ -8,10 +9,11 @@ from django.shortcuts import get_object_or_404
 
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework import status, permissions
+from rest_framework import status, permissions, serializers
 
 from app.barbers.models import Barbershop, Staff
-from .models import Appointment, AppointmentStatus, Hold, ShopSystemSwitchHistory
+from .models import Appointment, AppointmentStatus, Hold, ShopSystemSwitchHistory, CancelledBy
+from drf_spectacular.utils import extend_schema, inline_serializer
 from .permissions import IsBookingEnabled
 from .serializers import (
     AvailabilityQuerySerializer,
@@ -87,6 +89,21 @@ class HoldCreateApi(APIView):
             duration += int(item.get("duration", 0))
         grid = staff.appointment_interval
 
+        service_items_payload = [dict(item) for item in data["service_items"]]
+        total_price = Decimal("0")
+        for item in service_items_payload:
+            price = item.get("price")
+            if price is None:
+                continue
+            try:
+                total_price += Decimal(str(price))
+            except (ArithmeticError, ValueError):
+                continue
+        try:
+            total_price = total_price.quantize(Decimal("0.01"))
+        except Exception:
+            total_price = Decimal("0.00")
+
         # grid validation
         if start.minute % grid != 0:
             return Response({"code": "409_CONFLICT_GRID"}, status=status.HTTP_409_CONFLICT)
@@ -103,8 +120,10 @@ class HoldCreateApi(APIView):
             start_datetime=start,
             end_datetime=end,
             expires_at=timezone.now() + timedelta(seconds=60),
+            service_items=service_items_payload,
+            price_total=total_price,
         )
-        resp = HoldResponseSerializer({"hold_id": hold.pk, "expires_in": 60}).data
+        resp = HoldResponseSerializer({"hold_id": hold.pk, "expires_in": 60, "price_total": hold.price_total}).data
         store_idempotent_response(key=idem_key, response_json=resp)
         return Response(resp, status=status.HTTP_200_OK)
 
@@ -142,7 +161,8 @@ class AppointmentCreateApi(APIView):
             start_datetime=hold.start_datetime,
             end_datetime=hold.end_datetime,
             duration_minutes=duration,
-            service_items=[],
+            service_items=hold.service_items or [],
+            price_total=hold.price_total,
             note=data.get("note", ""),
             source=data.get("source") or "mobile_customer",
         )
@@ -387,7 +407,7 @@ class PartnerAppointmentsListApi(APIView):
         q = AppointmentListQuerySerializer(data=request.query_params)
         q.is_valid(raise_exception=True)
         data = q.validated_data
-        qs = Appointment.objects.all().select_related("staff__user", "shop")
+        qs = Appointment.objects.all().select_related("staff__user", "shop", "customer")
         staff_id = data.get("staff_id")
         shop_id = data.get("shop_id")
         status_f = data.get("status")
@@ -405,5 +425,90 @@ class PartnerAppointmentsListApi(APIView):
             qs = qs.filter(start_datetime__lte=date_to)
         qs = qs.order_by("start_datetime")
         return Response({"items": AppointmentSerializer(qs, many=True).data})
+
+
+class CustomerAppointmentsApi(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    @extend_schema(
+        summary="Müşterinin randevularını listele",
+        responses={
+            200: inline_serializer(
+                name="CustomerAppointmentListResponse",
+                fields={
+                    "items": AppointmentSerializer(many=True),
+                },
+            ),
+        },
+    )
+    def get(self, request):
+        q = AppointmentListQuerySerializer(data=request.query_params)
+        q.is_valid(raise_exception=True)
+        data = q.validated_data
+        qs = Appointment.objects.filter(customer=request.user).select_related("staff__user", "shop")
+        status_f = data.get("status")
+        date_from = data.get("date_from")
+        date_to = data.get("date_to")
+        if status_f:
+            qs = qs.filter(status=status_f)
+        if date_from:
+            qs = qs.filter(start_datetime__gte=date_from)
+        if date_to:
+            qs = qs.filter(start_datetime__lte=date_to)
+        qs = qs.order_by("start_datetime")
+        return Response({"items": AppointmentSerializer(qs, many=True).data})
+
+
+class CustomerAppointmentCancelApi(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    @transaction.atomic
+    @extend_schema(
+        summary="Müşterinin randevuyu iptal etmesi",
+        responses={
+            200: inline_serializer(
+                name="CustomerAppointmentCancelResponse",
+                fields={
+                    "status": serializers.CharField(),
+                },
+            ),
+        },
+    )
+    def post(self, request, appointment_id: int):
+        idem_key = request.headers.get("Idempotency-Key")
+        if not idem_key:
+            return Response({"detail": "IDEMPOTENCY_KEY_REQUIRED"}, status=status.HTTP_400_BAD_REQUEST)
+        existing = ensure_idempotent(
+            key=idem_key,
+            actor=str(request.user.pk),
+            method="POST",
+            path=request.path,
+            body=request.data,
+        )
+        if existing is not None:
+            return Response(existing)
+
+        ap = get_object_or_404(
+            Appointment.objects.select_for_update(),
+            pk=appointment_id,
+            customer=request.user,
+        )
+        if ap.status in [AppointmentStatus.COMPLETED, AppointmentStatus.NO_SHOW]:
+            return Response({"detail": "INVALID_TRANSITION"}, status=status.HTTP_400_BAD_REQUEST)
+        if ap.status == AppointmentStatus.CANCELLED:
+            resp = {"status": ap.status}
+            store_idempotent_response(key=idem_key, response_json=resp)
+            return Response(resp)
+        if ap.start_datetime <= timezone.now():
+            return Response({"detail": "PAST_APPOINTMENT"}, status=status.HTTP_400_BAD_REQUEST)
+
+        ap.status = AppointmentStatus.CANCELLED
+        ap.cancelled_by = CancelledBy.CUSTOMER
+        ap.save(update_fields=["status", "cancelled_by"])
+        events.emit(events.staff_topic(ap.staff_id), {"type": "appointment_cancelled", "id": ap.id})
+        events.emit(events.shop_topic(ap.shop_id), {"type": "appointment_cancelled", "id": ap.id})
+        resp = {"status": ap.status}
+        store_idempotent_response(key=idem_key, response_json=resp)
+        return Response(resp)
 
 

@@ -10,7 +10,7 @@ from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.db.models import Count
-from drf_spectacular.utils import extend_schema, OpenApiResponse
+from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiParameter
 from django.conf import settings
 
 from .serializers import (
@@ -323,11 +323,28 @@ class CheckEmailView(generics.GenericAPIView):
 
 class ResolveUserView(generics.GenericAPIView):
     """Resolve user by email for onboarding flows.
-    GET /users/resolve/?email=foo@bar.com -> {exists, user_id, attached_shop_id}
-    """
+    GET /auth/resolve/?email=foo@bar.com -> {exists, user_id, attached_shop_id}
+    Legacy alias: /users/resolve/"""
 
     permission_classes = [permissions.IsAuthenticated]
 
+    @extend_schema(
+        summary="Kullanıcıyı e-posta ile çözümle",
+        parameters=[
+            OpenApiParameter(
+                name="email",
+                required=True,
+                location=OpenApiParameter.QUERY,
+                description="Sorgulanacak e-posta adresi",
+            ),
+        ],
+        responses={
+            200: OpenApiResponse(
+                description="Kullanıcının kayıtlı olup olmadığı ve bağlı olduğu kuaför bilgisi",
+            ),
+            400: OpenApiResponse(description="Eksik email parametresi"),
+        },
+    )
     def get(self, request, *args, **kwargs):
         email = request.query_params.get('email')
         if not email:
