@@ -48,8 +48,18 @@ class AvailabilityApi(APIView):
         duration = data["duration"]
         grid = data.get("grid")
 
+        # Enforce strict grid: duration must be divisible by effective grid
         if staff_id:
             staff = get_object_or_404(Staff, pk=staff_id, barbershop=shop)
+            effective_grid = grid or staff.appointment_interval
+            if effective_grid and duration % int(effective_grid) != 0:
+                return Response({"detail": "INVALID_DURATION_GRID"}, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            # When no specific staff is selected, validate only if grid is provided
+            if grid and duration % int(grid) != 0:
+                return Response({"detail": "INVALID_DURATION_GRID"}, status=status.HTTP_400_BAD_REQUEST)
+
+        if staff_id:
             slots = compute_staff_day_slots(staff=staff, shop=shop, date=timezone.make_aware(date), duration_minutes=duration, grid=grid)
         else:
             # Farketmez: tüm personellerden topla (erken slotlar)
@@ -88,6 +98,10 @@ class HoldCreateApi(APIView):
         for item in data["service_items"]:
             duration += int(item.get("duration", 0))
         grid = staff.appointment_interval
+
+        # Strict grid validation: total duration must be divisible by grid
+        if duration <= 0 or duration % int(grid) != 0:
+            return Response({"code": "400_INVALID_DURATION_GRID"}, status=status.HTTP_400_BAD_REQUEST)
 
         service_items_payload = [dict(item) for item in data["service_items"]]
         total_price = Decimal("0")

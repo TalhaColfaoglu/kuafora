@@ -4,6 +4,9 @@ from django.conf import settings
 from django.db import models
 from django.db.models import Q
 import uuid
+from django.db.models import F, Func
+from django.contrib.postgres.constraints import ExclusionConstraint
+from django.contrib.postgres.fields import RangeOperators, DateTimeRangeField
 
 
 class AppointmentStatus(models.TextChoices):
@@ -83,7 +86,21 @@ class Appointment(models.Model):
                     AppointmentStatus.SUGGESTED,
                 ]),
                 name="uniq_staff_time_active_status",
-            )
+            ),
+            # Prevent overlapping active appointments per staff using GIST exclusion
+            ExclusionConstraint(
+                name="exclude_overlap_per_staff_active",
+                expressions=[
+                    (Func(F("start_datetime"), F("end_datetime"), function="tstzrange", output_field=DateTimeRangeField()), RangeOperators.OVERLAPS),
+                    ("staff", RangeOperators.EQUAL),
+                ],
+                condition=Q(status__in=[
+                    AppointmentStatus.PENDING,
+                    AppointmentStatus.CONFIRMED,
+                    AppointmentStatus.SUGGESTED,
+                ]),
+                index_type="GIST",
+            ),
         ]
 
     def __str__(self) -> str:  # pragma: no cover - trivial

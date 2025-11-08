@@ -6,7 +6,7 @@ from typing import List, Tuple
 from django.utils import timezone
 from django.db import models
 
-from app.barbers.models import Staff, StaffWorkingHours, Override, Barbershop
+from app.barbers.models import Staff, StaffWorkingHours, ShopWorkingHours, Override, Barbershop, DailyOverride
 from app.appointments.models import Appointment
 
 
@@ -59,31 +59,80 @@ def compute_staff_day_slots(*, staff: Staff, shop: Barbershop, date: datetime, d
     day = date.date()
     grid_minutes = grid or staff.appointment_interval
 
+    # Check DailyOverride first (highest priority - manual daily toggle)
+    daily_override = DailyOverride.objects.filter(barbershop=shop, date=day).first()
+    if daily_override and daily_override.status == 'closed':
+        return []  # Entire day closed by manual toggle
+
     # Base working windows from StaffWorkingHours on the weekday
     # Our StaffWorkingHours stores codes as MON..SUN, not Mon/Tue...
     weekday = date.strftime("%a").upper()  # MON/TUE/...
     base_intervals: List[Interval] = []
-    for wh in StaffWorkingHours.objects.filter(staff=staff, day_of_week=weekday, is_closed=False):
-        if not wh.start_time or not wh.end_time:
-            continue
-        start_dt = timezone.make_aware(datetime.combine(day, wh.start_time), tz)
-        end_dt = timezone.make_aware(datetime.combine(day, wh.end_time), tz)
-        if start_dt < end_dt:
-            base_intervals.append((start_dt, end_dt))
+    
+    # First, try StaffWorkingHours
+    staff_wh = StaffWorkingHours.objects.filter(staff=staff, day_of_week=weekday, is_closed=False).first()
+    if staff_wh:
+        # Personel kendi saatlerini tanımlamış
+        if staff_wh.start_time and staff_wh.end_time:
+            start_dt = timezone.make_aware(datetime.combine(day, staff_wh.start_time), tz)
+            end_dt = timezone.make_aware(datetime.combine(day, staff_wh.end_time), tz)
+            if start_dt < end_dt:
+                base_intervals.append((start_dt, end_dt))
+        # start_time veya end_time null ise dükkan saatlerini devral
+        elif staff_wh.start_time is None or staff_wh.end_time is None:
+            shop_wh = ShopWorkingHours.objects.filter(barbershop=shop, day_of_week=weekday, is_closed=False).first()
+            if shop_wh and shop_wh.start_time and shop_wh.end_time:
+                start_dt = timezone.make_aware(datetime.combine(day, shop_wh.start_time), tz)
+                end_dt = timezone.make_aware(datetime.combine(day, shop_wh.end_time), tz)
+                if start_dt < end_dt:
+                    base_intervals.append((start_dt, end_dt))
+    else:
+        # StaffWorkingHours kaydı yok, dükkan saatlerini kullan
+        shop_wh = ShopWorkingHours.objects.filter(barbershop=shop, day_of_week=weekday, is_closed=False).first()
+        if shop_wh and shop_wh.start_time and shop_wh.end_time:
+            start_dt = timezone.make_aware(datetime.combine(day, shop_wh.start_time), tz)
+            end_dt = timezone.make_aware(datetime.combine(day, shop_wh.end_time), tz)
+            if start_dt < end_dt:
+                base_intervals.append((start_dt, end_dt))
+    
     base_intervals = _merge(base_intervals)
     if not base_intervals:
         return []
 
     # Apply overrides (only active and matching date)
-    # For now, handle time range closures and full day closures
+    # Check both shop global and staff individual overrides
     override_blocks: List[Interval] = []
-    for ov in Override.objects.filter(barbershop=shop, is_active=True).filter(
+    
+    # Shop global overrides
+    for ov in Override.objects.filter(
+        barbershop=shop,
+        override_type='shop_global',
+        is_active=True,
         start_date__lte=day
     ).filter(
         models.Q(end_date__isnull=True) | models.Q(end_date__gte=day)
     ):
         if ov.override_scope == "full_day_closed":
             # entire day closed
+            return []
+        if ov.start_time and ov.end_time:
+            sdt = timezone.make_aware(datetime.combine(day, ov.start_time), tz)
+            edt = timezone.make_aware(datetime.combine(day, ov.end_time), tz)
+            if sdt < edt:
+                override_blocks.append((sdt, edt))
+    
+    # Staff individual overrides
+    for ov in Override.objects.filter(
+        barbershop=shop,
+        staff=staff,
+        override_type='staff_individual',
+        is_active=True,
+        start_date__lte=day
+    ).filter(
+        models.Q(end_date__isnull=True) | models.Q(end_date__gte=day)
+    ):
+        if ov.override_scope == "full_day_closed":
+            # entire day closed for this staff
             return []
         if ov.start_time and ov.end_time:
             sdt = timezone.make_aware(datetime.combine(day, ov.start_time), tz)
