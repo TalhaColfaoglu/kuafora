@@ -7,6 +7,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from app.appointments.models import IdempotencyKey
+import json
 
 
 def _hash_payload(method: str, path: str, body: dict) -> str:
@@ -38,6 +39,12 @@ def ensure_idempotent(*, key: str, actor: str, method: str, path: str, body: dic
 
 
 def store_idempotent_response(*, key: str, response_json: dict):
-    IdempotencyKey.objects.filter(key=key).update(response_json=response_json)
+    # Ensure JSON is serializable (convert UUID/Decimal/Date to str)
+    try:
+        safe = json.loads(json.dumps(response_json, default=str))
+    except Exception:
+        # Fallback: store stringified
+        safe = {"raw": str(response_json)}
+    IdempotencyKey.objects.filter(key=key).update(response_json=safe)
 
 
