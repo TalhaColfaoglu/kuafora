@@ -69,23 +69,24 @@ def compute_staff_day_slots(*, staff: Staff, shop: Barbershop, date: datetime, d
     weekday = date.strftime("%a").upper()  # MON/TUE/...
     base_intervals: List[Interval] = []
     
-    # First, try StaffWorkingHours
-    staff_wh = StaffWorkingHours.objects.filter(staff=staff, day_of_week=weekday, is_closed=False).first()
-    if staff_wh:
-        # Personel kendi saatlerini tanımlamış
-        if staff_wh.start_time and staff_wh.end_time:
-            start_dt = timezone.make_aware(datetime.combine(day, staff_wh.start_time), tz)
-            end_dt = timezone.make_aware(datetime.combine(day, staff_wh.end_time), tz)
-            if start_dt < end_dt:
-                base_intervals.append((start_dt, end_dt))
-        # start_time veya end_time null ise dükkan saatlerini devral
-        elif staff_wh.start_time is None or staff_wh.end_time is None:
-            shop_wh = ShopWorkingHours.objects.filter(barbershop=shop, day_of_week=weekday, is_closed=False).first()
-            if shop_wh and shop_wh.start_time and shop_wh.end_time:
-                start_dt = timezone.make_aware(datetime.combine(day, shop_wh.start_time), tz)
-                end_dt = timezone.make_aware(datetime.combine(day, shop_wh.end_time), tz)
-                if start_dt < end_dt:
-                    base_intervals.append((start_dt, end_dt))
+    # Collect StaffWorkingHours for the weekday; support multiple intervals (shifts)
+    staff_wh_qs = StaffWorkingHours.objects.filter(staff=staff, day_of_week=weekday, is_closed=False)
+    if staff_wh_qs.exists():
+        # Shop WH resolved once for possible inheritance
+        shop_wh = ShopWorkingHours.objects.filter(barbershop=shop, day_of_week=weekday, is_closed=False).first()
+        for wh in staff_wh_qs:
+            if wh.start_time and wh.end_time:
+                sdt = timezone.make_aware(datetime.combine(day, wh.start_time), tz)
+                edt = timezone.make_aware(datetime.combine(day, wh.end_time), tz)
+                if sdt < edt:
+                    base_intervals.append((sdt, edt))
+            else:
+                # Inherit from shop hours if personel saatleri boş bırakılmışsa
+                if shop_wh and shop_wh.start_time and shop_wh.end_time:
+                    sdt = timezone.make_aware(datetime.combine(day, shop_wh.start_time), tz)
+                    edt = timezone.make_aware(datetime.combine(day, shop_wh.end_time), tz)
+                    if sdt < edt:
+                        base_intervals.append((sdt, edt))
     else:
         # StaffWorkingHours kaydı yok, dükkan saatlerini kullan
         shop_wh = ShopWorkingHours.objects.filter(barbershop=shop, day_of_week=weekday, is_closed=False).first()
