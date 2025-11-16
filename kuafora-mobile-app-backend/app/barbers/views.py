@@ -1943,7 +1943,7 @@ class PartnerOverrideViewSet(viewsets.ModelViewSet):
             sdt = dj_tz.make_aware(dt.combine(day, st))
             edt = dj_tz.make_aware(dt.combine(day, et))
             will_cancel = qs.filter(
-                models.Q(end_datetime__gt=sdt) & models.Q(start_datetime__lt=edt)
+                Q(end_datetime__gt=sdt) & Q(start_datetime__lt=edt)
             ).count()
         return Response({'ok': True, 'will_cancel_count': int(will_cancel)})
 
@@ -2935,7 +2935,7 @@ class PartnerHolidayOverrideViewSet(viewsets.ModelViewSet):
             edt = dj_tz.make_aware(dt.combine(day, ct))
             # Allowed window: [sdt, edt). İzinli pencere dışında kalanlar iptal.
             cancel_qs = base_qs.filter(
-                models.Q(end_datetime__lte=sdt) | models.Q(start_datetime__gte=edt) | models.Q(end_datetime__gt=edt) | models.Q(start_datetime__lt=sdt)
+                Q(end_datetime__lte=sdt) | Q(start_datetime__gte=edt) | Q(end_datetime__gt=edt) | Q(start_datetime__lt=sdt)
             )
             will_cancel = cancel_qs.count()
         else:
@@ -2969,9 +2969,9 @@ class PartnerHolidayOverrideViewSet(viewsets.ModelViewSet):
             override_type='shop_global',
             start_date__lte=date
         ).filter(
-            models.Q(end_date__isnull=True) | models.Q(end_date__gte=date)
+            Q(end_date__isnull=True) | Q(end_date__gte=date)
         ).filter(
-            models.Q(override_scope='time_range_closed') | models.Q(override_scope='full_day_closed')
+            Q(override_scope='time_range_closed') | Q(override_scope='full_day_closed')
         ).exists():
             raise drf_serializers.ValidationError({'detail': 'Bu gün zaten kapalı saat/kapanış bulunmaktadır'})
 
@@ -3014,7 +3014,7 @@ class PartnerHolidayOverrideViewSet(viewsets.ModelViewSet):
             elif status_val == 'custom_hours' and open_time and close_time and open_time < close_time:
                 sdt = dj_tz.make_aware(datetime.combine(date, open_time))
                 edt = dj_tz.make_aware(datetime.combine(date, close_time))
-                cancel_qs = base_qs.filter(models.Q(end_datetime__lte=sdt) | models.Q(start_datetime__gte=edt) | models.Q(end_datetime__gt=edt) | models.Q(start_datetime__lt=sdt))
+                cancel_qs = base_qs.filter(Q(end_datetime__lte=sdt) | Q(start_datetime__gte=edt) | Q(end_datetime__gt=edt) | Q(start_datetime__lt=sdt))
             else:
                 cancel_qs = Appointment.objects.none()
             if cancel_qs.exists():
