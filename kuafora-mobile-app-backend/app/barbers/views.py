@@ -1639,6 +1639,8 @@ class PartnerOverrideViewSet(viewsets.ModelViewSet):
 
         # Çoklu tarih desteği: dates[] verilirse her gün için ayrı override oluştur
         base_shop = admin_staff.barbershop if admin_staff else (my_staff.barbershop if my_staff else None)
+        if not base_shop:
+            raise drf_serializers.ValidationError({"detail": "Barbershop bulunamadı"})
         dates = self.request.data.get('dates')
         created = []
         if isinstance(dates, list) and dates:
@@ -1872,8 +1874,8 @@ class PartnerOverrideViewSet(viewsets.ModelViewSet):
             else:
                 message = str(e)
             return Response({'ok': False, 'error': {'code': 'validation_error', 'message': str(message)}})
-        except Exception:
-            return Response({'ok': False, 'error': {'code': 'unknown', 'message': 'İşlem tamamlanamadı. Lütfen tekrar deneyin.'}})
+        except Exception as e:
+            return Response({'ok': False, 'error': {'code': 'unknown', 'message': str(e)}})
 
     def destroy(self, request, *args, **kwargs):
         try:
