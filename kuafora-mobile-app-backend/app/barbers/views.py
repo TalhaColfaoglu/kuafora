@@ -2480,10 +2480,16 @@ class CalendarStatusViewSet(viewsets.ReadOnlyModelViewSet):
                 dec = ov_map.get(oh.date)
                 eff = dec.status if dec else 'open'  # default open per spec
                 items.append({'date': oh.date, 'name': oh.name, 'is_official': True, 'effective_status': eff, 'override_id': getattr(dec,'id',None)})
-            # Add custom special days (those with title)
+            # Add all custom special days (even if title is empty)
             for o in overrides.order_by('date'):
-                if getattr(o, 'title', ''):
-                    items.append({'date': o.date, 'name': o.title, 'is_official': False, 'effective_status': o.status, 'override_id': o.id})
+                name = getattr(o, 'title', '') or ('Özel Saat' if o.status == 'custom_hours' else 'Özel Gün')
+                items.append({
+                    'date': o.date,
+                    'name': name,
+                    'is_official': False,
+                    'effective_status': o.status,
+                    'override_id': o.id
+                })
             # Sort
             items.sort(key=lambda x: x['date'])
             # Merge consecutive same-name ranges with same status
