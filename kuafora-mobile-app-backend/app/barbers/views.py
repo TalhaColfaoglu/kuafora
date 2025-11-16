@@ -68,6 +68,46 @@ from .permissions import IsShopAdmin
 from django.conf import settings
 
 
+def _jsonable(value):
+    """Safely convert complex objects (models, date/time) into JSON-serializable structures."""
+    from django.db.models import Model
+    from datetime import date, time, datetime as _dt
+    if value is None:
+        return None
+    if isinstance(value, (str, int, float, bool)):
+        return value
+    if isinstance(value, (list, tuple, set)):
+        return [_jsonable(v) for v in value]
+    if isinstance(value, dict):
+        return {str(k): _jsonable(v) for k, v in value.items()}
+    if isinstance(value, Model):
+        # Prefer primary key
+        try:
+            return getattr(value, "pk", str(value))
+        except Exception:
+            return str(value)
+    if isinstance(value, time):
+        try:
+            return value.strftime("%H:%M")
+        except Exception:
+            return str(value)
+    if isinstance(value, date):
+        try:
+            return value.isoformat()
+        except Exception:
+            return str(value)
+    if isinstance(value, _dt):
+        try:
+            return value.isoformat()
+        except Exception:
+            return str(value)
+    # Fallback
+    try:
+        return str(value)
+    except Exception:
+        return None
+
+
 class IsStaffMember(BasePermission):
     """
     Permission to only allow staff members to access staff-related endpoints.
@@ -1409,7 +1449,7 @@ class PartnerShopWorkingHoursViewSet(viewsets.ModelViewSet):
                 action_type=action_type,
                 target_model=target_model,
                 target_id=target_id,
-                changes=changes
+                changes=_jsonable(changes)
             )
         except Staff.DoesNotExist:
             pass
@@ -1571,7 +1611,7 @@ class PartnerStaffWorkingHoursViewSet(viewsets.ModelViewSet):
                 action_type=action_type,
                 target_model=target_model,
                 target_id=target_id,
-                changes=changes
+                changes=_jsonable(changes)
             )
         except Staff.DoesNotExist:
             pass
@@ -1958,7 +1998,7 @@ class PartnerOverrideViewSet(viewsets.ModelViewSet):
                 action_type=action_type,
                 target_model=target_model,
                 target_id=target_id,
-                changes=changes
+                changes=_jsonable(changes)
             )
         except Staff.DoesNotExist:
             pass
