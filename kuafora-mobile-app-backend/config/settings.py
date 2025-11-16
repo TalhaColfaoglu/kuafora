@@ -115,8 +115,13 @@ USE_TZ = True
 
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
-MEDIA_URL = "/media/"
+#MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
+
+AWS_S3_CUSTOM_DOMAIN = "d1uiu5mb5i1uph.cloudfront.net"
+
+MEDIA_URL = f"https://{AWS_S3_CUSTOM_DOMAIN}/"
+
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 

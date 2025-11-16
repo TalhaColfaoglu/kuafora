@@ -6,7 +6,15 @@ from typing import List, Tuple
 from django.utils import timezone
 from django.db import models
 
-from app.barbers.models import Staff, StaffWorkingHours, ShopWorkingHours, Override, Barbershop, DailyOverride
+from app.barbers.models import (
+    Staff,
+    StaffWorkingHours,
+    ShopWorkingHours,
+    Override,
+    Barbershop,
+    DailyOverride,
+    ShopHolidayOverride,
+)
 from app.appointments.models import Appointment
 
 
@@ -64,6 +72,20 @@ def compute_staff_day_slots(*, staff: Staff, shop: Barbershop, date: datetime, d
     if daily_override and daily_override.status == 'closed':
         return []  # Entire day closed by manual toggle
 
+    # ShopHolidayOverride (official/special day decision at shop level)
+    # - closed: entire day closed
+    # - custom_hours: restrict base intervals to given window
+    holiday_decision = ShopHolidayOverride.objects.filter(barbershop=shop, date=day).first()
+    holiday_window: Interval | None = None
+    if holiday_decision:
+        if getattr(holiday_decision, "status", "") == "closed":
+            return []
+        if getattr(holiday_decision, "status", "") == "custom_hours":
+            if holiday_decision.open_time and holiday_decision.close_time and holiday_decision.open_time < holiday_decision.close_time:
+                sdt = timezone.make_aware(datetime.combine(day, holiday_decision.open_time), tz)
+                edt = timezone.make_aware(datetime.combine(day, holiday_decision.close_time), tz)
+                holiday_window = (sdt, edt)
+
     # Base working windows from StaffWorkingHours on the weekday
     # Our StaffWorkingHours stores codes as MON..SUN, not Mon/Tue...
     weekday = date.strftime("%a").upper()  # MON/TUE/...
@@ -99,6 +121,19 @@ def compute_staff_day_slots(*, staff: Staff, shop: Barbershop, date: datetime, d
     base_intervals = _merge(base_intervals)
     if not base_intervals:
         return []
+
+    # If a shop-level custom-hours holiday window exists, intersect base intervals with it
+    if holiday_window:
+        restricted: List[Interval] = []
+        hw_start, hw_end = holiday_window
+        for bs, be in base_intervals:
+            s = max(bs, hw_start)
+            e = min(be, hw_end)
+            if s < e:
+                restricted.append((s, e))
+        base_intervals = _merge(restricted)
+        if not base_intervals:
+            return []
 
     # Apply overrides (only active and matching date)
     # Check both shop global and staff individual overrides

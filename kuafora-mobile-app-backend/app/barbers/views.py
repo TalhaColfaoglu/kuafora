@@ -1786,13 +1786,79 @@ class PartnerOverrideViewSet(viewsets.ModelViewSet):
 
     def create(self, request, *args, **kwargs):
         try:
-            serializer = self.get_serializer(data=request.data)
+            # Pre-map legacy client payload before validation
+            raw = request.data
+            try:
+                payload = dict(raw)
+            except Exception:
+                payload = {**raw}
+            scope_in = str(payload.get('scope') or '').lower()
+            kind_in = str(payload.get('override_type') or '').lower()
+            # Accept single date as start/end
+            if (not payload.get('start_date')) and payload.get('date'):
+                payload['start_date'] = payload['date']
+            if (not payload.get('end_date')) and payload.get('date'):
+                payload['end_date'] = payload['date']
+            # Map human-friendly fields to model fields
+            if scope_in in ('shop', 'global'):
+                payload['override_type'] = 'shop_global'
+            elif scope_in in ('staff', 'personel'):
+                payload['override_type'] = 'staff_individual'
+            # override_scope
+            if kind_in in ('closed', 'kapali', 'full_day_closed'):
+                payload['override_scope'] = 'full_day_closed'
+            elif kind_in in ('break', 'mola', 'time_range_closed'):
+                payload['override_scope'] = 'time_range_closed'
+            elif kind_in in ('early_closing', 'early'):
+                payload['override_scope'] = 'early_closing'
+            elif kind_in in ('late_opening', 'late'):
+                payload['override_scope'] = 'late_opening'
+            # If staff scope but no staff provided, default to current user's staff id
+            if payload.get('override_type') == 'staff_individual' and not payload.get('staff'):
+                my_staff = Staff.objects.filter(user=request.user).first()
+                if my_staff:
+                    payload['staff'] = my_staff.id
+
+            serializer = self.get_serializer(data=payload)
             if not serializer.is_valid():
                 # İlk hattaki doğrulama hataları
                 msg = next(iter(serializer.errors.values()))
                 return Response({'ok': False, 'error': {'code': 'validation_error', 'message': str(msg)}})
             # perform_create içi ileri doğrulamalar raise edebilir
             self.perform_create(serializer)
+            # Cancel overlapping appointments if needed (best-effort)
+            try:
+                from datetime import datetime
+                from django.utils import timezone as dj_tz
+                from app.appointments.models import Appointment
+                from app.appointments.models import AppointmentStatus
+                # For single created or last of batch
+                ov = serializer.instance
+                day = ov.start_date
+                start_time = ov.start_time
+                end_time = ov.end_time
+                # Determine filtering scope
+                base_qs = Appointment.objects.filter(
+                    shop=ov.barbershop, start_datetime__date=day
+                ).exclude(status__in=[AppointmentStatus.CANCELLED, AppointmentStatus.COMPLETED, AppointmentStatus.NO_SHOW])
+                if ov.override_type == 'staff_individual' and ov.staff_id:
+                    base_qs = base_qs.filter(staff_id=ov.staff_id)
+                # Compute offending appointments
+                cancel_qs = base_qs
+                if ov.override_scope == 'time_range_closed' and start_time and end_time:
+                    sdt = dj_tz.make_aware(datetime.combine(day, start_time))
+                    edt = dj_tz.make_aware(datetime.combine(day, end_time))
+                    cancel_qs = cancel_qs.filter(end_datetime__gt=sdt, start_datetime__lt=edt)
+                elif ov.override_scope == 'early_closing' and end_time:
+                    edt = dj_tz.make_aware(datetime.combine(day, end_time))
+                    cancel_qs = cancel_qs.filter(start_datetime__lt=edt, end_datetime__gt=edt)
+                elif ov.override_scope == 'late_opening' and start_time:
+                    sdt = dj_tz.make_aware(datetime.combine(day, start_time))
+                    cancel_qs = cancel_qs.filter(start_datetime__lt=sdt)
+                # full_day_closed: keep cancel_qs as base_qs
+                cancel_qs.update(status=AppointmentStatus.CANCELLED)
+            except Exception:
+                pass
             return Response({'ok': True, 'data': self.get_serializer(serializer.instance).data})
         except drf_serializers.ValidationError as e:
             detail = getattr(e, 'detail', None)
@@ -2791,6 +2857,42 @@ class PartnerHolidayOverrideViewSet(viewsets.ModelViewSet):
             }
         )
         serializer.instance = obj
+        # Best-effort: cancel overlapping appointments and create announcement at 00:01
+        try:
+            from datetime import datetime, time as dt_time
+            from django.utils import timezone as dj_tz
+            from app.appointments.models import Appointment, AppointmentStatus
+            # Cancel logic
+            base_qs = Appointment.objects.filter(
+                shop=admin_staff.barbershop, start_datetime__date=date
+            ).exclude(status__in=[AppointmentStatus.CANCELLED, AppointmentStatus.COMPLETED, AppointmentStatus.NO_SHOW])
+            if status_val == 'closed':
+                cancel_qs = base_qs
+            elif status_val == 'custom_hours' and open_time and close_time and open_time < close_time:
+                sdt = dj_tz.make_aware(datetime.combine(date, open_time))
+                edt = dj_tz.make_aware(datetime.combine(date, close_time))
+                cancel_qs = base_qs.filter(models.Q(end_datetime__lte=sdt) | models.Q(start_datetime__gte=edt) | models.Q(end_datetime__gt=edt) | models.Q(start_datetime__lt=sdt))
+            else:
+                cancel_qs = Appointment.objects.none()
+            if cancel_qs.exists():
+                cancel_qs.update(status=AppointmentStatus.CANCELLED)
+            # Announcement scheduling (start of day)
+            msg_title = title or ('Bugün Kapalı' if status_val == 'closed' else 'Bugün Özel Saat')
+            msg_content = note or (title or '')
+            SpecialMessage.objects.create(
+                barbershop=admin_staff.barbershop,
+                source='automatic',
+                target_type='all_shop',
+                title=msg_title,
+                content=msg_content,
+                start_datetime=dj_tz.make_aware(datetime.combine(date, dt_time(hour=0, minute=1))),
+                end_datetime=dj_tz.make_aware(datetime.combine(date, dt_time(hour=23, minute=59))),
+                created_by=self.request.user,
+                is_active=True,
+            )
+        except Exception:
+            # No-op on failure; core upsert already completed
+            pass
 
     def perform_update(self, serializer):
         # Ensure barbershop remains same and user is admin + open/closed sınırları
