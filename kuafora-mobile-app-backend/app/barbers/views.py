@@ -1883,6 +1883,70 @@ class PartnerOverrideViewSet(viewsets.ModelViewSet):
         except Exception:
             return Response({'ok': False, 'error': {'code': 'unknown', 'message': 'Silinemedi. Lütfen tekrar deneyin.'}})
 
+    @action(detail=False, methods=['get'], url_path='impact')
+    def impact(self, request):
+        """
+        Hesaplama amaçlı etki uç noktası (değişiklik yapmaz).
+        Query:
+          scope=staff
+          override_type=closed|break
+          date=YYYY-MM-DD
+          start_time=HH:MM (break için)
+          end_time=HH:MM   (break için)
+          staff_id? (admin için opsiyonel; yoksa çağıranın staff kaydı kullanılır)
+        """
+        from datetime import datetime as dt
+        from django.utils import timezone as dj_tz
+        from app.appointments.models import Appointment, AppointmentStatus
+        scope = (request.query_params.get('scope') or '').lower()
+        kind = (request.query_params.get('override_type') or '').lower()
+        date_str = request.query_params.get('date')
+        start_time_str = request.query_params.get('start_time')
+        end_time_str = request.query_params.get('end_time')
+        staff_id = request.query_params.get('staff_id')
+        if scope not in ('staff',):
+            return Response({'ok': False, 'error': {'code': 'bad_request', 'message': 'scope=staff olmalı'}})
+        if kind not in ('closed', 'break'):
+            return Response({'ok': False, 'error': {'code': 'bad_request', 'message': 'override_type closed|break olmalı'}})
+        try:
+            day = dt.strptime(date_str, '%Y-%m-%d').date()
+        except Exception:
+            return Response({'ok': False, 'error': {'code': 'bad_request', 'message': 'Geçersiz tarih'}}, status=200)
+        # RBAC: staff_id verilmişse admin aynı dükkandan olmalı; yoksa kendi staff
+        staff = None
+        if staff_id:
+            staff = Staff.objects.filter(id=staff_id, barbershop__staff__user=request.user, barbershop__staff__is_admin=True).first()
+            if not staff:
+                return Response({'ok': False, 'error': {'code': 'forbidden', 'message': 'Yetkiniz yok'}}, status=200)
+        else:
+            staff = Staff.objects.filter(user=request.user).order_by('-is_admin', '-id').first()
+            if not staff:
+                return Response({'ok': False, 'error': {'code': 'not_found', 'message': 'Staff profili bulunamadı'}})
+        qs = Appointment.objects.filter(
+            shop=staff.barbershop,
+            staff=staff,
+            start_datetime__date=day
+        ).exclude(status__in=[AppointmentStatus.CANCELLED, AppointmentStatus.COMPLETED, AppointmentStatus.NO_SHOW])
+        will_cancel = 0
+        if kind == 'closed':
+            will_cancel = qs.count()
+        else:
+            # break => saat aralığı zorunlu
+            try:
+                from datetime import time as dt_time
+                st = dt_time.fromisoformat(start_time_str) if start_time_str else None
+                et = dt_time.fromisoformat(end_time_str) if end_time_str else None
+            except Exception:
+                st = et = None
+            if not st or not et or st >= et:
+                return Response({'ok': False, 'error': {'code': 'bad_request', 'message': 'Saat aralığı geçersiz'}}, status=200)
+            sdt = dj_tz.make_aware(dt.combine(day, st))
+            edt = dj_tz.make_aware(dt.combine(day, et))
+            will_cancel = qs.filter(
+                models.Q(end_datetime__gt=sdt) & models.Q(start_datetime__lt=edt)
+            ).count()
+        return Response({'ok': True, 'will_cancel_count': int(will_cancel)})
+
     def _log_action(self, action_type, target_model, target_id, changes):
         try:
             admin_staff = Staff.objects.get(user=self.request.user, is_admin=True)
@@ -2831,6 +2895,53 @@ class PartnerHolidayOverrideViewSet(viewsets.ModelViewSet):
         user = self.request.user
         return ShopHolidayOverride.objects.filter(barbershop__staff__user=user, barbershop__staff__is_admin=True)
 
+    @action(detail=False, methods=['get'], url_path='impact')
+    def impact(self, request):
+        """
+        Shop özel günü için etki hesaplama (değişiklik yapmaz).
+        Query: date=YYYY-MM-DD, status=closed|custom_hours, open_time=HH:MM, close_time=HH:MM
+        """
+        from datetime import datetime as dt
+        from django.utils import timezone as dj_tz
+        from app.appointments.models import Appointment, AppointmentStatus
+        admin_staff = Staff.objects.filter(user=request.user, is_admin=True).first()
+        if not admin_staff:
+            return Response({'ok': False, 'error': {'code': 'forbidden', 'message': 'Yetki yok'}})
+        date_str = request.query_params.get('date')
+        status_val = (request.query_params.get('status') or '').lower()
+        open_time_str = request.query_params.get('open_time')
+        close_time_str = request.query_params.get('close_time')
+        try:
+            day = dt.strptime(date_str, '%Y-%m-%d').date()
+        except Exception:
+            return Response({'ok': False, 'error': {'code': 'bad_request', 'message': 'Geçersiz tarih'}})
+        base_qs = Appointment.objects.filter(
+            shop=admin_staff.barbershop,
+            start_datetime__date=day
+        ).exclude(status__in=[AppointmentStatus.CANCELLED, AppointmentStatus.COMPLETED, AppointmentStatus.NO_SHOW])
+        will_cancel = 0
+        if status_val == 'closed':
+            will_cancel = base_qs.count()
+        elif status_val == 'custom_hours':
+            try:
+                from datetime import time as dt_time
+                ot = dt_time.fromisoformat(open_time_str) if open_time_str else None
+                ct = dt_time.fromisoformat(close_time_str) if close_time_str else None
+            except Exception:
+                ot = ct = None
+            if not ot or not ct or ot >= ct:
+                return Response({'ok': False, 'error': {'code': 'bad_request', 'message': 'Saat aralığı geçersiz'}})
+            sdt = dj_tz.make_aware(dt.combine(day, ot))
+            edt = dj_tz.make_aware(dt.combine(day, ct))
+            # Allowed window: [sdt, edt). İzinli pencere dışında kalanlar iptal.
+            cancel_qs = base_qs.filter(
+                models.Q(end_datetime__lte=sdt) | models.Q(start_datetime__gte=edt) | models.Q(end_datetime__gt=edt) | models.Q(start_datetime__lt=sdt)
+            )
+            will_cancel = cancel_qs.count()
+        else:
+            return Response({'ok': False, 'error': {'code': 'bad_request', 'message': 'status closed|custom_hours olmalı'}})
+        return Response({'ok': True, 'will_cancel_count': int(will_cancel)})
+
     def perform_create(self, serializer):
         # Upsert by (barbershop,date) + doğrulama: resmi tatillerde sadece open/closed
         admin_staff = Staff.objects.get(user=self.request.user, is_admin=True)
@@ -2841,6 +2952,29 @@ class PartnerHolidayOverrideViewSet(viewsets.ModelViewSet):
         title = serializer.validated_data.get('title', '')
         note = serializer.validated_data.get('note', '')
 
+        # Engeller: zaten kapalı gün/saatler
+        # 1) ShopWorkingHours günü kapalı ise izin verme
+        from datetime import datetime as _dt
+        weekday_code_map = {0: "MON", 1: "TUE", 2: "WED", 3: "THU", 4: "FRI", 5: "SAT", 6: "SUN"}
+        day_code = weekday_code_map.get(date.weekday())
+        shop_wh = ShopWorkingHours.objects.filter(barbershop=admin_staff.barbershop, day_of_week=day_code).first()
+        if shop_wh and getattr(shop_wh, 'is_closed', False):
+            raise drf_serializers.ValidationError({'detail': 'Bu gün mağaza çalışma saatlerinde kapalı olarak işaretli'})
+        # 2) Aynı güne shop-level kapatma (DailyOverride closed) varsa
+        if DailyOverride.objects.filter(barbershop=admin_staff.barbershop, date=date, status='closed').exists():
+            raise drf_serializers.ValidationError({'detail': 'Bu gün zaten kapalı (manuel kapatma)'})
+        # 3) Aynı güne shop_global time_range_closed/full_day_closed varsa
+        if Override.objects.filter(
+            barbershop=admin_staff.barbershop,
+            override_type='shop_global',
+            start_date__lte=date
+        ).filter(
+            models.Q(end_date__isnull=True) | models.Q(end_date__gte=date)
+        ).filter(
+            models.Q(override_scope='time_range_closed') | models.Q(override_scope='full_day_closed')
+        ).exists():
+            raise drf_serializers.ValidationError({'detail': 'Bu gün zaten kapalı saat/kapanış bulunmaktadır'})
+
         # Resmi tatil listesinde ise custom_hours yasak
         is_official = OfficialHoliday.objects.filter(country_code='TR', date=date).exists()
         if is_official and status_val == 'custom_hours':
@@ -2849,6 +2983,9 @@ class PartnerHolidayOverrideViewSet(viewsets.ModelViewSet):
         if status_val == 'custom_hours':
             if not open_time or not close_time or open_time >= close_time:
                 raise drf_serializers.ValidationError({'detail': 'Özel saat için başlangıç/bitiş saatleri zorunlu ve geçerli olmalıdır'})
+            # Saatler mağaza çalışma saatleri içinde olmalı (tercih: zorunlu kural)
+            if not shop_wh or not shop_wh.start_time or not shop_wh.end_time or not (shop_wh.start_time <= open_time < close_time <= shop_wh.end_time):
+                raise drf_serializers.ValidationError({'detail': 'Özel saatler mağaza çalışma saatleri içinde olmalıdır'})
 
         obj, _ = ShopHolidayOverride.objects.update_or_create(
             barbershop=admin_staff.barbershop,
@@ -2903,12 +3040,33 @@ class PartnerHolidayOverrideViewSet(viewsets.ModelViewSet):
     def perform_update(self, serializer):
         # Ensure barbershop remains same and user is admin + open/closed sınırları
         admin_staff = Staff.objects.get(user=self.request.user, is_admin=True)
-        status_val = serializer.validated_data.get('status')
+        date = serializer.validated_data.get('date') or getattr(serializer.instance, 'date', None)
+        status_val = serializer.validated_data.get('status') or getattr(serializer.instance, 'status', None)
+        open_time = serializer.validated_data.get('open_time') or getattr(serializer.instance, 'open_time', None)
+        close_time = serializer.validated_data.get('close_time') or getattr(serializer.instance, 'close_time', None)
+        # Engeller create ile aynı
+        weekday_code_map = {0: "MON", 1: "TUE", 2: "WED", 3: "THU", 4: "FRI", 5: "SAT", 6: "SUN"}
+        day_code = weekday_code_map.get(date.weekday())
+        shop_wh = ShopWorkingHours.objects.filter(barbershop=admin_staff.barbershop, day_of_week=day_code).first()
+        if shop_wh and getattr(shop_wh, 'is_closed', False):
+            raise drf_serializers.ValidationError({'detail': 'Bu gün mağaza çalışma saatlerinde kapalı olarak işaretli'})
+        if DailyOverride.objects.filter(barbershop=admin_staff.barbershop, date=date, status='closed').exists():
+            raise drf_serializers.ValidationError({'detail': 'Bu gün zaten kapalı (manuel kapatma)'})
+        if Override.objects.filter(
+            barbershop=admin_staff.barbershop,
+            override_type='shop_global',
+            start_date__lte=date
+        ).filter(
+            models.Q(end_date__isnull=True) | models.Q(end_date__gte=date)
+        ).filter(
+            models.Q(override_scope='time_range_closed') | models.Q(override_scope='full_day_closed')
+        ).exists():
+            raise drf_serializers.ValidationError({'detail': 'Bu gün zaten kapalı saat/kapanış bulunmaktadır'})
         if status_val == 'custom_hours':
-            open_time = serializer.validated_data.get('open_time')
-            close_time = serializer.validated_data.get('close_time')
             if not open_time or not close_time or open_time >= close_time:
                 raise drf_serializers.ValidationError({'detail': 'Özel saat için başlangıç/bitiş saatleri zorunlu ve geçerli olmalıdır'})
+            if not shop_wh or not shop_wh.start_time or not shop_wh.end_time or not (shop_wh.start_time <= open_time < close_time <= shop_wh.end_time):
+                raise drf_serializers.ValidationError({'detail': 'Özel saatler mağaza çalışma saatleri içinde olmalıdır'})
         serializer.save(barbershop=admin_staff.barbershop)
 
     def create(self, request, *args, **kwargs):

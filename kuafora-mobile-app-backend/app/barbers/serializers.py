@@ -371,7 +371,7 @@ class ShopHolidayOverrideSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
         )
-        read_only_fields = ("created_by", "created_at", "updated_at")
+        read_only_fields = ("barbershop", "created_by", "created_at", "updated_at")
 
 
 class DailyOverrideSerializer(serializers.ModelSerializer):
@@ -403,7 +403,7 @@ class OverrideSerializer(serializers.ModelSerializer):
             "start_date", "end_date", "start_time", "end_time", "is_recurring", "recurring_rule",
             "reason", "is_active", "created_by", "created_by_name", "created_at", "updated_at"
         )
-        read_only_fields = ("created_at", "updated_at", "created_by")
+        read_only_fields = ("barbershop", "created_at", "updated_at", "created_by")
 
 
 class SpecialMessageSerializer(serializers.ModelSerializer):
