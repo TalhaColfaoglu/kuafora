@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from django.db.models import Prefetch, Q
+from django.db.models import Prefetch, Q, Count
 from rest_framework import viewsets, mixins, permissions, generics, status, serializers as drf_serializers
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -2941,7 +2941,7 @@ class ImpactPlusApi(generics.GenericAPIView):
         else:
             return Response({'ok': False, 'error': {'code': 'bad_request', 'message': 'status closed|custom_hours'}})
         total = cancel_qs.count()
-        staff_counts = cancel_qs.values('staff_id').annotate(c=models.Count('id')).order_by('-c')
+        staff_counts = cancel_qs.values('staff_id').annotate(c=Count('id')).order_by('-c')
         affected_staff = staff_counts.count()
         top = []
         # Eşik: toplam ≥5 veya etkilenen personel ≥3 ise breakdown gönder
@@ -3289,9 +3289,9 @@ class PartnerHolidayOverrideViewSet(viewsets.ModelViewSet):
             override_type='shop_global',
             start_date__lte=date
         ).filter(
-            models.Q(end_date__isnull=True) | models.Q(end_date__gte=date)
+            Q(end_date__isnull=True) | Q(end_date__gte=date)
         ).filter(
-            models.Q(override_scope='time_range_closed') | models.Q(override_scope='full_day_closed')
+            Q(override_scope='time_range_closed') | Q(override_scope='full_day_closed')
         ).exists():
             raise drf_serializers.ValidationError({'detail': 'Bu gün zaten kapalı saat/kapanış bulunmaktadır'})
         if status_val == 'custom_hours':
