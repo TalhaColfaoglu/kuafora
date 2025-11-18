@@ -26,6 +26,7 @@ from .views import (
     AnnouncementsPublicApi,
     PartnerHolidayOverrideViewSet,
     ToggleTodayApi,
+    ImpactPlusApi,
 )
 
 router = DefaultRouter()
@@ -67,4 +68,6 @@ urlpatterns = [
     # Public announcements for mobile app
     path("announcements/", AnnouncementsPublicApi.as_view(), name="announcements-public"),
     path("special-messages/", AnnouncementsPublicApi.as_view(), name="special-messages-public"),
+    # Impact plus
+    path("partner/holiday/impact-plus/", ImpactPlusApi.as_view(), name="impact-plus"),
 ]

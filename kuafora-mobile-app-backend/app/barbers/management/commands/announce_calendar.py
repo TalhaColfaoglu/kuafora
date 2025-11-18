@@ -17,6 +17,14 @@ class Command(BaseCommand):
 
         if mode == 'today':
             self.stdout.write(self.style.SUCCESS(f'Checking for today\'s announcements ({today})...'))
+            # 00:01: daha önce planlanan otomatik mesajları aktif et
+            activated = SpecialMessage.objects.filter(
+                source='automatic',
+                is_active=False,
+                start_datetime__date=today
+            ).update(is_active=True)
+            if activated:
+                self.stdout.write(self.style.SUCCESS(f'  Activated {activated} scheduled messages for today'))
             for shop in Barbershop.objects.all():
                 status_data = _compute_shop_status(shop.id, today)
                 if status_data['status'] == 'closed' and status_data['source'] in ['SPECIAL_DAY', 'OFFICIAL_HOLIDAY', 'TOGGLE']:
