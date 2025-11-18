@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from django.db.models import Prefetch, Q, Count
+from drf_spectacular.utils import extend_schema
 from rest_framework import viewsets, mixins, permissions, generics, status, serializers as drf_serializers
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -2523,6 +2524,7 @@ class CalendarStatusViewSet(viewsets.ReadOnlyModelViewSet):
         except Barbershop.DoesNotExist:
             return Response({"detail": "Barbershop not found"}, status=404)
 
+    @extend_schema(exclude=True)
     @action(detail=False, methods=["get"], url_path="day-overrides")
     def day_overrides(self, request):
         """Belirli bir gün için shop/staff kapatma bantlarını döndürür."""
@@ -2885,6 +2887,7 @@ class ToggleTodayApi(generics.GenericAPIView):
         return Response({'ok': False, 'error': {'code': 'method_not_allowed', 'message': 'Sadece POST/PUT/PATCH desteklenir'}})
 
 
+@extend_schema(exclude=True)
 class ImpactPlusApi(generics.GenericAPIView):
     permission_classes = [permissions.IsAuthenticated]
 
