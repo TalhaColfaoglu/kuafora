@@ -22,6 +22,8 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     # Dinamik şema yerine statik dosyayı servis et (dinamik jeneratör hatalarından etkilenmesin)
     path("api/schema/", schema_static, name="schema"),
+    # Debug amaçlı dinamik şema (üretimde daima statik kullan)
+    path("api/schema-dynamic/", SpectacularAPIView.as_view(), name="schema-dynamic"),
     # Swagger'ı doğrudan statik OpenAPI dosyasından okut (dinamik şema hatalarından etkilenmesin)
     path("api/docs/", SpectacularSwaggerView.as_view(url="/api/schema/"), name="swagger-ui"),
     # Fallback: Swagger'ı statik üretilmiş dosyadan da servis edebil
