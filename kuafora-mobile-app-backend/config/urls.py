@@ -14,6 +14,8 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
     path("api/docs/", SpectacularSwaggerView.as_view(url_name="schema"), name="swagger-ui"),
+    # Fallback: Swagger'ı statik üretilmiş dosyadan da servis edebil
+    path("api/docs-static/", SpectacularSwaggerView.as_view(url="/static/openapi.yaml"), name="swagger-ui-static"),
     # Top-level aliases to avoid router/action conflicts and ensure 2xx on POST
     path("api/toggle-today/", ToggleTodayApi.as_view(), name="api-toggle-today"),
     path("api/calendar/toggle/", ToggleTodayApi.as_view(), name="api-calendar-toggle"),
