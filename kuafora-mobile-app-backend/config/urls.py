@@ -11,12 +11,16 @@ def health(request):
     return JsonResponse({"status": "ok"})
 
 def schema_static(request):
-    try:
-        from django.conf import settings
-        p: Path = settings.STATIC_ROOT / "openapi.yaml"
-        return FileResponse(open(p, "rb"), content_type="application/yaml")
-    except Exception:
-        return JsonResponse({"detail": "schema file not found"}, status=404)
+    # Önce statik YAML şemayı sunmayı dene; yoksa dinamik üretime düş
+    from django.conf import settings
+    p: Path = settings.STATIC_ROOT / "openapi.yaml"
+    if p.exists():
+        try:
+            return FileResponse(open(p, "rb"), content_type="application/yaml")
+        except Exception:
+            pass
+    # Dinamik fallback (JSON döner)
+    return SpectacularAPIView.as_view()(request)
 
 urlpatterns = [
     path("admin/", admin.site.urls),
@@ -25,7 +29,7 @@ urlpatterns = [
     # Debug amaçlı dinamik şema (üretimde daima statik kullan)
     path("api/schema-dynamic/", SpectacularAPIView.as_view(), name="schema-dynamic"),
     # Swagger'ı doğrudan statik OpenAPI dosyasından okut (dinamik şema hatalarından etkilenmesin)
-    path("api/docs/", SpectacularSwaggerView.as_view(url="/api/schema/"), name="swagger-ui"),
+    path("api/docs/", SpectacularSwaggerView.as_view(url_name="schema"), name="swagger-ui"),
     # Fallback: Swagger'ı statik üretilmiş dosyadan da servis edebil
     path("api/docs-static/", SpectacularSwaggerView.as_view(url="/static/openapi.yaml"), name="swagger-ui-static"),
     # Top-level aliases to avoid router/action conflicts and ensure 2xx on POST
