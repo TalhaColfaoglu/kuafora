@@ -5,14 +5,23 @@ from django.conf.urls.static import static
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 from app.barbers.views import ToggleTodayApi
 from app.users.views import ResolveUserView
-
-from django.http import JsonResponse
+from django.http import JsonResponse, FileResponse
+from pathlib import Path
 def health(request):
     return JsonResponse({"status": "ok"})
 
+def schema_static(request):
+    try:
+        from django.conf import settings
+        p: Path = settings.STATIC_ROOT / "openapi.yaml"
+        return FileResponse(open(p, "rb"), content_type="application/yaml")
+    except Exception:
+        return JsonResponse({"detail": "schema file not found"}, status=404)
+
 urlpatterns = [
     path("admin/", admin.site.urls),
-    path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
+    # Dinamik şema yerine statik dosyayı servis et (dinamik jeneratör hatalarından etkilenmesin)
+    path("api/schema/", schema_static, name="schema"),
     # Swagger'ı doğrudan statik OpenAPI dosyasından okut (dinamik şema hatalarından etkilenmesin)
     path("api/docs/", SpectacularSwaggerView.as_view(url="/static/openapi.yaml"), name="swagger-ui"),
     # Fallback: Swagger'ı statik üretilmiş dosyadan da servis edebil
