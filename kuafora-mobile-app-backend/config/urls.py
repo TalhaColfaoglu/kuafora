@@ -23,7 +23,7 @@ urlpatterns = [
     # Dinamik şema yerine statik dosyayı servis et (dinamik jeneratör hatalarından etkilenmesin)
     path("api/schema/", schema_static, name="schema"),
     # Swagger'ı doğrudan statik OpenAPI dosyasından okut (dinamik şema hatalarından etkilenmesin)
-    path("api/docs/", SpectacularSwaggerView.as_view(url="/static/openapi.yaml"), name="swagger-ui"),
+    path("api/docs/", SpectacularSwaggerView.as_view(url="/api/schema/"), name="swagger-ui"),
     # Fallback: Swagger'ı statik üretilmiş dosyadan da servis edebil
     path("api/docs-static/", SpectacularSwaggerView.as_view(url="/static/openapi.yaml"), name="swagger-ui-static"),
     # Top-level aliases to avoid router/action conflicts and ensure 2xx on POST

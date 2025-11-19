@@ -24,6 +24,10 @@ python manage.py collectstatic --noinput
 python manage.py makemigrations --noinput
 python manage.py migrate --noinput
 
+# Generate OpenAPI schema file for Swagger UI to consume
+mkdir -p staticfiles
+python manage.py spectacular --file staticfiles/openapi.yaml || true
+
 if [ "${DEBUG:-0}" = "1" ]; then
   python manage.py runserver 0.0.0.0:8000
 else
