@@ -20,7 +20,14 @@ def schema_static(request):
         except Exception:
             pass
     # Dinamik fallback (JSON döner)
-    return SpectacularAPIView.as_view()(request)
+    try:
+        return SpectacularAPIView.as_view()(request)
+    except Exception as exc:
+        # Dinamik üretim dahi patlarsa anlamlı bir hata dön
+        return JsonResponse(
+            {"detail": "schema generation failed", "error": str(exc)},
+            status=500,
+        )
 
 urlpatterns = [
     path("admin/", admin.site.urls),

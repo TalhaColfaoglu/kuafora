@@ -110,6 +110,26 @@ services:
       - ./nginx/certbot/www:/var/www/certbot
     networks: [kuafora_net]
 
+  certbot:
+    image: certbot/certbot:latest
+    container_name: kuafora_certbot
+    depends_on:
+      - nginx
+    volumes:
+      - ./nginx/certbot/conf:/etc/letsencrypt
+      - ./nginx/certbot/www:/var/www/certbot
+    entrypoint: /bin/sh
+    command:
+      - -c
+      - |
+        set -e
+        # Obtain/renew certificates for api.kuafora.com and kuafora.com (webroot)
+        certbot certonly --webroot -w /var/www/certbot \
+          -d api.kuafora.com -d kuafora.com -d www.kuafora.com \
+          --agree-tos --register-unsafely-without-email --non-interactive --keep-until-expiring
+        # Keep container alive (optional); comment if you prefer one-shot
+        sleep 3600
+
 networks:
   kuafora_net:
     driver: bridge

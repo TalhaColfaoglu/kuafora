@@ -22,19 +22,28 @@ _allowed = set(env.list("ALLOWED_HOSTS", default=[]))
 _allowed.update({"*", "0.0.0.0", "localhost", "127.0.0.1", ".compute.amazonaws.com"})
 ALLOWED_HOSTS = list(_allowed)
 
-# CORS settings for Flutter frontend
-CORS_ALLOWED_ORIGINS= [
+# Proxy & security headers (for correct scheme/host behind Nginx)
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+USE_X_FORWARDED_HOST = True
+
+# CORS settings for Flutter frontend and docs
+CORS_ALLOWED_ORIGINS = [
     "http://ec2-3-79-28-13.eu-central-1.compute.amazonaws.com",
-    "http://3.79.28.13"
+    "http://3.79.28.13",
+    "https://api.kuafora.com",
+    "https://ec2-3-79-28-13.eu-central-1.compute.amazonaws.com",
 ]
 CORS_ALLOW_CREDENTIALS = True
 if DEBUG:
     CORS_ALLOW_ALL_ORIGINS = True
 
 # CSRF settings
-CSRF_TRUSTED_ORIGINS= [
+CSRF_TRUSTED_ORIGINS = [
     "http://ec2-3-79-28-13.eu-central-1.compute.amazonaws.com",
-    "http://3.79.28.13"
+    "http://3.79.28-13.eu-central-1.compute.amazonaws.com".replace("-13.eu", ".eu"),  # safety
+    "http://3.79.28.13",
+    "https://api.kuafora.com",
+    "https://ec2-3-79-28-13.eu-central-1.compute.amazonaws.com",
 ]
 
 INSTALLED_APPS = [
@@ -147,6 +156,10 @@ SPECTACULAR_SETTINGS = {
     "DESCRIPTION": "Kuaför randevu uygulaması için REST API",
     "VERSION": "1.0.0",
     "SERVE_INCLUDE_SCHEMA": False,
+    # Docs içinde doğru base url görünsün
+    "SERVERS": [
+        {"url": "https://api.kuafora.com", "description": "Production"},
+    ],
 }
 
 from datetime import timedelta
