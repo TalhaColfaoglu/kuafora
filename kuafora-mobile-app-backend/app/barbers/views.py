@@ -3252,9 +3252,14 @@ class PartnerHolidayOverrideViewSet(viewsets.ModelViewSet):
                 cancel_qs = Appointment.objects.none()
             if cancel_qs.exists():
                 cancel_qs.update(status=AppointmentStatus.CANCELLED)
-            # 00:01 için planlı duyuru (aktif değil)
-            msg_title = "Salon bugün açık olmayacaktır."
+            # 00:01 için planlı duyuru (aktif)
+            msg_title = "Salon Kapalı" if status_val == 'closed' else "Salon Çalışma Saatleri"
             msg_content = (note or '').strip()
+            if status_val == 'custom_hours' and open_time and close_time:
+                msg_content = f"Bugün {open_time.strftime('%H:%M')} - {close_time.strftime('%H:%M')} saatleri arasında hizmet vereceğiz. {msg_content}".strip()
+            elif status_val == 'closed':
+                msg_content = f"Bugün salonumuz kapalıdır. {msg_content}".strip()
+
             SpecialMessage.objects.update_or_create(
                 barbershop=admin_staff.barbershop,
                 source='automatic',
@@ -3265,7 +3270,7 @@ class PartnerHolidayOverrideViewSet(viewsets.ModelViewSet):
                     'content': msg_content,
                     'end_datetime': dj_tz.make_aware(datetime.combine(date, dt_time(hour=23, minute=59))),
                     'created_by': self.request.user,
-                    'is_active': False,
+                    'is_active': True,
                 }
             )
         except Exception:

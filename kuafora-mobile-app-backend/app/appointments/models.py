@@ -69,6 +69,9 @@ class Appointment(models.Model):
     cancelled_by = models.CharField(max_length=20, choices=CancelledBy.choices, default=CancelledBy.SYSTEM, blank=True)
     refund_status = models.CharField(max_length=20, choices=RefundStatus.choices, default=RefundStatus.NONE)
 
+    is_attended = models.BooleanField(null=True, blank=True)
+    attended_at = models.DateTimeField(null=True, blank=True)
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -172,7 +175,3 @@ class NotificationEvent(models.Model):
     last_error = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-
-
-
-

@@ -59,6 +59,8 @@ class BarbershopSerializer(serializers.ModelSerializer):
             "star_1_count","star_2_count","star_3_count","star_4_count","star_5_count",
             "views_weekly",
             "favorites_count",
+            # Social
+            "instagram", "facebook", "twitter", "whatsapp",
         )
         read_only_fields = ("rating_avg", "total_reviews", "views_weekly", "favorites_count", "created_at", "updated_at")
         extra_kwargs = {
@@ -125,7 +127,9 @@ class StaffSerializer(serializers.ModelSerializer):
             # Yeni alanlar:
             "bio", "gender_preference", "experience_years", "career_start_year", "tags",
             "rating_avg", "staff_services",
-            "auto_approval", "commission_rate", "appointment_interval"
+            "auto_approval", "commission_rate", "appointment_interval",
+            # Social
+            "instagram", "facebook", "twitter", "whatsapp",
         )
         read_only_fields = ("total_reviews", "rating_avg", "experience_years")
 

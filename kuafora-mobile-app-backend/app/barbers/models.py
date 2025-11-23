@@ -42,6 +42,12 @@ class Barbershop(models.Model):
     views_weekly = models.PositiveIntegerField(default=0, editable=False)
     favorites_count = models.PositiveIntegerField(default=0, editable=False)
 
+    # Social Media
+    instagram = models.CharField(max_length=100, blank=True)
+    facebook = models.CharField(max_length=100, blank=True)
+    twitter = models.CharField(max_length=100, blank=True)
+    whatsapp = models.CharField(max_length=100, blank=True)
+
     def __str__(self) -> str:  # pragma: no cover - trivial
         return self.name
 
@@ -84,6 +90,12 @@ class Staff(models.Model):
         help_text="Uzmanlık etiketleri: ['boyama_ustasi', '20_yillik_usta', ...]"
     )
     rating_avg = models.FloatField(default=0, editable=False)
+    
+    # Social Media
+    instagram = models.CharField(max_length=100, blank=True)
+    facebook = models.CharField(max_length=100, blank=True)
+    twitter = models.CharField(max_length=100, blank=True)
+    whatsapp = models.CharField(max_length=100, blank=True)
     
     # Randevu sistemi için (şimdilik boş kalabilir)
     auto_approval = models.BooleanField(

@@ -13,6 +13,7 @@ from .views import (
     PartnerAppointmentsListApi,
     CustomerAppointmentsApi,
     CustomerAppointmentCancelApi,
+    AppointmentAttendanceApi,
 )
 
 
@@ -27,8 +28,7 @@ urlpatterns = [
     path("api/partner/appointments/<int:appointment_id>/accept", PartnerAcceptApi.as_view()),
     path("api/partner/appointments/<int:appointment_id>/cancel", PartnerCancelApi.as_view()),
     path("api/partner/appointments/<int:appointment_id>/status", PartnerStatusApi.as_view()),
+    path("api/partner/appointments/<int:appointment_id>/attendance", AppointmentAttendanceApi.as_view()),
     path("api/partner/appointments", PartnerAppointmentsListApi.as_view()),
     path("api/partner/shops/<int:shop_id>/system/switch", SystemSwitchApi.as_view()),
 ]
-
-

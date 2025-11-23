@@ -12,6 +12,7 @@ from rest_framework.response import Response
 from rest_framework import status, permissions, serializers
 
 from app.barbers.models import Barbershop, Staff
+from app.users.models import CustomerBan
 from .models import Appointment, AppointmentStatus, Hold, ShopSystemSwitchHistory, CancelledBy
 from drf_spectacular.utils import extend_schema, inline_serializer
 from .permissions import IsBookingEnabled
@@ -71,6 +72,15 @@ class AvailabilityApi(APIView):
         return Response(AvailabilityResponseSerializer({"slots": slots}).data)
 
 
+def check_customer_ban(user):
+    active_ban = CustomerBan.objects.filter(user=user, expires_at__gt=timezone.now()).first()
+    if active_ban:
+        remaining = active_ban.expires_at - timezone.now()
+        days = remaining.days
+        return f"Randevu oluşturamazsınız. Ban sürenizin bitmesine {days} gün kaldı."
+    return None
+
+
 class HoldCreateApi(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
@@ -81,6 +91,11 @@ class HoldCreateApi(APIView):
         existing = ensure_idempotent(key=idem_key, actor=str(request.user.pk), method="POST", path=request.path, body=request.data)
         if existing is not None:
             return Response(existing)
+
+        # Ban check
+        ban_msg = check_customer_ban(request.user)
+        if ban_msg:
+            return Response({"detail": ban_msg, "code": "403_USER_BANNED"}, status=status.HTTP_403_FORBIDDEN)
 
         s = HoldCreateSerializer(data=request.data)
         s.is_valid(raise_exception=True)
@@ -153,6 +168,11 @@ class AppointmentCreateApi(APIView):
         existing = ensure_idempotent(key=idem_key, actor=str(request.user.pk), method="POST", path=request.path, body=request.data)
         if existing is not None:
             return Response(existing)
+
+        # Ban check
+        ban_msg = check_customer_ban(request.user)
+        if ban_msg:
+            return Response({"detail": ban_msg, "code": "403_USER_BANNED"}, status=status.HTTP_403_FORBIDDEN)
 
         s = AppointmentCreateSerializer(data=request.data)
         s.is_valid(raise_exception=True)
@@ -529,3 +549,55 @@ class CustomerAppointmentCancelApi(APIView):
         return Response(resp)
 
 
+class AppointmentAttendanceApi(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    @transaction.atomic
+    def post(self, request, appointment_id: int):
+        """
+        Mark appointment attendance status.
+        Input: {"status": "attended" | "no_show"}
+        """
+        new_status = request.data.get("status")
+        if new_status not in ["attended", "no_show"]:
+            return Response({"detail": "Invalid status. Use 'attended' or 'no_show'."}, status=status.HTTP_400_BAD_REQUEST)
+
+        ap = get_object_or_404(Appointment.objects.select_for_update(), pk=appointment_id)
+        
+        # Ensure user is authorized staff/admin
+        # In a real app, check request.user against ap.staff.user or shop admins
+        # Assuming permission checks are handled by DRF permission classes or similar in a robust app.
+        # For now, we trust authenticated users who can reach this endpoint have access (since URL routing might be protected or we add explicit check)
+        # Let's add a basic check:
+        if not (request.user.is_staff or request.user.is_superuser or (ap.staff.user == request.user)):
+             # Check if shop admin
+             is_shop_admin = Staff.objects.filter(user=request.user, barbershop=ap.shop, is_admin=True).exists()
+             if not is_shop_admin:
+                 return Response({"detail": "Not authorized"}, status=status.HTTP_403_FORBIDDEN)
+
+        if ap.start_datetime > timezone.now():
+             return Response({"detail": "Cannot mark attendance for future appointments."}, status=status.HTTP_400_BAD_REQUEST)
+
+        if new_status == "attended":
+            ap.is_attended = True
+            ap.status = AppointmentStatus.COMPLETED
+        else:
+            ap.is_attended = False
+            ap.status = AppointmentStatus.NO_SHOW
+            
+            # Ban logic: Ban for 3 months
+            if ap.customer:
+                ban_expiry = timezone.now() + timedelta(days=90)
+                CustomerBan.objects.create(
+                    user=ap.customer,
+                    reason="No-show for appointment",
+                    expires_at=ban_expiry
+                )
+
+        ap.attended_at = timezone.now()
+        ap.save(update_fields=["is_attended", "status", "attended_at"])
+        
+        events.emit(events.staff_topic(ap.staff_id), {"type": "appointment_attendance", "id": ap.id, "status": ap.status})
+        events.emit(events.shop_topic(ap.shop_id), {"type": "appointment_attendance", "id": ap.id, "status": ap.status})
+
+        return Response({"status": ap.status, "is_attended": ap.is_attended})
