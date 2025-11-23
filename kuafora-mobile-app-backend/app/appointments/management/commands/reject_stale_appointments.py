@@ -22,4 +22,3 @@ class Command(BaseCommand):
             self.stdout.write(self.style.SUCCESS(f'Successfully cancelled {count} stale appointments'))
         else:
             self.stdout.write(self.style.SUCCESS('No stale appointments found'))
-
