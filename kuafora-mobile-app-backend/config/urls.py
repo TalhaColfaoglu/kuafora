@@ -7,17 +7,18 @@ from app.barbers.views import ToggleTodayApi
 from app.users.views import ResolveUserView
 from django.http import JsonResponse, FileResponse
 from pathlib import Path
+
 def health(request):
     return JsonResponse({"status": "ok"})
 
 def schema_static(request):
     # Önce statik YAML şemayı sunmayı dene; yoksa dinamik üretime düş
-        from django.conf import settings
-        p: Path = settings.STATIC_ROOT / "openapi.yaml"
+    from django.conf import settings
+    p: Path = settings.STATIC_ROOT / "openapi.yaml"
     if p.exists():
         try:
-        return FileResponse(open(p, "rb"), content_type="application/yaml")
-    except Exception:
+            return FileResponse(open(p, "rb"), content_type="application/yaml")
+        except Exception:
             pass
     # Dinamik fallback (JSON döner)
     try:
@@ -52,5 +53,3 @@ urlpatterns = [
     path("", include("app.appointments.urls")),
     path("health/", health),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
-
-
