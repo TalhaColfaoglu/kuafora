@@ -74,7 +74,7 @@ class UserAddress(models.Model):
     def __str__(self) -> str:  # pragma: no cover - trivial
         return f"{self.user.email} - {self.label}"
 
-
+    
 class CustomerBan(models.Model):
     user = models.ForeignKey("User", on_delete=models.CASCADE, related_name="bans")
     reason = models.CharField(max_length=255)
