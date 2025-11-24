@@ -67,6 +67,14 @@ def compute_staff_day_slots(*, staff: Staff, shop: Barbershop, date: datetime, d
     day = date.date()
     grid_minutes = grid or staff.appointment_interval
 
+    # NEW: OfficialHoliday check (if not overridden by ShopHolidayOverride, assume default policy might be 'closed' or just informative)
+    # However, ShopHolidayOverride is usually created by trigger/signal. If not exists, check raw OfficialHoliday?
+    # Currently, we rely on ShopHolidayOverride being present for any official holiday logic.
+    # If you want STRICT closing on official holidays if no override exists:
+    # from barbers.models import OfficialHoliday
+    # if OfficialHoliday.objects.filter(date=day).exists() and not ShopHolidayOverride.objects.filter(barbershop=shop, date=day).exists():
+    #    return [] 
+
     # Check DailyOverride first (highest priority - manual daily toggle)
     daily_override = DailyOverride.objects.filter(barbershop=shop, date=day).first()
     if daily_override and daily_override.status == 'closed':

@@ -67,6 +67,7 @@ class Appointment(models.Model):
     payment_status = models.CharField(max_length=20, choices=PaymentStatus.choices, default=PaymentStatus.NONE)
 
     cancelled_by = models.CharField(max_length=20, choices=CancelledBy.choices, default=CancelledBy.SYSTEM, blank=True)
+    rejection_reason = models.TextField(blank=True)
     refund_status = models.CharField(max_length=20, choices=RefundStatus.choices, default=RefundStatus.NONE)
 
     is_attended = models.BooleanField(null=True, blank=True)

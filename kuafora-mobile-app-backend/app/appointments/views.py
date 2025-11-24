@@ -348,7 +348,17 @@ class PartnerCancelApi(APIView):
         if ap.status in [AppointmentStatus.COMPLETED, AppointmentStatus.NO_SHOW]:
             return Response({"detail": "INVALID_TRANSITION"}, status=status.HTTP_400_BAD_REQUEST)
         ap.status = AppointmentStatus.CANCELLED
-        ap.save(update_fields=["status"]) 
+        
+        # Check if rejection (staff action) or just cancel
+        # If this endpoint is used by staff to "cancel" a customer appointment, it might be rejection.
+        # Usually PartnerCancelApi is used by staff.
+        # Let's assume if cancelled via PartnerCancelApi, it is a rejection/cancellation by staff.
+        # We can allow passing a reason.
+        reason = request.data.get('reason', '')
+        ap.rejection_reason = reason
+        ap.cancelled_by = CancelledBy.STAFF
+        
+        ap.save(update_fields=["status", "cancelled_by", "rejection_reason"]) 
         events.emit(events.staff_topic(ap.staff_id), {"type": "appointment_cancelled", "id": ap.id})
         events.emit(events.shop_topic(ap.shop_id), {"type": "appointment_cancelled", "id": ap.id})
         resp = {"status": ap.status}

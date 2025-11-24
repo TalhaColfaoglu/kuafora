@@ -245,16 +245,11 @@ class BarbershopViewSet(viewsets.ReadOnlyModelViewSet):
             result = []
             for code in code_list:
                 try:
-                    has_full_closed = Override.objects.filter(
-                        barbershop=shop,
-                        override_type='shop_global',
-                        start_date__lte=timezone.localdate(),
-                        end_date__gte=timezone.localdate(),
-                        override_scope='full_day_closed',
-                    ).exists()
-                    if has_full_closed:
-                        result.append({'day_of_week': code,'start_time': None,'end_time': None,'is_closed': True})
-                        continue
+                    # Note: We removed the 'today' override check here because this endpoint returns
+                    # the generic weekly schedule. Date-specific overrides are handled by the 
+                    # availability endpoint or by specific date queries.
+                    # Including timezone.localdate() check here caused the shop to appear fully closed
+                    # on all days if 'today' happened to be a holiday.
 
                     staff_hours = StaffWorkingHours.objects.filter(
                         staff__barbershop=shop, day_of_week=code, is_closed=False,

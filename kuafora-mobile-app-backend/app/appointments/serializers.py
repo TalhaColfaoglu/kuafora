@@ -61,6 +61,8 @@ class AppointmentSerializer(serializers.ModelSerializer):
             "staff_name",
             "shop_name",
             "customer_name",
+            "cancelled_by",
+            "rejection_reason",
         )
 
     def get_staff_name(self, obj):
