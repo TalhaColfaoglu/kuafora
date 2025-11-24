@@ -90,15 +90,19 @@ class BarbershopAdvancedStatsView(generics.GenericAPIView):
         for r in reviews_qs:
             u_name = "Anonim"
             if not r.is_anonymous and r.user:
-                u_name = r.user.first_name or r.user.email.split('@')[0]
+                u_name = getattr(r.user, 'full_name', r.user.email.split('@')[0])
             
+            staff_name = None
+            if r.staff and r.staff.user:
+                 staff_name = getattr(r.staff.user, 'full_name', None)
+
             reviews_data.append({
                 "id": r.id,
                 "user_name": u_name,
                 "rating": r.rating,
                 "comment": r.comment,
                 "created_at": r.created_at,
-                "staff_name": r.staff.user.first_name if r.staff and r.staff.user else None
+                "staff_name": staff_name
             })
 
 
@@ -158,15 +162,14 @@ class BarbershopAdvancedStatsView(generics.GenericAPIView):
             }
 
             # Staff Performance
-            staff_qs = appts.values('staff__user__first_name', 'staff__user__last_name').annotate(
+            # Adjusted query to use 'full_name' instead of 'first_name'/'last_name'
+            staff_qs = appts.values('staff__user__full_name').annotate(
                 count=Count('id'),
                 revenue=Sum('price_total', filter=Q(status__in=[AppointmentStatus.COMPLETED, AppointmentStatus.CONFIRMED]))
             ).order_by('-revenue')
             
             for s in staff_qs:
-                fname = s['staff__user__first_name'] or ""
-                lname = s['staff__user__last_name'] or ""
-                name = f"{fname} {lname}".strip() or "Personel"
+                name = (s['staff__user__full_name'] or "").strip() or "Personel"
                 staff_performance.append({
                     "name": name,
                     "count": s['count'],
