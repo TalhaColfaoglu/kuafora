@@ -22,6 +22,7 @@ from .models import (
     Service,
     ServiceCategory,
     LastViewed,
+    BreakWindow,
 )
 
 
@@ -61,6 +62,7 @@ class BarbershopSerializer(serializers.ModelSerializer):
             "favorites_count",
             # Social
             "instagram", "facebook", "twitter", "whatsapp",
+            "features",
         )
         read_only_fields = ("rating_avg", "total_reviews", "views_weekly", "favorites_count", "created_at", "updated_at")
         extra_kwargs = {
@@ -347,6 +349,96 @@ class StaffWorkingHoursSerializer(serializers.ModelSerializer):
     class Meta:
         model = StaffWorkingHours
         fields = ("id", "staff", "staff_name", "day_of_week", "start_time", "end_time", "is_closed", "created_at", "updated_at")
+
+
+class BreakWindowSerializer(serializers.ModelSerializer):
+    staff_name = serializers.CharField(source="staff.user.full_name", read_only=True)
+    barbershop_name = serializers.CharField(source="barbershop.name", read_only=True)
+
+    class Meta:
+        model = BreakWindow
+        fields = (
+            "id",
+            "scope",
+            "barbershop",
+            "barbershop_name",
+            "staff",
+            "staff_name",
+            "date",
+            "start_time",
+            "end_time",
+            "label",
+            "created_by",
+            "created_at",
+            "updated_at",
+        )
+        read_only_fields = ("created_by", "created_at", "updated_at")
+
+    def validate(self, attrs):
+        from datetime import datetime as _dt
+        from rest_framework import serializers as drf_serializers
+        request = self.context.get("request")
+        user = getattr(request, "user", None)
+
+        scope = attrs.get("scope") or getattr(self.instance, "scope", None)
+        staff = attrs.get("staff") or getattr(self.instance, "staff", None)
+        barbershop = (
+            attrs.get("barbershop")
+            or getattr(self.instance, "barbershop", None)
+            or getattr(staff, "barbershop", None)
+        )
+        if not barbershop:
+            raise drf_serializers.ValidationError({"barbershop": "Dükkan zorunlu"})
+
+        if scope == BreakWindow.Scope.STAFF and not staff:
+            raise drf_serializers.ValidationError({"staff": "Personel molası için staff zorunlu"})
+        if scope == BreakWindow.Scope.SHOP and staff:
+            raise drf_serializers.ValidationError({"staff": "Dükkan molasında staff seçilemez"})
+        if staff and staff.barbershop_id != barbershop.id:
+            raise drf_serializers.ValidationError({"staff": "Personel bu dükkanda değil"})
+
+        date_val = attrs.get("date") or getattr(self.instance, "date", None)
+        start_time = attrs.get("start_time") or getattr(self.instance, "start_time", None)
+        end_time = attrs.get("end_time") or getattr(self.instance, "end_time", None)
+        if not date_val or not start_time or not end_time:
+            raise drf_serializers.ValidationError("Tarih ve saat aralığı zorunlu")
+        if start_time >= end_time:
+            raise drf_serializers.ValidationError({"start_time": "Başlangıç bitişten küçük olmalı"})
+
+        from app.barbers.services.breaks import (
+            get_shop_hours,
+            get_effective_staff_window,
+        )
+
+        if scope == BreakWindow.Scope.SHOP:
+            shop_hours = get_shop_hours(barbershop, date_val)
+            if not shop_hours or shop_hours.is_closed:
+                raise drf_serializers.ValidationError({"date": "Bu gün dükkan kapalı"})
+            open_time = shop_hours.start_time
+            close_time = shop_hours.end_time
+        else:
+            staff_window = get_effective_staff_window(staff, date_val)
+            open_time, close_time = staff_window[0], staff_window[1]
+            if not open_time or not close_time:
+                raise drf_serializers.ValidationError({"date": "Personel bu gün çalışmıyor"})
+
+        if open_time and start_time < open_time:
+            raise drf_serializers.ValidationError({"start_time": "Mola başlangıcı çalışma saatinden önce"})
+        if close_time and end_time > close_time:
+            raise drf_serializers.ValidationError({"end_time": "Mola bitişi çalışma saatinden sonra"})
+
+        qs = BreakWindow.objects.filter(barbershop=barbershop, scope=scope, date=date_val)
+        if staff:
+            qs = qs.filter(staff=staff)
+        if self.instance:
+            qs = qs.exclude(pk=self.instance.pk)
+        if qs.filter(start_time__lt=end_time, end_time__gt=start_time).exists():
+            raise drf_serializers.ValidationError({"date": "Bu saat aralığında mola zaten var"})
+
+        attrs["barbershop"] = barbershop
+        if user and user.is_authenticated:
+            attrs["created_by"] = user
+        return attrs
 
 
 # --- Holidays & Special Days ---

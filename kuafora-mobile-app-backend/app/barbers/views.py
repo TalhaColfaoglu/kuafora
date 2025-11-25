@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import List
+
 from django.db.models import Prefetch, Q, Count
 from drf_spectacular.utils import extend_schema
 from rest_framework import viewsets, mixins, permissions, generics, status, serializers as drf_serializers
@@ -34,6 +36,7 @@ from .models import (
     OfficialHoliday,
     ShopHolidayOverride,
     DailyOverride,
+    BreakWindow,
     
 )
 from .serializers import (
@@ -63,6 +66,7 @@ from .serializers import (
     OfficialHolidaySerializer,
     ShopHolidayOverrideSerializer,
     DailyOverrideSerializer,
+    BreakWindowSerializer,
 )
 from .filters import BarbershopFilter
 from .permissions import IsShopAdmin
@@ -241,10 +245,27 @@ class BarbershopViewSet(viewsets.ReadOnlyModelViewSet):
 
             code_list = ["MON","TUE","WED","THU","FRI","SAT","SUN"]
             result = []
-            # Be defensive: never raise 500s here
-            result = []
-            for code in code_list:
+            
+            # Pre-fetch breaks (time_range_closed overrides) for the relevant week
+            # Simplification: For standard weekly display, we just fetch overrides that might represent a "recurring break" 
+            # or specific time blocks. However, standard working hours display usually needs "static" breaks.
+            # If we use overrides for breaks, they are date-specific. 
+            # For now, let's just check if there are any 'time_range_closed' overrides active for 'today' or general (if we had recurring).
+            # But to be consistent with the plan: We will just list time_range_closed overrides for "today" if the requested day matches today,
+            # or maybe just return empty list for breaks in this generic weekly view unless we have a dedicated WeeklyBreak model.
+            # Given the requirement is "gunluk mola", we should probably inject breaks if the requested day is today.
+            # But this endpoint returns a list of 7 days. It's a static schedule.
+            # Let's inject breaks into the response if they exist as recurring Overrides (if we supported them) 
+            # or just keep it simple: this endpoint shows standard hours. 
+            # Wait, the user wants breaks to appear in the app. 
+            # Let's try to find 'time_range_closed' overrides that are active for the current week dates.
+            
+            start_of_week = timezone.now().date() - timedelta(days=timezone.now().date().weekday())
+            
+            for i, code in enumerate(code_list):
+                current_date = start_of_week + timedelta(days=i)
                 try:
+                    # ... existing logic for open/close ...
                     # Note: We removed the 'today' override check here because this endpoint returns
                     # the generic weekly schedule. Date-specific overrides are handled by the 
                     # availability endpoint or by specific date queries.
@@ -256,39 +277,60 @@ class BarbershopViewSet(viewsets.ReadOnlyModelViewSet):
                     )
                     shop_hours = ShopWorkingHours.objects.filter(barbershop=shop, day_of_week=code).first()
 
+                    day_result = {'day_of_week': code, 'start_time': None, 'end_time': None, 'is_closed': True, 'breaks': []}
+
                     if not staff_hours.exists():
                         # StaffWorkingHours yoksa, ShopWorkingHours'a bak
                         if not shop_hours:
-                            result.append({'day_of_week': code,'start_time': None,'end_time': None,'is_closed': True})
+                            pass # defaults to closed
                         elif shop_hours.is_closed:
-                            result.append({'day_of_week': code,'start_time': None,'end_time': None,'is_closed': True})
+                            pass # defaults to closed
                         else:
                             # ShopWorkingHours var ve açık, saatleri döndür
-                            result.append({'day_of_week': code,'start_time': shop_hours.start_time,'end_time': shop_hours.end_time,'is_closed': False})
-                        continue
+                            day_result.update({'start_time': shop_hours.start_time, 'end_time': shop_hours.end_time, 'is_closed': False})
+                    else:
+                        candidates_start = [sh.start_time or (shop_hours.start_time if shop_hours else None) for sh in staff_hours]
+                        candidates_end = [sh.end_time or (shop_hours.end_time if shop_hours else None) for sh in staff_hours]
+                        candidates_start = [c for c in candidates_start if c is not None]
+                        candidates_end = [c for c in candidates_end if c is not None]
+                        
+                    # Inject breaks (time_range_closed overrides for this specific date)
+                    # Find overrides for this shop that are time_range_closed and cover this date
+                    breaks_qs = Override.objects.filter(
+                        barbershop=shop,
+                        override_scope='time_range_closed',
+                        is_active=True,
+                        start_date__lte=current_date,
+                        end_date__gte=current_date
+                    )
+                    
+                    day_breaks = []
+                    for b in breaks_qs:
+                         if b.start_time and b.end_time:
+                             day_breaks.append({'start': b.start_time, 'end': b.end_time, 'reason': b.reason})
+                    
+                    day_result['breaks'] = day_breaks
+                    result.append(day_result)
 
-                    candidates_start = [sh.start_time or (shop_hours.start_time if shop_hours else None) for sh in staff_hours]
-                    candidates_end = [sh.end_time or (shop_hours.end_time if shop_hours else None) for sh in staff_hours]
-                    candidates_start = [c for c in candidates_start if c is not None]
-                    candidates_end = [c for c in candidates_end if c is not None]
-                    if not candidates_start or not candidates_end:
-                        result.append({'day_of_week': code,'start_time': None,'end_time': None,'is_closed': True})
-                        continue
-                    start_time = min(candidates_start)
-                    end_time = max(candidates_end)
-                    result.append({'day_of_week': code,'start_time': start_time,'end_time': end_time,'is_closed': False})
                 except Exception:
                     # Fallback: at least return closed state (no 500)
-                    result.append({'day_of_week': code,'start_time': None,'end_time': None,'is_closed': True})
-            # stringify times to prevent ProgrammingError in JSON serialization
+                    result.append({'day_of_week': code,'start_time': None,'end_time': None,'is_closed': True, 'breaks': []})
+            
+            # stringify times
             def _fmt(t):
                 try:
                     return t.strftime('%H:%M') if t else None
                 except Exception:
                     return None
+            
             for it in result:
                 it['start_time'] = _fmt(it.get('start_time'))
                 it['end_time'] = _fmt(it.get('end_time'))
+                # fmt breaks
+                for b in it.get('breaks', []):
+                    b['start'] = _fmt(b['start'])
+                    b['end'] = _fmt(b['end'])
+
             return Response(result)
 
         # PUT (normalize "week" payload)
@@ -507,6 +549,11 @@ def _compute_shop_status(barbershop_id: int, ts: datetime) -> dict:
     """
     from django.core.cache import cache
     key = f"shop_status:{barbershop_id}:{ts.date().strftime('%Y-%m-%d')}"
+    def _cache_and_return(payload: dict, timeout: int = 60):
+        payload.setdefault("active_break", None)
+        cache.set(key, payload, timeout=timeout)
+        return payload
+
     cached = cache.get(key)
     if cached:
         # Eğer DailyOverride varsa ve cache eski olabilir; 5 sn içinde recheck yap
@@ -520,48 +567,149 @@ def _compute_shop_status(barbershop_id: int, ts: datetime) -> dict:
     date = local_ts.date()
     shop = Barbershop.objects.filter(id=barbershop_id).first()
     if not shop:
-        return {"status": "closed", "source": "WEEKLY_SCHEDULE", "message": "Bulunamadı", "next_change": None, "open_interval": None, "breaks": []}
+        return {
+            "status": "closed",
+            "source": "WEEKLY_SCHEDULE",
+            "message": "Bulunamadı",
+            "next_change": None,
+            "open_interval": None,
+            "breaks": [],
+            "active_break": None,
+        }
     do = DailyOverride.objects.filter(barbershop_id=barbershop_id, date=date).first()
     if do:
         status = 'open' if do.status == 'open' else 'closed'
         msg = "Bugün kapalı" if status == 'closed' else None
-        data = {"status": status, "source": "TOGGLE", "message": msg, "next_change": None, "open_interval": None, "breaks": []}
-        cache.set(key, data, timeout=60)
-        return data
+        data = {
+            "status": status,
+            "source": "TOGGLE",
+            "message": msg,
+            "next_change": None,
+            "open_interval": None,
+            "breaks": [],
+        }
+        return _cache_and_return(data)
     # 2) SpecialDay (Override - sadece tek gün etkilerini değerlendiriyoruz)
     ov = Override.objects.filter(barbershop_id=barbershop_id, start_date__lte=date, end_date__gte=date, is_active=True).order_by('-created_at')
+    
+    # NEW: Check if NOW is inside any time_range_closed override (Break System)
+    now_time = local_ts.time()
+    active_break_override = None
+    for o in ov:
+        if o.override_scope == 'time_range_closed' and o.start_time and o.end_time:
+            if o.start_time <= now_time <= o.end_time:
+                active_break_override = o
+                break
+
+    if active_break_override:
+        end_dt = timezone.make_aware(datetime.combine(date, active_break_override.end_time))
+        end_str = active_break_override.end_time.strftime('%H:%M')
+        data = {
+            "status": "closed",
+            "source": "BREAK_OVERRIDE",
+            "message": f"Şu an mola vakti, {end_str}'da mola bitecek.",
+            "next_change": end_dt.isoformat(),
+            "open_interval": None,
+            "breaks": [],
+            "active_break": {
+                "label": active_break_override.reason or "Mola",
+                "end_time": end_str,
+                "scope": "override",
+            },
+        }
+        return _cache_and_return(data)
+
+    shop_break = (
+        BreakWindow.objects.filter(
+            barbershop_id=barbershop_id,
+            scope=BreakWindow.Scope.SHOP,
+            date=date,
+            start_time__lte=now_time,
+            end_time__gte=now_time,
+        )
+        .order_by("start_time")
+        .first()
+    )
+    if shop_break:
+        end_dt = timezone.make_aware(datetime.combine(date, shop_break.end_time))
+        end_str = shop_break.end_time.strftime('%H:%M')
+        data = {
+            "status": "closed",
+            "source": "BREAK",
+            "message": f"Şu an mola vakti, {end_str}'da mola bitecek.",
+            "next_change": end_dt.isoformat(),
+            "open_interval": None,
+            "breaks": [],
+            "active_break": {
+                "label": shop_break.label or "Mola",
+                "end_time": end_str,
+                "scope": "shop",
+            },
+        }
+        return _cache_and_return(data)
+
     if ov.exists():
         top = ov.first()
         if top.override_scope == 'full_day_closed':
-            data = {"status": "closed", "source": "SPECIAL_DAY", "message": top.reason or "Bugün kapalı", "next_change": None, "open_interval": None, "breaks": []}
-            cache.set(key, data, timeout=60)
-            return data
+            data = {
+                "status": "closed",
+                "source": "SPECIAL_DAY",
+                "message": top.reason or "Bugün kapalı",
+                "next_change": None,
+                "open_interval": None,
+                "breaks": [],
+            }
+            return _cache_and_return(data)
         if top.override_scope == 'time_range_closed':
             # Basit yaklaşım: gün açık kabul; kapalı aralığı mola gibi göster
             open_interval, breaks = _effective_shop_hours_with_breaks(shop, date, extra_closed=[(top.start_time, top.end_time)])
             msg, next_change = _message_for_state(open_interval, breaks, local_ts)
-            data = {"status": _open_closed_now(open_interval, breaks, local_ts), "source": "SPECIAL_DAY", "message": msg, "next_change": next_change, "open_interval": _to_dict_interval(open_interval), "breaks": _to_list_breaks(breaks)}
-            cache.set(key, data, timeout=60)
-            return data
+            data = {
+                "status": _open_closed_now(open_interval, breaks, local_ts),
+                "source": "SPECIAL_DAY",
+                "message": msg,
+                "next_change": next_change,
+                "open_interval": _to_dict_interval(open_interval),
+                "breaks": _to_list_breaks(breaks),
+            }
+            return _cache_and_return(data)
     # 3) OfficialHoliday (shop decision)
     shov = ShopHolidayOverride.objects.filter(barbershop_id=barbershop_id, date=date).first()
     if shov:
         if shov.status == 'closed':
-            data = {"status": "closed", "source": "OFFICIAL_HOLIDAY", "message": shov.title or "Bugün kapalı", "next_change": None, "open_interval": None, "breaks": []}
-            cache.set(key, data, timeout=60)
-            return data
+            data = {
+                "status": "closed",
+                "source": "OFFICIAL_HOLIDAY",
+                "message": shov.title or "Bugün kapalı",
+                "next_change": None,
+                "open_interval": None,
+                "breaks": [],
+            }
+            return _cache_and_return(data)
         if shov.status == 'custom_hours':
             open_interval = (shov.open_time, shov.close_time)
             msg, next_change = _message_for_state(open_interval, [], local_ts)
-            data = {"status": _open_closed_now(open_interval, [], local_ts), "source": "OFFICIAL_HOLIDAY", "message": msg, "next_change": next_change, "open_interval": _to_dict_interval(open_interval), "breaks": []}
-            cache.set(key, data, timeout=60)
-            return data
+            data = {
+                "status": _open_closed_now(open_interval, [], local_ts),
+                "source": "OFFICIAL_HOLIDAY",
+                "message": msg,
+                "next_change": next_change,
+                "open_interval": _to_dict_interval(open_interval),
+                "breaks": [],
+            }
+            return _cache_and_return(data)
     # 4) WeeklySchedule
     open_interval, breaks = _effective_shop_hours_with_breaks(shop, date)
     msg, next_change = _message_for_state(open_interval, breaks, local_ts)
-    data = {"status": _open_closed_now(open_interval, breaks, local_ts), "source": "WEEKLY_SCHEDULE", "message": msg, "next_change": next_change, "open_interval": _to_dict_interval(open_interval), "breaks": _to_list_breaks(breaks)}
-    cache.set(key, data, timeout=60)
-    return data
+    data = {
+        "status": _open_closed_now(open_interval, breaks, local_ts),
+        "source": "WEEKLY_SCHEDULE",
+        "message": msg,
+        "next_change": next_change,
+        "open_interval": _to_dict_interval(open_interval),
+        "breaks": _to_list_breaks(breaks),
+    }
+    return _cache_and_return(data)
 
 
 def _effective_shop_hours_with_breaks(shop, date, extra_closed=None):
@@ -1613,6 +1761,104 @@ class PartnerStaffWorkingHoursViewSet(viewsets.ModelViewSet):
             pass
 
 
+class PartnerBreakWindowViewSet(viewsets.ModelViewSet):
+    serializer_class = BreakWindowSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    http_method_names = ["get", "post", "put", "patch", "delete"]
+
+    def get_queryset(self):
+        user = self.request.user
+        admin_shop_ids = self._admin_shop_ids()
+        base_qs = BreakWindow.objects.select_related("barbershop", "staff__user", "created_by")
+        if admin_shop_ids:
+            qs = base_qs.filter(barbershop_id__in=admin_shop_ids)
+        else:
+            staff_ids = list(Staff.objects.filter(user=user).values_list("id", flat=True))
+            if not staff_ids:
+                return base_qs.none()
+            qs = base_qs.filter(staff_id__in=staff_ids)
+
+        params = self.request.query_params
+        barbershop_id = params.get("barbershop_id")
+        if barbershop_id:
+            qs = qs.filter(barbershop_id=barbershop_id)
+        staff_id = params.get("staff_id")
+        if staff_id:
+            qs = qs.filter(staff_id=staff_id)
+        scope = params.get("scope")
+        if scope in (BreakWindow.Scope.SHOP, BreakWindow.Scope.STAFF):
+            qs = qs.filter(scope=scope)
+        date_str = params.get("date")
+        if date_str:
+            qs = qs.filter(date=date_str)
+        else:
+            date_from = params.get("date_from")
+            date_to = params.get("date_to")
+            if date_from:
+                qs = qs.filter(date__gte=date_from)
+            if date_to:
+                qs = qs.filter(date__lte=date_to)
+        return qs.order_by("date", "start_time")
+
+    def perform_create(self, serializer):
+        scope = serializer.validated_data.get("scope")
+        target_barbershop = (
+            serializer.validated_data.get("barbershop")
+            or getattr(serializer.validated_data.get("staff"), "barbershop", None)
+        )
+        if not target_barbershop:
+            raise drf_serializers.ValidationError({"barbershop": "Dükkan zorunlu"})
+
+        if scope == BreakWindow.Scope.SHOP:
+            if not self._is_admin_for(target_barbershop.id):
+                raise drf_serializers.ValidationError({"detail": "Dükkan molası eklemek için admin olmalısınız"})
+            serializer.save(created_by=self.request.user)
+            return
+
+        staff = serializer.validated_data.get("staff")
+        if staff:
+            if staff.user_id != self.request.user.id and not self._is_admin_for(staff.barbershop_id):
+                raise drf_serializers.ValidationError({"detail": "Bu personel için yetkiniz yok"})
+        else:
+            staff = (
+                Staff.objects.filter(user=self.request.user, barbershop=target_barbershop)
+                .order_by("-is_admin", "-id")
+                .first()
+            )
+            if not staff:
+                raise drf_serializers.ValidationError({"staff": "Personel profili bulunamadı"})
+        serializer.save(staff=staff, barbershop=staff.barbershop, created_by=self.request.user)
+
+    def perform_update(self, serializer):
+        instance = serializer.instance
+        if not self._can_manage(instance):
+            raise drf_serializers.ValidationError({"detail": "Bu molayı güncelleme yetkiniz yok"})
+        scope = serializer.validated_data.get("scope", instance.scope)
+        if scope == BreakWindow.Scope.SHOP and not self._is_admin_for(instance.barbershop_id):
+            raise drf_serializers.ValidationError({"detail": "Dükkan molası güncellemek için admin olmalısınız"})
+        serializer.save()
+
+    def perform_destroy(self, instance):
+        if not self._can_manage(instance):
+            raise drf_serializers.ValidationError({"detail": "Bu molayı silme yetkiniz yok"})
+        instance.delete()
+
+    def _admin_shop_ids(self) -> List[int]:
+        if not hasattr(self, "_cached_admin_ids"):
+            self._cached_admin_ids = list(
+                Staff.objects.filter(user=self.request.user, is_admin=True).values_list("barbershop_id", flat=True)
+            )
+        return self._cached_admin_ids
+
+    def _is_admin_for(self, barbershop_id: int) -> bool:
+        return barbershop_id in self._admin_shop_ids()
+
+    def _can_manage(self, instance: BreakWindow) -> bool:
+        if self._is_admin_for(instance.barbershop_id):
+            return True
+        return bool(instance.staff and instance.staff.user_id == self.request.user.id)
+
+
 class PartnerOverrideViewSet(viewsets.ModelViewSet):
     serializer_class = OverrideSerializer
     # Personel kendi özel gününü oluşturabilsin; dükkan genel override için RBAC aşağıda kontrol ediliyor
@@ -2622,6 +2868,10 @@ class CalendarStatusViewSet(viewsets.ReadOnlyModelViewSet):
                 start_datetime__date__lte=week_end,
                 end_datetime__date__gte=week_start
             ).values('id','title','content','is_active','start_datetime','end_datetime','source','created_at','updated_at'))
+            break_windows = list(
+                BreakWindow.objects.filter(barbershop=barbershop, date__range=(week_start, week_end))
+                .values('id', 'scope', 'staff_id', 'date', 'start_time', 'end_time', 'label')
+            )
             
             weekly_data = {
                 'barbershop_id': barbershop.id,
@@ -2645,6 +2895,9 @@ class CalendarStatusViewSet(viewsets.ReadOnlyModelViewSet):
             for it in overrides:
                 it['start_time'] = _fmt_time(it.get('start_time'))
                 it['end_time'] = _fmt_time(it.get('end_time'))
+            for it in break_windows:
+                it['start_time'] = _fmt_time(it.get('start_time'))
+                it['end_time'] = _fmt_time(it.get('end_time'))
 
             return Response({
                 'barbershop_id': barbershop.id,
@@ -2654,6 +2907,7 @@ class CalendarStatusViewSet(viewsets.ReadOnlyModelViewSet):
                 'staff_hours': staff_hours,
                 'overrides': overrides,
                 'messages': messages,
+                'break_windows': break_windows,
             })
         except (Barbershop.DoesNotExist, ValueError):
             return Response({"detail": "Invalid barbershop or date"}, status=404)
@@ -2760,6 +3014,8 @@ class CalendarStatusViewSet(viewsets.ReadOnlyModelViewSet):
             'source': status_data.get('source'),
             'message': status_data.get('message'),
             'next_change': status_data.get('next_change'),
+            'active_break': status_data.get('active_break'),
+            'breaks': status_data.get('breaks'),
         })
         try:
             resp['Cache-Control'] = 'no-store, max-age=0'

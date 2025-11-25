@@ -3,6 +3,7 @@ from __future__ import annotations
 from django.db import models
 from django.conf import settings
 from django.core.validators import MinValueValidator, MaxValueValidator
+from django.core.exceptions import ValidationError
 
 
 class Barbershop(models.Model):
@@ -47,6 +48,7 @@ class Barbershop(models.Model):
     facebook = models.CharField(max_length=100, blank=True)
     twitter = models.CharField(max_length=100, blank=True)
     whatsapp = models.CharField(max_length=100, blank=True)
+    features = models.JSONField(default=list, blank=True)
 
     def __str__(self) -> str:  # pragma: no cover - trivial
         return self.name
@@ -189,6 +191,79 @@ class StaffWorkingHours(models.Model):
 
     def __str__(self) -> str:
         return f"{self.staff.user.email} - {self.get_day_of_week_display()}"
+
+
+class BreakWindow(models.Model):
+    """Gün bazlı mola aralıkları; dükkan veya personel kapsamı."""
+
+    class Scope(models.TextChoices):
+        SHOP = "shop", "Dükkan"
+        STAFF = "staff", "Personel"
+
+    barbershop = models.ForeignKey(
+        Barbershop,
+        on_delete=models.CASCADE,
+        related_name="break_windows",
+        help_text="Molanın bağlı olduğu dükkan",
+    )
+    staff = models.ForeignKey(
+        Staff,
+        on_delete=models.CASCADE,
+        related_name="break_windows",
+        null=True,
+        blank=True,
+        help_text="Personel molaları için zorunlu",
+    )
+    scope = models.CharField(max_length=10, choices=Scope.choices)
+    date = models.DateField(help_text="Molayı kapsayan gün")
+    start_time = models.TimeField()
+    end_time = models.TimeField()
+    label = models.CharField(max_length=120, blank=True, help_text="Örn: Yemek molası")
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="created_break_windows",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["date", "start_time"]
+        indexes = [
+            models.Index(fields=["barbershop", "date"]),
+            models.Index(fields=["staff", "date"]),
+        ]
+        constraints = [
+            models.CheckConstraint(
+                check=models.Q(start_time__lt=models.F("end_time")),
+                name="breakwindow_start_before_end",
+            )
+        ]
+
+    def clean(self):
+        errors = {}
+        if self.scope == self.Scope.SHOP and self.staff_id:
+            errors["staff"] = "Dükkan molasında staff seçilemez"
+        if self.scope == self.Scope.STAFF and not self.staff_id:
+            errors["staff"] = "Personel molası için staff zorunlu"
+        if self.staff and self.barbershop_id and self.staff.barbershop_id != self.barbershop_id:
+            errors["staff"] = "Personel, dükkan ile eşleşmiyor"
+        if self.start_time and self.end_time and self.start_time >= self.end_time:
+            errors["start_time"] = "Başlangıç bitişten küçük olmalı"
+        if errors:
+            raise ValidationError(errors)
+
+    def save(self, *args, **kwargs):
+        if self.staff and not self.barbershop_id:
+            self.barbershop = self.staff.barbershop
+        self.full_clean()
+        return super().save(*args, **kwargs)
+
+    def __str__(self) -> str:  # pragma: no cover - trivial
+        target = self.staff.user.email if self.staff_id else self.barbershop.name
+        return f"{target} | {self.date} {self.start_time}-{self.end_time}"
 
 
 class Override(models.Model):

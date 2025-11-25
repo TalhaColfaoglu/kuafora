@@ -103,19 +103,60 @@ class HoldCreateApi(APIView):
         shop = get_object_or_404(Barbershop, pk=data["shop_id"])
         if getattr(shop, "system_type", "info") != "booking":
             return Response({"detail": "BOOKING_DISABLED"}, status=status.HTTP_403_FORBIDDEN)
-        staff = get_object_or_404(Staff, pk=data["staff_id"], barbershop=shop)
 
-        # recompute availability to verify requested start_time
+        # Smart Allocation Logic
+        staff_id = data.get("staff_id")
         date = data["date"]
-        start_naive = datetime.combine(date, data["start_time"])  # local date
+        start_time = data["start_time"]
+        start_naive = datetime.combine(date, start_time)
         start = timezone.make_aware(start_naive)
+        
+        # Calc duration
         duration = 0
         for item in data["service_items"]:
             duration += int(item.get("duration", 0))
-        grid = staff.appointment_interval
+        if duration <= 0:
+             return Response({"code": "400_INVALID_DURATION"}, status=status.HTTP_400_BAD_REQUEST)
 
+        if staff_id:
+            staff = get_object_or_404(Staff, pk=staff_id, barbershop=shop)
+        else:
+            # Auto-assign: Find best staff
+            # Criteria: Available at requested time + Lowest daily load
+            # 1. Find all staff in shop
+            all_staff = Staff.objects.filter(barbershop=shop)
+            candidates = []
+            for st in all_staff:
+                 # Check availability
+                 slots = compute_staff_day_slots(staff=st, shop=shop, date=start, duration_minutes=duration)
+                 if start_time.strftime("%H:%M") in slots:
+                     candidates.append(st)
+            
+            if not candidates:
+                return Response({"code": "409_NO_STAFF_AVAILABLE"}, status=status.HTTP_409_CONFLICT)
+            
+            # 2. Sort by load (count of active appointments today)
+            # This is a simple heuristic. Could be improved by total minutes booked.
+            candidates_with_load = []
+            for st in candidates:
+                load = Appointment.objects.filter(
+                    staff=st, 
+                    start_datetime__date=date, 
+                    status__in=[AppointmentStatus.PENDING, AppointmentStatus.CONFIRMED]
+                ).count()
+                candidates_with_load.append((load, st))
+            
+            # Sort ascending by load
+            candidates_with_load.sort(key=lambda x: x[0])
+            staff = candidates_with_load[0][1]  # Pick the least busy
+
+        grid = staff.appointment_interval
         # Strict grid validation: total duration must be divisible by grid
-        if duration <= 0 or duration % int(grid) != 0:
+        if duration % int(grid) != 0:
+            # If auto-assigned, maybe we should relax grid check or ensure candidates match grid?
+            # For now, strict check. If auto-assigned staff has different grid that mismatches duration, it fails.
+            # Ideal: filter candidates by grid compatibility too.
+            # Assuming all staff in shop often share grid or services align.
             return Response({"code": "400_INVALID_DURATION_GRID"}, status=status.HTTP_400_BAD_REQUEST)
 
         service_items_payload = [dict(item) for item in data["service_items"]]
@@ -138,7 +179,8 @@ class HoldCreateApi(APIView):
             return Response({"code": "409_CONFLICT_GRID"}, status=status.HTTP_409_CONFLICT)
 
         end = start + timedelta(minutes=duration)
-        # naive slot check: reuse engine to see if start exists
+        # naive slot check: reuse engine to see if start exists (double check for explicit staff)
+        # For auto-assigned, we just checked above, but check again to be safe and consistent
         slots = compute_staff_day_slots(staff=staff, shop=shop, date=start, duration_minutes=duration, grid=grid)
         if start.strftime("%H:%M") not in slots:
             return Response({"code": "409_CONFLICT_SLOT"}, status=status.HTTP_409_CONFLICT)

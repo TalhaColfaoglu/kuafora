@@ -14,7 +14,9 @@ from app.barbers.models import (
     Barbershop,
     DailyOverride,
     ShopHolidayOverride,
+    BreakWindow,
 )
+from app.barbers.services.breaks import collect_break_intervals
 from app.appointments.models import Appointment
 
 
@@ -62,10 +64,42 @@ def _subtract(base: List[Interval], busy: List[Interval]) -> List[Interval]:
     return res
 
 
-def compute_staff_day_slots(*, staff: Staff, shop: Barbershop, date: datetime, duration_minutes: int, grid: int | None = None) -> List[str]:
+def compute_staff_day_slots(*, staff: Staff, shop: Barbershop, date: datetime, duration_minutes: int, grid: int | None = None, include_meta: bool = False):
     tz = timezone.get_current_timezone()
     day = date.date()
     grid_minutes = grid or staff.appointment_interval
+    break_intervals = collect_break_intervals(shop, staff, day)
+
+    def _serialize_break_windows():
+        payload = []
+        for _start, _end, br in break_intervals:
+            payload.append(
+                {
+                    "start": br.start_time.strftime("%H:%M"),
+                    "end": br.end_time.strftime("%H:%M"),
+                    "label": br.label or ("Dükkan Molası" if br.scope == BreakWindow.Scope.SHOP else "Mola"),
+                    "scope": br.scope,
+                    "staff_id": br.staff_id,
+                    "staff_name": getattr(getattr(br.staff, "user", None), "full_name", None)
+                    or getattr(getattr(br.staff, "user", None), "email", None),
+                }
+            )
+        return payload
+
+    def _return(slots: List[str], slot_items: Optional[List[dict]] = None):
+        if include_meta:
+            return {
+                "slots": slots,
+                "slot_items": slot_items or [],
+                "break_windows": _serialize_break_windows(),
+            }
+        return slots
+
+    def _match_break(slot_start: datetime, slot_end: datetime):
+        for b_start, b_end, br in break_intervals:
+            if slot_start < b_end and slot_end > b_start:
+                return br
+        return None
 
     # NEW: OfficialHoliday check (if not overridden by ShopHolidayOverride, assume default policy might be 'closed' or just informative)
     # However, ShopHolidayOverride is usually created by trigger/signal. If not exists, check raw OfficialHoliday?
@@ -78,7 +112,7 @@ def compute_staff_day_slots(*, staff: Staff, shop: Barbershop, date: datetime, d
     # Check DailyOverride first (highest priority - manual daily toggle)
     daily_override = DailyOverride.objects.filter(barbershop=shop, date=day).first()
     if daily_override and daily_override.status == 'closed':
-        return []  # Entire day closed by manual toggle
+        return _return([])  # Entire day closed by manual toggle
 
     # ShopHolidayOverride (official/special day decision at shop level)
     # - closed: entire day closed
@@ -87,7 +121,7 @@ def compute_staff_day_slots(*, staff: Staff, shop: Barbershop, date: datetime, d
     holiday_window: Interval | None = None
     if holiday_decision:
         if getattr(holiday_decision, "status", "") == "closed":
-            return []
+            return _return([])
         if getattr(holiday_decision, "status", "") == "custom_hours":
             if holiday_decision.open_time and holiday_decision.close_time and holiday_decision.open_time < holiday_decision.close_time:
                 sdt = timezone.make_aware(datetime.combine(day, holiday_decision.open_time), tz)
@@ -128,7 +162,7 @@ def compute_staff_day_slots(*, staff: Staff, shop: Barbershop, date: datetime, d
     
     base_intervals = _merge(base_intervals)
     if not base_intervals:
-        return []
+        return _return([])
 
     # If a shop-level custom-hours holiday window exists, intersect base intervals with it
     if holiday_window:
@@ -141,7 +175,7 @@ def compute_staff_day_slots(*, staff: Staff, shop: Barbershop, date: datetime, d
                 restricted.append((s, e))
         base_intervals = _merge(restricted)
         if not base_intervals:
-            return []
+            return _return([])
 
     # Apply overrides (only active and matching date)
     # Check both shop global and staff individual overrides
@@ -158,7 +192,7 @@ def compute_staff_day_slots(*, staff: Staff, shop: Barbershop, date: datetime, d
     ):
         if ov.override_scope == "full_day_closed":
             # entire day closed
-            return []
+            return _return([])
         if ov.start_time and ov.end_time:
             sdt = timezone.make_aware(datetime.combine(day, ov.start_time), tz)
             edt = timezone.make_aware(datetime.combine(day, ov.end_time), tz)
@@ -177,7 +211,7 @@ def compute_staff_day_slots(*, staff: Staff, shop: Barbershop, date: datetime, d
     ):
         if ov.override_scope == "full_day_closed":
             # entire day closed for this staff
-            return []
+            return _return([])
         if ov.start_time and ov.end_time:
             sdt = timezone.make_aware(datetime.combine(day, ov.start_time), tz)
             edt = timezone.make_aware(datetime.combine(day, ov.end_time), tz)
@@ -187,7 +221,12 @@ def compute_staff_day_slots(*, staff: Staff, shop: Barbershop, date: datetime, d
         # subtract override blocks from base intervals
         base_intervals = _subtract(base_intervals, _merge(override_blocks))
         if not base_intervals:
-            return []
+            return _return([])
+
+    candidate_intervals = list(base_intervals)
+    break_blocks = [(bs, be) for bs, be, _ in break_intervals]
+    if break_blocks:
+        base_intervals = _subtract(base_intervals, _merge(break_blocks))
 
     # Busy intervals from existing appointments (active statuses)
     busy: List[Interval] = []
@@ -199,7 +238,7 @@ def compute_staff_day_slots(*, staff: Staff, shop: Barbershop, date: datetime, d
     # Free intervals
     free = _subtract(base_intervals, busy)
     if not free:
-        return []
+        return _return([])
 
     # Grid-aligned slot emission
     slots: List[str] = []

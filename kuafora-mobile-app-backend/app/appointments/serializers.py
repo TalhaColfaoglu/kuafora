@@ -19,7 +19,7 @@ class AvailabilityResponseSerializer(serializers.Serializer):
 
 class HoldCreateSerializer(serializers.Serializer):
     shop_id = serializers.IntegerField()
-    staff_id = serializers.IntegerField()
+    staff_id = serializers.IntegerField(required=False, allow_null=True)
     date = serializers.DateField()
     start_time = serializers.TimeField()
     service_items = serializers.ListField(child=serializers.DictField(), allow_empty=False)
