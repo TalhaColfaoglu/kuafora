@@ -8,7 +8,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("barbers", "0013_barbershop_features"),
+        ("barbers", "0013_add_barbershop_features"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
