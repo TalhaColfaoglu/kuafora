@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from django.core.exceptions import ValidationError
 from rest_framework import serializers
 from .models import (
     Favorite,
@@ -405,35 +406,20 @@ class BreakWindowSerializer(serializers.ModelSerializer):
         if start_time >= end_time:
             raise drf_serializers.ValidationError({"start_time": "Başlangıç bitişten küçük olmalı"})
 
-        from app.barbers.services.breaks import (
-            get_shop_hours,
-            get_effective_staff_window,
-        )
+        from app.barbers.services.breaks import validate_break_window_constraints
 
-        if scope == BreakWindow.Scope.SHOP:
-            shop_hours = get_shop_hours(barbershop, date_val)
-            if not shop_hours or shop_hours.is_closed:
-                raise drf_serializers.ValidationError({"date": "Bu gün dükkan kapalı"})
-            open_time = shop_hours.start_time
-            close_time = shop_hours.end_time
-        else:
-            staff_window = get_effective_staff_window(staff, date_val)
-            open_time, close_time = staff_window[0], staff_window[1]
-            if not open_time or not close_time:
-                raise drf_serializers.ValidationError({"date": "Personel bu gün çalışmıyor"})
-
-        if open_time and start_time < open_time:
-            raise drf_serializers.ValidationError({"start_time": "Mola başlangıcı çalışma saatinden önce"})
-        if close_time and end_time > close_time:
-            raise drf_serializers.ValidationError({"end_time": "Mola bitişi çalışma saatinden sonra"})
-
-        qs = BreakWindow.objects.filter(barbershop=barbershop, scope=scope, date=date_val)
-        if staff:
-            qs = qs.filter(staff=staff)
-        if self.instance:
-            qs = qs.exclude(pk=self.instance.pk)
-        if qs.filter(start_time__lt=end_time, end_time__gt=start_time).exists():
-            raise drf_serializers.ValidationError({"date": "Bu saat aralığında mola zaten var"})
+        try:
+            validate_break_window_constraints(
+                barbershop=barbershop,
+                staff=staff,
+                scope=scope,
+                date_value=date_val,
+                start_time=start_time,
+                end_time=end_time,
+                instance=self.instance,
+            )
+        except ValidationError as exc:
+            raise drf_serializers.ValidationError(exc.message_dict or exc.messages) from exc
 
         attrs["barbershop"] = barbershop
         if user and user.is_authenticated:

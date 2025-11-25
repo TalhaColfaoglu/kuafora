@@ -19,6 +19,7 @@ from .views import (
     LastViewedViewSet,
     PartnerShopWorkingHoursViewSet,
     PartnerStaffWorkingHoursViewSet,
+    PartnerBreakWindowViewSet,
     PartnerOverrideViewSet,
     PartnerSpecialMessageViewSet,
     CalendarStatusViewSet,
@@ -46,6 +47,7 @@ router.register(r"partner/working-hours", PartnerWorkScheduleViewSet, basename="
 router.register(r"partner/review-replies", ReviewReplyViewSet, basename="partner-review-reply")
 router.register(r"partner/shop-working-hours", PartnerShopWorkingHoursViewSet, basename="partner-shop-working-hours")
 router.register(r"partner/staff-working-hours", PartnerStaffWorkingHoursViewSet, basename="partner-staff-working-hours")
+router.register(r"partner/break-windows", PartnerBreakWindowViewSet, basename="partner-break-window")
 router.register(r"partner/overrides", PartnerOverrideViewSet, basename="partner-override")
 router.register(r"partner/special-messages", PartnerSpecialMessageViewSet, basename="partner-special-message")
 router.register(r"partner/holidayoverride", PartnerHolidayOverrideViewSet, basename="partner-holiday-override")

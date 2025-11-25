@@ -1,4 +1,4 @@
-from datetime import timedelta
+from datetime import timedelta, time
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
@@ -12,7 +12,7 @@ from app.appointments.models import (
     Hold,
     NotificationEvent,
 )
-from app.barbers.models import Barbershop, Staff
+from app.barbers.models import Barbershop, Staff, ShopWorkingHours, StaffWorkingHours, BreakWindow
 
 
 class CustomerAppointmentsAPITest(APITestCase):
@@ -36,6 +36,8 @@ class CustomerAppointmentsAPITest(APITestCase):
             email="staff@example.com",
             auto_approval=True,
         )
+        self.staff.appointment_interval = 30
+        self.staff.save(update_fields=["appointment_interval"])
 
     @patch("app.appointments.views.compute_staff_day_slots", return_value=["09:00"])
     def test_hold_and_confirm_persist_service_items(self, _mock_slots):
@@ -131,4 +133,51 @@ class CustomerAppointmentsAPITest(APITestCase):
         self.assertEqual(ap.status, AppointmentStatus.CANCELLED)
         self.assertEqual(ap.cancelled_by, CancelledBy.CUSTOMER)
         self.assertGreaterEqual(NotificationEvent.objects.filter(topic__in=[f"staff_{self.staff.id}", f"shop_{self.shop.id}"]).count(), 2)
+
+    def test_availability_returns_break_metadata(self):
+        self.client.force_authenticate(self.customer)
+        target_date = (timezone.now() + timedelta(days=1)).date()
+        weekday_codes = {0: "MON", 1: "TUE", 2: "WED", 3: "THU", 4: "FRI", 5: "SAT", 6: "SUN"}
+        code = weekday_codes[target_date.weekday()]
+        ShopWorkingHours.objects.create(
+            barbershop=self.shop,
+            day_of_week=code,
+            start_time=time(9, 0),
+            end_time=time(18, 0),
+            is_closed=False,
+        )
+        StaffWorkingHours.objects.create(
+            staff=self.staff,
+            day_of_week=code,
+            start_time=time(9, 0),
+            end_time=time(18, 0),
+            is_closed=False,
+        )
+        BreakWindow.objects.create(
+            barbershop=self.shop,
+            scope=BreakWindow.Scope.SHOP,
+            date=target_date,
+            start_time=time(13, 0),
+            end_time=time(13, 30),
+            label="Öğle",
+            created_by=self.staff_user,
+        )
+
+        resp = self.client.get(
+            "/api/appointments/availability",
+            {
+                "shop_id": self.shop.id,
+                "staff_id": self.staff.id,
+                "date": target_date.isoformat(),
+                "duration": 30,
+            },
+        )
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn("slots", resp.data)
+        self.assertIn("slot_items", resp.data)
+        slot_items = resp.data["slot_items"]
+        self.assertTrue(any(item.get("is_break") for item in slot_items))
+        break_slots = [item for item in slot_items if item.get("is_break")]
+        self.assertEqual(break_slots[0].get("disabled_reason"), "break")
+        self.assertNotIn("13:00", resp.data["slots"])
 

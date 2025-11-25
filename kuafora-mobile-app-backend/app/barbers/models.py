@@ -244,6 +244,9 @@ class BreakWindow(models.Model):
 
     def clean(self):
         errors = {}
+        barbershop = self.barbershop or getattr(self.staff, "barbershop", None)
+        if not barbershop:
+            errors["barbershop"] = "Dükkan zorunlu"
         if self.scope == self.Scope.SHOP and self.staff_id:
             errors["staff"] = "Dükkan molasında staff seçilemez"
         if self.scope == self.Scope.STAFF and not self.staff_id:
@@ -254,6 +257,17 @@ class BreakWindow(models.Model):
             errors["start_time"] = "Başlangıç bitişten küçük olmalı"
         if errors:
             raise ValidationError(errors)
+        from app.barbers.services.breaks import validate_break_window_constraints
+
+        validate_break_window_constraints(
+            barbershop=barbershop,
+            staff=self.staff,
+            scope=self.scope,
+            date_value=self.date,
+            start_time=self.start_time,
+            end_time=self.end_time,
+            instance=self,
+        )
 
     def save(self, *args, **kwargs):
         if self.staff and not self.barbershop_id:

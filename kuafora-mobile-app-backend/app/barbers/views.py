@@ -71,6 +71,7 @@ from .serializers import (
 from .filters import BarbershopFilter
 from .permissions import IsShopAdmin
 from django.conf import settings
+from .services.breaks import break_windows_by_date, serialize_break_window
 
 
 def _jsonable(value):
@@ -261,6 +262,13 @@ class BarbershopViewSet(viewsets.ReadOnlyModelViewSet):
             # Let's try to find 'time_range_closed' overrides that are active for the current week dates.
             
             start_of_week = timezone.now().date() - timedelta(days=timezone.now().date().weekday())
+            week_end = start_of_week + timedelta(days=6)
+            week_breaks = break_windows_by_date(
+                barbershop=shop,
+                start_date=start_of_week,
+                end_date=week_end,
+                include_staff=True,
+            )
             
             for i, code in enumerate(code_list):
                 current_date = start_of_week + timedelta(days=i)
@@ -304,10 +312,17 @@ class BarbershopViewSet(viewsets.ReadOnlyModelViewSet):
                         end_date__gte=current_date
                     )
                     
-                    day_breaks = []
+                    day_breaks = [serialize_break_window(br) for br in week_breaks.get(current_date, [])]
                     for b in breaks_qs:
                          if b.start_time and b.end_time:
-                             day_breaks.append({'start': b.start_time, 'end': b.end_time, 'reason': b.reason})
+                            day_breaks.append({
+                                'start': b.start_time,
+                                'end': b.end_time,
+                                'label': b.reason or 'Özel Durum',
+                                'scope': 'override',
+                                'staff_id': None,
+                                'staff_name': None,
+                            })
                     
                     day_result['breaks'] = day_breaks
                     result.append(day_result)
@@ -720,9 +735,24 @@ def _effective_shop_hours_with_breaks(shop, date, extra_closed=None):
         return (None, None), []
     open_interval = (sh.start_time, sh.end_time)
     breaks = []
-    # Merge extra closed as break
-    if extra_closed and extra_closed[0][0] and extra_closed[0][1]:
-        breaks.append({"start": extra_closed[0][0], "end": extra_closed[0][1]})
+    if extra_closed:
+        for item in extra_closed:
+            if not item:
+                continue
+            start_extra, end_extra = item
+            if start_extra and end_extra:
+                breaks.append(
+                    {
+                        "start": start_extra,
+                        "end": end_extra,
+                        "label": "Özel Durum",
+                        "scope": "override",
+                        "staff_id": None,
+                        "staff_name": None,
+                    }
+                )
+    for br in BreakWindow.objects.filter(barbershop=shop, scope=BreakWindow.Scope.SHOP, date=date):
+        breaks.append(serialize_break_window(br))
     return open_interval, breaks
 
 
@@ -734,7 +764,21 @@ def _to_dict_interval(interval):
 
 
 def _to_list_breaks(breaks):
-    return [{"start": b["start"].strftime('%H:%M'), "end": b["end"].strftime('%H:%M')} for b in breaks]
+    payload = []
+    for b in breaks:
+        start = b.get("start")
+        end = b.get("end")
+        payload.append(
+            {
+                "start": start.strftime("%H:%M") if hasattr(start, "strftime") else start,
+                "end": end.strftime("%H:%M") if hasattr(end, "strftime") else end,
+                "label": b.get("label"),
+                "scope": b.get("scope", "shop"),
+                "staff_id": b.get("staff_id"),
+                "staff_name": b.get("staff_name"),
+            }
+        )
+    return payload
 
 
 def _open_closed_now(open_interval, breaks, ts):
@@ -2731,6 +2775,25 @@ class CalendarStatusViewSet(viewsets.ReadOnlyModelViewSet):
                         'active_override': None
                     })
 
+            shop_break = BreakWindow.objects.filter(
+                barbershop=barbershop,
+                scope=BreakWindow.Scope.SHOP,
+                date=today,
+                start_time__lte=now.time(),
+                end_time__gte=now.time(),
+            ).order_by("start_time").first()
+            if shop_break:
+                return Response({
+                    'is_open': False,
+                    'status_message': f"Şu an mola vakti, {shop_break.end_time.strftime('%H:%M')}'da mola bitecek.",
+                    'active_override': {
+                        'scope': 'break',
+                        'reason': shop_break.label or 'Mola',
+                        'start_time': shop_break.start_time.strftime('%H:%M'),
+                        'end_time': shop_break.end_time.strftime('%H:%M'),
+                    },
+                    })
+
             # No override/holiday, check regular shop hours
             weekday_code_map = {0: "MON", 1: "TUE", 2: "WED", 3: "THU", 4: "FRI", 5: "SAT", 6: "SUN"}
             day_code = weekday_code_map.get(today.weekday())
@@ -2870,7 +2933,7 @@ class CalendarStatusViewSet(viewsets.ReadOnlyModelViewSet):
             ).values('id','title','content','is_active','start_datetime','end_datetime','source','created_at','updated_at'))
             break_windows = list(
                 BreakWindow.objects.filter(barbershop=barbershop, date__range=(week_start, week_end))
-                .values('id', 'scope', 'staff_id', 'date', 'start_time', 'end_time', 'label')
+                .values('id', 'scope', 'staff_id', 'staff__user__full_name', 'staff__user__email', 'date', 'start_time', 'end_time', 'label')
             )
             
             weekly_data = {
@@ -2898,6 +2961,9 @@ class CalendarStatusViewSet(viewsets.ReadOnlyModelViewSet):
             for it in break_windows:
                 it['start_time'] = _fmt_time(it.get('start_time'))
                 it['end_time'] = _fmt_time(it.get('end_time'))
+                staff_name = it.pop('staff__user__full_name', None) or it.pop('staff__user__email', None)
+                if staff_name:
+                    it['staff_name'] = staff_name
 
             return Response({
                 'barbershop_id': barbershop.id,

@@ -61,15 +61,30 @@ class AvailabilityApi(APIView):
                 return Response({"detail": "INVALID_DURATION_GRID"}, status=status.HTTP_400_BAD_REQUEST)
 
         if staff_id:
-            slots = compute_staff_day_slots(staff=staff, shop=shop, date=timezone.make_aware(date), duration_minutes=duration, grid=grid)
+            payload = compute_staff_day_slots(
+                staff=staff,
+                shop=shop,
+                date=timezone.make_aware(date),
+                duration_minutes=duration,
+                grid=grid,
+                include_meta=True,
+            )
         else:
-            # Farketmez: tüm personellerden topla (erken slotlar)
             slots = []
             for staff in Staff.objects.filter(barbershop=shop):
-                slots.extend(compute_staff_day_slots(staff=staff, shop=shop, date=timezone.make_aware(date), duration_minutes=duration, grid=grid))
+                slots.extend(
+                    compute_staff_day_slots(
+                        staff=staff,
+                        shop=shop,
+                        date=timezone.make_aware(date),
+                        duration_minutes=duration,
+                        grid=grid,
+                    )
+                )
             slots = sorted(list(set(slots)))[:10]
+            payload = {"slots": slots}
 
-        return Response(AvailabilityResponseSerializer({"slots": slots}).data)
+        return Response(AvailabilityResponseSerializer(payload).data)
 
 
 def check_customer_ban(user):

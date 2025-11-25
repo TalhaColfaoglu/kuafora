@@ -15,6 +15,8 @@ class AvailabilityQuerySerializer(serializers.Serializer):
 
 class AvailabilityResponseSerializer(serializers.Serializer):
     slots = serializers.ListField(child=serializers.CharField())
+    slot_items = serializers.ListField(child=serializers.DictField(), required=False)
+    break_windows = serializers.ListField(child=serializers.DictField(), required=False)
 
 
 class HoldCreateSerializer(serializers.Serializer):

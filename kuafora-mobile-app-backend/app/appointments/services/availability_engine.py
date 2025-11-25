@@ -67,7 +67,9 @@ def _subtract(base: List[Interval], busy: List[Interval]) -> List[Interval]:
 def compute_staff_day_slots(*, staff: Staff, shop: Barbershop, date: datetime, duration_minutes: int, grid: int | None = None, include_meta: bool = False):
     tz = timezone.get_current_timezone()
     day = date.date()
-    grid_minutes = grid or staff.appointment_interval
+    grid_minutes = grid or getattr(staff, "appointment_interval", None) or duration_minutes
+    if not grid_minutes:
+        grid_minutes = duration_minutes
     break_intervals = collect_break_intervals(shop, staff, day)
 
     def _serialize_break_windows():
@@ -247,6 +249,42 @@ def compute_staff_day_slots(*, staff: Staff, shop: Barbershop, date: datetime, d
         while t + timedelta(minutes=duration_minutes) <= fe:
             slots.append(t.strftime("%H:%M"))
             t += timedelta(minutes=grid_minutes)
-    return slots
+    if not include_meta:
+        return slots
+
+    slot_set = set(slots)
+    slot_items: List[dict] = []
+    seen: set[str] = set()
+    for cs, ce in candidate_intervals:
+        t = _align_up(cs, grid_minutes)
+        while t + timedelta(minutes=duration_minutes) <= ce:
+            label = t.strftime("%H:%M")
+            if label in seen:
+                t += timedelta(minutes=grid_minutes)
+                continue
+            slot_end = t + timedelta(minutes=duration_minutes)
+            br = _match_break(t, slot_end)
+            is_available = label in slot_set
+            disabled_reason = None
+            if not is_available:
+                disabled_reason = "break" if br else "busy"
+            slot_items.append(
+                {
+                    "time": label,
+                    "is_available": is_available,
+                    "is_break": bool(br),
+                    "disabled_reason": disabled_reason,
+                    "break_label": (br.label or "Mola") if br else None,
+                    "break_scope": br.scope if br else None,
+                    "staff_break": bool(br and br.scope == BreakWindow.Scope.STAFF),
+                }
+            )
+            seen.add(label)
+            t += timedelta(minutes=grid_minutes)
+    return {
+        "slots": slots,
+        "slot_items": slot_items,
+        "break_windows": _serialize_break_windows(),
+    }
 
 

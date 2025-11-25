@@ -1,9 +1,10 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from collections import defaultdict
 from datetime import date, datetime, time, timedelta
-from typing import Iterable, List, Optional, Sequence, Tuple
+from typing import Dict, Iterable, List, Optional, Sequence, Tuple
 
+from django.core.exceptions import ValidationError
 from django.utils import timezone
 
 from app.barbers.models import (
@@ -99,5 +100,86 @@ def current_shop_break(shop: Barbershop, ts: datetime) -> Optional[BreakWindow]:
 
 def overlaps(a_start: datetime, a_end: datetime, b_start: datetime, b_end: datetime) -> bool:
     return a_start < b_end and a_end > b_start
+
+
+def validate_break_window_constraints(
+    *,
+    barbershop: Barbershop,
+    staff: Optional[Staff],
+    scope: str,
+    date_value: date,
+    start_time: time,
+    end_time: time,
+    instance: Optional[BreakWindow] = None,
+) -> None:
+    """
+    Shared doğrulama: çalışma saatleri içinde mi, çakışma var mı?
+    Model.clean() ve serializer.validate() tarafından çağrılır.
+    """
+    if start_time >= end_time:
+        raise ValidationError({"start_time": "Başlangıç bitişten küçük olmalı"})
+
+    if scope == BreakWindow.Scope.SHOP:
+        shop_hours = get_shop_hours(barbershop, date_value)
+        if not shop_hours or shop_hours.is_closed:
+            raise ValidationError({"date": "Bu gün dükkan kapalı"})
+        open_time = shop_hours.start_time
+        close_time = shop_hours.end_time
+    else:
+        if not staff:
+            raise ValidationError({"staff": "Personel molası için staff zorunlu"})
+        open_time, close_time, _ = get_effective_staff_window(staff, date_value)
+        if not open_time or not close_time:
+            raise ValidationError({"date": "Personel bu gün çalışmıyor"})
+
+    if open_time and start_time < open_time:
+        raise ValidationError({"start_time": "Mola başlangıcı çalışma saatinden önce"})
+    if close_time and end_time > close_time:
+        raise ValidationError({"end_time": "Mola bitişi çalışma saatinden sonra"})
+
+    qs = BreakWindow.objects.filter(barbershop=barbershop, scope=scope, date=date_value)
+    if staff:
+        qs = qs.filter(staff=staff)
+    if instance and instance.pk:
+        qs = qs.exclude(pk=instance.pk)
+    if qs.filter(start_time__lt=end_time, end_time__gt=start_time).exists():
+        raise ValidationError({"date": "Bu saat aralığında mola zaten var"})
+
+
+def break_windows_by_date(
+    *,
+    barbershop: Barbershop,
+    start_date: date,
+    end_date: date,
+    include_staff: bool = True,
+) -> Dict[date, List[BreakWindow]]:
+    qs = BreakWindow.objects.filter(
+        barbershop=barbershop,
+        date__range=(start_date, end_date),
+    )
+    if not include_staff:
+        qs = qs.filter(scope=BreakWindow.Scope.SHOP)
+    qs = qs.select_related("staff__user").order_by("date", "start_time")
+    bucket: Dict[date, List[BreakWindow]] = defaultdict(list)
+    for br in qs:
+        bucket[br.date].append(br)
+    return bucket
+
+
+def serialize_break_window(br: BreakWindow) -> dict:
+    return {
+        "id": br.id,
+        "start": br.start_time,
+        "end": br.end_time,
+        "label": br.label or ("Dükkan Molası" if br.scope == BreakWindow.Scope.SHOP else "Mola"),
+        "scope": br.scope,
+        "staff_id": br.staff_id,
+        "staff_name": (
+            getattr(getattr(br.staff, "user", None), "full_name", None)
+            or getattr(getattr(br.staff, "user", None), "email", None)
+        )
+        if br.staff_id
+        else None,
+    }
 
 
