@@ -2,8 +2,8 @@ from datetime import datetime, date, time, timedelta
 from typing import List, Dict, Union, Optional
 from django.db import transaction
 from django.utils import timezone
-from app.barbers.models import Barbershop, Staff, Appointment
-from app.appointments.models import AppointmentStatus, CancelledBy
+from app.barbers.models import Barbershop, Staff
+from app.appointments.models import Appointment, AppointmentStatus, CancelledBy
 
 def check_and_cancel_conflicts(
     target: Union[Barbershop, Staff],
