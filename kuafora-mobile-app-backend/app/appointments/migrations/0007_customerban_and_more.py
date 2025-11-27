@@ -1,5 +1,6 @@
 from django.conf import settings
 from django.db import migrations, models
+from django.db.utils import ProgrammingError
 import django.db.models.deletion
 from django.contrib.postgres.constraints import ExclusionConstraint
 from django.contrib.postgres.fields import DateTimeRangeField, RangeOperators
@@ -11,7 +12,12 @@ def create_customerban_table(apps, schema_editor):
     if table_name in schema_editor.connection.introspection.table_names():
         return
     CustomerBan = apps.get_model("appointments", "CustomerBan")
-    schema_editor.create_model(CustomerBan)
+    try:
+        schema_editor.create_model(CustomerBan)
+    except ProgrammingError as exc:
+        message = str(exc).lower()
+        if "already exists" not in message:
+            raise
 
 
 def drop_customerban_table(apps, schema_editor):
