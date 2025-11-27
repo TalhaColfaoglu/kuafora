@@ -60,13 +60,24 @@ class LoginSerializer(serializers.Serializer):
 
 class UserSerializer(serializers.ModelSerializer):
     image = serializers.ImageField(read_only=True)
+    ban_status = serializers.SerializerMethodField()
 
     class Meta:
         model = User
-        fields = ("id", "email", "full_name", "phone", "gender", "image")
+        fields = ("id", "email", "full_name", "phone", "gender", "image", "ban_status")
         read_only_fields = ("id", "image") 
 
-    
+    def get_ban_status(self, obj):
+        from app.appointments.models import CustomerBan
+        from django.utils import timezone
+        active_ban = CustomerBan.objects.filter(user=obj, end_date__gte=timezone.now().date()).first()
+        if active_ban:
+            return {
+                "is_banned": True,
+                "end_date": active_ban.end_date,
+                "reason": active_ban.reason
+            }
+        return None
 
 
 class UserUpdateSerializer(serializers.ModelSerializer):
@@ -127,8 +138,3 @@ class LogoutSerializer(serializers.Serializer):
 class BarbershopStatsSerializer(serializers.Serializer):
     favorites_count = serializers.IntegerField()
     views_count = serializers.IntegerField()
-
-
-    
-
-

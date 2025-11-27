@@ -12,8 +12,8 @@ from rest_framework.response import Response
 from rest_framework import status, permissions, serializers
 
 from app.barbers.models import Barbershop, Staff
-from app.users.models import CustomerBan
-from .models import Appointment, AppointmentStatus, Hold, ShopSystemSwitchHistory, CancelledBy
+# CustomerBan is now in app.appointments.models
+from .models import Appointment, AppointmentStatus, Hold, ShopSystemSwitchHistory, CancelledBy, CustomerBan
 from drf_spectacular.utils import extend_schema, inline_serializer
 from .permissions import IsBookingEnabled
 from .serializers import (
@@ -88,11 +88,10 @@ class AvailabilityApi(APIView):
 
 
 def check_customer_ban(user):
-    active_ban = CustomerBan.objects.filter(user=user, expires_at__gt=timezone.now()).first()
+    active_ban = CustomerBan.objects.filter(user=user, end_date__gte=timezone.now().date()).first()
     if active_ban:
-        remaining = active_ban.expires_at - timezone.now()
-        days = remaining.days
-        return f"Randevu oluşturamazsınız. Ban sürenizin bitmesine {days} gün kaldı."
+        remaining = (active_ban.end_date - timezone.now().date()).days
+        return f"Randevu oluşturamazsınız. Ban sürenizin bitmesine {remaining} gün kaldı."
     return None
 
 
@@ -654,11 +653,12 @@ class AppointmentAttendanceApi(APIView):
             
             # Ban logic: Ban for 3 months
             if ap.customer:
-                ban_expiry = timezone.now() + timedelta(days=90)
+                ban_end = timezone.now().date() + timedelta(days=90)
                 CustomerBan.objects.create(
                     user=ap.customer,
-                    reason="No-show for appointment",
-                    expires_at=ban_expiry
+                    start_date=timezone.now().date(),
+                    end_date=ban_end,
+                    reason=f"No-show for appointment {ap.id}"
                 )
 
         ap.attended_at = timezone.now()

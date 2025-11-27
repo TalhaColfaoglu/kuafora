@@ -176,3 +176,21 @@ class NotificationEvent(models.Model):
     last_error = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+
+class CustomerBan(models.Model):
+    """Blocks a customer from booking new appointments for a duration."""
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="bans")
+    start_date = models.DateField()
+    end_date = models.DateField()
+    reason = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=["user", "end_date"]),
+        ]
+
+    def is_active(self):
+        from django.utils import timezone
+        return self.end_date >= timezone.now().date()

@@ -65,6 +65,7 @@ class AppointmentSerializer(serializers.ModelSerializer):
             "customer_name",
             "cancelled_by",
             "rejection_reason",
+            "is_attended",
         )
 
     def get_staff_name(self, obj):
@@ -95,5 +96,3 @@ class AppointmentListQuerySerializer(serializers.Serializer):
     status = serializers.CharField(required=False)
     date_from = serializers.DateTimeField(required=False)
     date_to = serializers.DateTimeField(required=False)
-
-
