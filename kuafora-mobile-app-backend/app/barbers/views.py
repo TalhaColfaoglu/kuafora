@@ -1607,11 +1607,6 @@ class PartnerShopWorkingHoursViewSet(viewsets.ModelViewSet):
                 count = check_and_cancel_conflicts(shop, schedule_data, today)
             
             return Response({"detail": f"Çalışma saatleri güncellendi. {count} çakışan randevu iptal edildi."})
-        except Exception as e:
-            print(f"DEBUG: Exception in create: {str(e)}")
-            import traceback
-            traceback.print_exc()
-            return Response({"detail": f"Creation failed: {str(e)}"}, status=400)
 
     def perform_create(self, serializer):
         try:
