@@ -1607,56 +1607,6 @@ class PartnerShopWorkingHoursViewSet(viewsets.ModelViewSet):
                 count = check_and_cancel_conflicts(shop, schedule_data, today)
             
             return Response({"detail": f"Çalışma saatleri güncellendi. {count} çakışan randevu iptal edildi."})
-:
-            # Parse time strings to time objects
-            start_time_str = request.data.get('start_time')
-            end_time_str = request.data.get('end_time')
-            
-            from datetime import datetime
-            start_time = None
-            end_time = None
-            
-            if start_time_str:
-                try:
-                    start_time = datetime.strptime(start_time_str, '%H:%M:%S').time()
-                except ValueError:
-                    try:
-                        start_time = datetime.strptime(start_time_str, '%H:%M').time()
-                    except ValueError:
-                        return Response({"detail": f"Invalid start_time format: {start_time_str}"}, status=400)
-            
-            if end_time_str:
-                try:
-                    end_time = datetime.strptime(end_time_str, '%H:%M:%S').time()
-                except ValueError:
-                    try:
-                        end_time = datetime.strptime(end_time_str, '%H:%M').time()
-                    except ValueError:
-                        return Response({"detail": f"Invalid end_time format: {end_time_str}"}, status=400)
-
-            day_code = (request.data.get('day_of_week') or '').upper()
-            valid_days = {'MON','TUE','WED','THU','FRI','SAT','SUN'}
-            if day_code not in valid_days:
-                return Response({"detail": f"Invalid day_of_week: {day_code}"}, status=400)
-
-            is_closed = bool(request.data.get('is_closed', False))
-            if is_closed:
-                start_time = None
-                end_time = None
-
-            # Upsert to avoid unique_together IntegrityError
-            obj, _created = ShopWorkingHours.objects.update_or_create(
-                barbershop=admin_staff.barbershop,
-                day_of_week=day_code,
-                defaults={
-                    'start_time': start_time,
-                    'end_time': end_time,
-                    'is_closed': is_closed,
-                }
-            )
-            print(f"DEBUG: Created ShopWorkingHours: {obj.id}")
-            serializer = self.get_serializer(obj)
-            return Response(serializer.data, status=201)
         except Exception as e:
             print(f"DEBUG: Exception in create: {str(e)}")
             import traceback
