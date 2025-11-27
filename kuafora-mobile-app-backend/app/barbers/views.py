@@ -37,8 +37,9 @@ from .models import (
     ShopHolidayOverride,
     DailyOverride,
     BreakWindow,
-    
+    ScheduleChangeRequest,
 )
+from .services.schedule import check_and_cancel_conflicts
 from .serializers import (
     BarbershopWithFavoriteSerializer,
     
@@ -301,6 +302,13 @@ class BarbershopViewSet(viewsets.ReadOnlyModelViewSet):
                         candidates_end = [sh.end_time or (shop_hours.end_time if shop_hours else None) for sh in staff_hours]
                         candidates_start = [c for c in candidates_start if c is not None]
                         candidates_end = [c for c in candidates_end if c is not None]
+                        
+                        if candidates_start and candidates_end:
+                            day_result.update({
+                                'start_time': min(candidates_start),
+                                'end_time': max(candidates_end),
+                                'is_closed': False
+                            })
                         
                     # Inject breaks (time_range_closed overrides for this specific date)
                     # Find overrides for this shop that are time_range_closed and cover this date
@@ -1544,6 +1552,62 @@ class PartnerShopWorkingHoursViewSet(viewsets.ModelViewSet):
 
         # Create/update directly without serializer validation issues
         try:
+            # Standard logic here
+            return super().create(request, *args, **kwargs)
+        except Exception as e:
+            # Fallback for safety
+            print(f"Standard create failed: {e}")
+            raise
+
+    @action(detail=False, methods=["post"], url_path="update-schedule")
+    def update_schedule(self, request):
+        schedule_data = request.data.get("schedule", [])
+        effective_date_str = request.data.get("effective_date")
+        
+        try:
+            admin_staff = Staff.objects.filter(user=request.user, is_admin=True).order_by('-id').first()
+            if not admin_staff:
+                 return Response({"detail": "Admin yetkisi gerekli"}, status=403)
+            shop = admin_staff.barbershop
+        except Staff.DoesNotExist:
+             return Response({"detail": "Admin yetkisi gerekli"}, status=403)
+
+        if not schedule_data:
+             return Response({"detail": "Schedule data required"}, status=400)
+
+        effective_date = timezone.now().date()
+        if effective_date_str:
+            try:
+                effective_date = datetime.strptime(effective_date_str, "%Y-%m-%d").date()
+            except ValueError:
+                pass
+        
+        today = timezone.now().date()
+        is_future = effective_date > today
+
+        if is_future:
+            ScheduleChangeRequest.objects.create(
+                target_type=ScheduleChangeRequest.TargetType.SHOP,
+                target_id=shop.id,
+                new_schedule_json=schedule_data,
+                effective_date=effective_date,
+                applied=False
+            )
+            count = check_and_cancel_conflicts(shop, schedule_data, effective_date)
+            return Response({"detail": f"Değişiklikler {effective_date} tarihine planlandı. {count} çakışan randevu iptal edildi."})
+        else:
+            # Apply immediately
+            from django.db import transaction
+            with transaction.atomic():
+                ShopWorkingHours.objects.filter(barbershop=shop).delete()
+                serializer = ShopWorkingHoursSerializer(data=schedule_data, many=True)
+                serializer.is_valid(raise_exception=True)
+                serializer.save(barbershop=shop)
+                
+                count = check_and_cancel_conflicts(shop, schedule_data, today)
+            
+            return Response({"detail": f"Çalışma saatleri güncellendi. {count} çakışan randevu iptal edildi."})
+:
             # Parse time strings to time objects
             start_time_str = request.data.get('start_time')
             end_time_str = request.data.get('end_time')
@@ -1652,6 +1716,53 @@ class PartnerStaffWorkingHoursViewSet(viewsets.ModelViewSet):
         # Politika: Hem admin hem personel SADECE kendi staff kaydı için saatleri yönetebilir
         my_staff = Staff.objects.filter(user=user).first()
         return StaffWorkingHours.objects.filter(staff=my_staff)
+
+    @action(detail=False, methods=["post"], url_path="update-schedule")
+    def update_schedule(self, request):
+        schedule_data = request.data.get("schedule", [])
+        effective_date_str = request.data.get("effective_date")
+        
+        staff = Staff.objects.filter(user=request.user).order_by('-is_admin', '-id').first()
+        if not staff:
+            return Response({"detail": "Staff profile not found"}, status=404)
+
+        if not schedule_data:
+             return Response({"detail": "Schedule data required"}, status=400)
+
+        effective_date = timezone.now().date()
+        if effective_date_str:
+            try:
+                effective_date = datetime.strptime(effective_date_str, "%Y-%m-%d").date()
+            except ValueError:
+                pass
+        
+        today = timezone.now().date()
+        is_future = effective_date > today
+
+        if is_future:
+            ScheduleChangeRequest.objects.create(
+                target_type=ScheduleChangeRequest.TargetType.STAFF,
+                target_id=staff.id,
+                new_schedule_json=schedule_data,
+                effective_date=effective_date,
+                applied=False
+            )
+            count = check_and_cancel_conflicts(staff, schedule_data, effective_date)
+            return Response({"detail": f"Değişiklikler {effective_date} tarihine planlandı. {count} çakışan randevu iptal edildi."})
+        else:
+            from django.db import transaction
+            with transaction.atomic():
+                StaffWorkingHours.objects.filter(staff=staff).delete()
+                # Validate against shop hours if immediate
+                # (Simplified: skipping complex validation here as service handles conflicts)
+                
+                serializer = StaffWorkingHoursSerializer(data=schedule_data, many=True)
+                serializer.is_valid(raise_exception=True)
+                serializer.save(staff=staff)
+                
+                count = check_and_cancel_conflicts(staff, schedule_data, today)
+            
+            return Response({"detail": f"Çalışma saatleri güncellendi. {count} çakışan randevu iptal edildi."})
 
     @action(detail=False, methods=["get", "put"], url_path="weekly")
     def weekly(self, request):

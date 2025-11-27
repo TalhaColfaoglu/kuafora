@@ -337,7 +337,7 @@ class BarbershopDetailSerializer(BarbershopSerializer):
 class ShopWorkingHoursSerializer(serializers.ModelSerializer):
     class Meta:
         model = ShopWorkingHours
-        fields = ("id", "barbershop", "day_of_week", "start_time", "end_time", "is_closed", "created_at", "updated_at")
+        fields = ("id", "barbershop", "day_of_week", "start_time", "end_time", "break_start_time", "break_end_time", "is_closed", "created_at", "updated_at")
         read_only_fields = ("created_at", "updated_at")
         extra_kwargs = {
             'barbershop': {'required': False},  # Set in perform_create
@@ -349,7 +349,7 @@ class StaffWorkingHoursSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = StaffWorkingHours
-        fields = ("id", "staff", "staff_name", "day_of_week", "start_time", "end_time", "is_closed", "created_at", "updated_at")
+        fields = ("id", "staff", "staff_name", "day_of_week", "start_time", "end_time", "break_start_time", "break_end_time", "is_closed", "created_at", "updated_at")
 
 
 class BreakWindowSerializer(serializers.ModelSerializer):

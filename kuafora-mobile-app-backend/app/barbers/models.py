@@ -156,6 +156,8 @@ class ShopWorkingHours(models.Model):
     day_of_week = models.CharField(max_length=3, choices=Weekday.choices)
     start_time = models.TimeField()
     end_time = models.TimeField()
+    break_start_time = models.TimeField(null=True, blank=True)
+    break_end_time = models.TimeField(null=True, blank=True)
     is_closed = models.BooleanField(default=False, help_text="Bu gün tamamen kapalı mı")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -182,6 +184,8 @@ class StaffWorkingHours(models.Model):
     day_of_week = models.CharField(max_length=3, choices=Weekday.choices)
     start_time = models.TimeField(null=True, blank=True, help_text="Boşsa dükkan saatlerini devralır")
     end_time = models.TimeField(null=True, blank=True, help_text="Boşsa dükkan saatlerini devralır")
+    break_start_time = models.TimeField(null=True, blank=True)
+    break_end_time = models.TimeField(null=True, blank=True)
     is_closed = models.BooleanField(default=False, help_text="Bu gün personel çalışmıyor")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -191,6 +195,33 @@ class StaffWorkingHours(models.Model):
 
     def __str__(self) -> str:
         return f"{self.staff.user.email} - {self.get_day_of_week_display()}"
+
+
+class ScheduleChangeRequest(models.Model):
+    """
+    Planlanmış çalışma saati değişiklikleri.
+    Eğer effective_date gelecekteyse, bu modelde saklanır ve cron ile uygulanır.
+    """
+    class TargetType(models.TextChoices):
+        SHOP = "shop", "Shop"
+        STAFF = "staff", "Staff"
+
+    target_type = models.CharField(max_length=10, choices=TargetType.choices)
+    target_id = models.IntegerField(help_text="Staff ID veya Barbershop ID")
+    new_schedule_json = models.JSONField(help_text="Uygulanacak yeni saat verisi (list of dicts)")
+    effective_date = models.DateField()
+    applied = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=["target_type", "target_id"]),
+            models.Index(fields=["effective_date", "applied"]),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.target_type} {self.target_id} -> {self.effective_date}"
+
 
 
 class BreakWindow(models.Model):

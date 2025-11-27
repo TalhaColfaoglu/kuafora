@@ -137,15 +137,30 @@ def compute_staff_day_slots(*, staff: Staff, shop: Barbershop, date: datetime, d
     
     # Collect StaffWorkingHours for the weekday; support multiple intervals (shifts)
     staff_wh_qs = StaffWorkingHours.objects.filter(staff=staff, day_of_week=weekday, is_closed=False)
+    
+    # Shop WH resolved once for possible inheritance
+    shop_wh = ShopWorkingHours.objects.filter(barbershop=shop, day_of_week=weekday, is_closed=False).first()
+    
     if staff_wh_qs.exists():
-        # Shop WH resolved once for possible inheritance
-        shop_wh = ShopWorkingHours.objects.filter(barbershop=shop, day_of_week=weekday, is_closed=False).first()
         for wh in staff_wh_qs:
             if wh.start_time and wh.end_time:
                 sdt = timezone.make_aware(datetime.combine(day, wh.start_time), tz)
                 edt = timezone.make_aware(datetime.combine(day, wh.end_time), tz)
                 if sdt < edt:
                     base_intervals.append((sdt, edt))
+                # Inject recurring break from StaffWorkingHours
+                if wh.break_start_time and wh.break_end_time:
+                    bs = timezone.make_aware(datetime.combine(day, wh.break_start_time), tz)
+                    be = timezone.make_aware(datetime.combine(day, wh.break_end_time), tz)
+                    if bs < be:
+                         # Add as a "break interval" to be subtracted later
+                         break_intervals.append((bs, be, BreakWindow(
+                             start_time=wh.break_start_time, 
+                             end_time=wh.break_end_time, 
+                             label="Mola",
+                             scope=BreakWindow.Scope.STAFF,
+                             staff=staff
+                         )))
             else:
                 # Inherit from shop hours if personel saatleri boş bırakılmışsa
                 if shop_wh and shop_wh.start_time and shop_wh.end_time:
@@ -153,14 +168,41 @@ def compute_staff_day_slots(*, staff: Staff, shop: Barbershop, date: datetime, d
                     edt = timezone.make_aware(datetime.combine(day, shop_wh.end_time), tz)
                     if sdt < edt:
                         base_intervals.append((sdt, edt))
+                    # Inherit shop recurring break? Usually staff override defines breaks.
+                    # If inheriting hours, maybe inherit shop breaks too?
+                    # Let's support it for consistency.
+                    if shop_wh.break_start_time and shop_wh.break_end_time:
+                        bs = timezone.make_aware(datetime.combine(day, shop_wh.break_start_time), tz)
+                        be = timezone.make_aware(datetime.combine(day, shop_wh.break_end_time), tz)
+                        if bs < be:
+                            break_intervals.append((bs, be, BreakWindow(
+                                start_time=shop_wh.break_start_time, 
+                                end_time=shop_wh.break_end_time, 
+                                label="Dükkan Molası",
+                                scope=BreakWindow.Scope.SHOP,
+                                barbershop=shop
+                            )))
     else:
         # StaffWorkingHours kaydı yok, dükkan saatlerini kullan
-        shop_wh = ShopWorkingHours.objects.filter(barbershop=shop, day_of_week=weekday, is_closed=False).first()
         if shop_wh and shop_wh.start_time and shop_wh.end_time:
             start_dt = timezone.make_aware(datetime.combine(day, shop_wh.start_time), tz)
             end_dt = timezone.make_aware(datetime.combine(day, shop_wh.end_time), tz)
             if start_dt < end_dt:
                 base_intervals.append((start_dt, end_dt))
+            
+            # Shop level recurring break
+            if shop_wh.break_start_time and shop_wh.break_end_time:
+                bs = timezone.make_aware(datetime.combine(day, shop_wh.break_start_time), tz)
+                be = timezone.make_aware(datetime.combine(day, shop_wh.break_end_time), tz)
+                if bs < be:
+                    break_intervals.append((bs, be, BreakWindow(
+                        start_time=shop_wh.break_start_time, 
+                        end_time=shop_wh.break_end_time, 
+                        label="Dükkan Molası",
+                        scope=BreakWindow.Scope.SHOP,
+                        barbershop=shop
+                    )))
+
     
     base_intervals = _merge(base_intervals)
     if not base_intervals:
