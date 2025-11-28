@@ -17,7 +17,7 @@ from app.barbers.models import (
     BreakWindow,
 )
 from app.barbers.services.breaks import collect_break_intervals
-from app.appointments.models import Appointment
+from app.appointments.models import Appointment, AppointmentStatus
 
 
 Interval = Tuple[datetime, datetime]
@@ -277,7 +277,23 @@ def compute_staff_day_slots(*, staff: Staff, shop: Barbershop, date: datetime, d
 
     # Busy intervals from existing appointments (active statuses)
     busy: List[Interval] = []
-    qs = Appointment.objects.filter(staff=staff, start_datetime__date=day).exclude(status__in=["cancelled", "completed", "no_show"])  # type: ignore[list-item]
+    # Use explicit range to avoid timezone ambiguities in __date lookup
+    # date is already timezone-aware 00:00 of the requested day
+    start_of_day = date
+    end_of_day = start_of_day + timedelta(days=1)
+
+    qs = Appointment.objects.filter(
+        staff=staff, 
+        start_datetime__gte=start_of_day, 
+        start_datetime__lt=end_of_day
+    ).exclude(
+        status__in=[
+            AppointmentStatus.CANCELLED, 
+            AppointmentStatus.COMPLETED, 
+            AppointmentStatus.NO_SHOW
+        ]
+    )
+    
     for ap in qs:
         busy.append((ap.start_datetime, ap.end_datetime))
     busy = _merge(busy)

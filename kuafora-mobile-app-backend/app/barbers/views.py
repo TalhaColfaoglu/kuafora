@@ -518,6 +518,8 @@ class BarbershopViewSet(viewsets.ReadOnlyModelViewSet):
         if ts_str:
             try:
                 ts = datetime.fromisoformat(ts_str)
+                if timezone.is_naive(ts):
+                     ts = timezone.make_aware(ts)
             except Exception:
                 ts = timezone.now()
         else:
