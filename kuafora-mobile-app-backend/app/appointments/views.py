@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime, timedelta
 from decimal import Decimal
 
-from django.db import transaction
+from django.db import transaction, IntegrityError
 from django.utils import timezone
 from django.shortcuts import get_object_or_404
 
@@ -256,7 +256,10 @@ class AppointmentCreateApi(APIView):
             note=data.get("note", ""),
             source=data.get("source") or "mobile_customer",
         )
-        ap.save()
+        try:
+            ap.save()
+        except IntegrityError:
+            return Response({"detail": "SLOT_TAKEN", "code": "409_CONFLICT_SLOT"}, status=status.HTTP_409_CONFLICT)
         hold.delete()
 
         # push: new pending/confirmed appointment
