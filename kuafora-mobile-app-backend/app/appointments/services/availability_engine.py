@@ -261,13 +261,16 @@ def compute_staff_day_slots(*, staff: Staff, shop: Barbershop, date: datetime, d
             edt = timezone.make_aware(datetime.combine(day, ov.end_time), tz)
             if sdt < edt:
                 override_blocks.append((sdt, edt))
+    
+    # Capture candidate intervals BEFORE subtracting overrides to show them in meta
+    candidate_intervals = list(base_intervals)
+
     if override_blocks:
         # subtract override blocks from base intervals
         base_intervals = _subtract(base_intervals, _merge(override_blocks))
         if not base_intervals:
             return _return([])
 
-    candidate_intervals = list(base_intervals)
     break_blocks = [(bs, be) for bs, be, _ in break_intervals]
     if break_blocks:
         base_intervals = _subtract(base_intervals, _merge(break_blocks))
@@ -297,6 +300,12 @@ def compute_staff_day_slots(*, staff: Staff, shop: Barbershop, date: datetime, d
     slot_set = set(slots)
     slot_items: List[dict] = []
     seen: set[str] = set()
+
+    def _is_override(s: datetime, e: datetime) -> bool:
+        for os, oe in override_blocks:
+             if s < oe and e > os: return True
+        return False
+
     for cs, ce in candidate_intervals:
         t = _align_up(cs, grid_minutes)
         while t + timedelta(minutes=duration_minutes) <= ce:
@@ -309,7 +318,12 @@ def compute_staff_day_slots(*, staff: Staff, shop: Barbershop, date: datetime, d
             is_available = label in slot_set
             disabled_reason = None
             if not is_available:
-                disabled_reason = "break" if br else "busy"
+                if _is_override(t, slot_end):
+                    disabled_reason = "closed"
+                elif br:
+                    disabled_reason = "break"
+                else:
+                    disabled_reason = "busy"
             slot_items.append(
                 {
                     "time": label,

@@ -156,6 +156,31 @@ class BarbershopViewSet(viewsets.ReadOnlyModelViewSet):
 
     @action(detail=True, methods=["get"], url_path="services")
     def services(self, request, pk=None):
+        staff_id = request.query_params.get('staff_id')
+        
+        if staff_id:
+            staff_services = StaffService.objects.filter(
+                staff__id=staff_id, 
+                staff__barbershop_id=pk,
+                is_active=True
+            ).select_related('service', 'service__category')
+            
+            data = []
+            for ss in staff_services:
+                svc = ss.service
+                data.append({
+                    "id": svc.id,
+                    "name": svc.name,
+                    "description": getattr(svc, 'description', ''),
+                    "price": ss.price,
+                    "duration": ss.duration_minutes,
+                    "category_id": svc.category_id,
+                    "category_name": svc.category.name if svc.category else None,
+                    "is_active": True,
+                    "price_range": {'min': float(ss.price), 'max': float(ss.price)}
+                })
+            return Response(data)
+
         services = Service.objects.filter(barbershop_id=pk, is_active=True)
         serializer = ServiceSerializer(services, many=True)
         return Response(serializer.data)
