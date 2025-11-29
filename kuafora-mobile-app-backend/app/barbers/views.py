@@ -1604,9 +1604,9 @@ class PartnerShopWorkingHoursViewSet(viewsets.ModelViewSet):
 
         effective_date = timezone.now().date()
         if effective_date_str:
-                try:
+            try:
                 effective_date = datetime.strptime(effective_date_str, "%Y-%m-%d").date()
-                except ValueError:
+            except ValueError:
                 pass
         
         today = timezone.now().date()
