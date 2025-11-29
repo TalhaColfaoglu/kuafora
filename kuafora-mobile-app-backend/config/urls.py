@@ -48,10 +48,11 @@ urlpatterns = [
     path("api/barbershops/today-toggle/", ToggleTodayApi.as_view(), name="api-barbershops-today-toggle"),
     path("api/barbershops/<int:barbershop_id>/toggle/", ToggleTodayApi.as_view(), name="api-barbershops-toggle-by-id"),
     path("api/auth/", include("app.users.urls")),
-    path("api/barbers/", include("app.barbers.urls")),
-    path("api/appointments/", include("app.appointments.urls")),
-    path("api/uploads/", include("app.uploads.urls")),
-    path("api/campaigns/", include("app.campaigns.urls")),
+    # Public + partner APIs
+    path("api/", include(("app.barbers.urls", "barbers"))),
+    path("", include(("app.appointments.urls", "appointments"))),
+    path("api/", include(("app.uploads.urls", "uploads"))),
+    path("api/", include(("app.campaigns.urls", "campaigns"))),
     path("api/users/resolve/", ResolveUserView.as_view(), name="resolve-user"),
     path("health/", health),
 ]
