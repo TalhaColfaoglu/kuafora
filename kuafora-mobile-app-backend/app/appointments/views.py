@@ -434,7 +434,7 @@ class AppointmentCreateApi(APIView):
             source=data.get("source") or "mobile_customer",
         )
         try:
-        ap.save()
+            ap.save()
         except IntegrityError:
             return Response({"detail": "SLOT_TAKEN", "code": "409_CONFLICT_SLOT"}, status=status.HTTP_409_CONFLICT)
         hold.delete()
