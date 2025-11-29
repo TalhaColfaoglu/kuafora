@@ -13,13 +13,13 @@ def health(request):
 
 def schema_static(request):
     # Önce statik YAML şemayı sunmayı dene; yoksa dinamik üretime düş
-    from django.conf import settings
+        from django.conf import settings
     try:
         p = settings.STATIC_ROOT / "openapi.yaml"
-        if p.exists():
-            return FileResponse(open(p, "rb"), content_type="application/yaml")
+    if p.exists():
+        return FileResponse(open(p, "rb"), content_type="application/yaml")
     except Exception:
-        pass
+            pass
     
     # Dinamik fallback (JSON döner)
     try:
@@ -52,5 +52,6 @@ urlpatterns = [
     # Legacy alias: eski istemciler /api/users/resolve/ beklediği için
     path("api/users/resolve/", ResolveUserView.as_view(), name="api-users-resolve-legacy"),
     path("", include("app.appointments.urls")),
+    path("api/", include("app.campaigns.urls")),
     path("health/", health),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

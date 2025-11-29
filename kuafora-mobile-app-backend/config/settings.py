@@ -66,6 +66,7 @@ INSTALLED_APPS = [
     "app.barbers",
     "app.uploads",
     "app.appointments",
+    "app.campaigns",
 ]
 
 MIDDLEWARE = [

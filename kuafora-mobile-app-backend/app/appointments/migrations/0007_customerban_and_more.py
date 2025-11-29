@@ -13,7 +13,7 @@ def create_customerban_table(apps, schema_editor):
         return
     CustomerBan = apps.get_model("appointments", "CustomerBan")
     try:
-        schema_editor.create_model(CustomerBan)
+    schema_editor.create_model(CustomerBan)
     except ProgrammingError as exc:
         message = str(exc).lower()
         if "already exists" not in message:

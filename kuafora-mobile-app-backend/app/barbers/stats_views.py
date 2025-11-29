@@ -111,6 +111,7 @@ class BarbershopAdvancedStatsView(generics.GenericAPIView):
         staff_performance = []
         top_services = []
         daily_chart = []
+        campaign_stats = None # New
         
         if shop.system_type == 'booking':
             appts = Appointment.objects.filter(shop=shop, start_datetime__range=(range_start, range_end))
@@ -214,6 +215,26 @@ class BarbershopAdvancedStatsView(generics.GenericAPIView):
                     "revenue": d['revenue'] or 0
                 })
 
+            # --- CAMPAIGN STATS ---
+            # Revenue from campaigns (using original price vs total price)
+            # Note: We updated Appointment model but data might be sparse for old records.
+            # original_price defaults to 0 in model, but logic tries to set it.
+            # If original_price == 0, assume no discount (original = total).
+            
+            campaign_qs = valid_appts.filter(original_price__gt=F('price_total'))
+            campaign_revenue = campaign_qs.aggregate(total=Sum('price_total'))['total'] or 0
+            total_discount_given = campaign_qs.aggregate(
+                discount=Sum(F('original_price') - F('price_total'))
+            )['discount'] or 0
+            campaign_count = campaign_qs.count()
+            
+            campaign_stats = {
+                "revenue_generated": campaign_revenue,
+                "discount_given": total_discount_given,
+                "appointment_count": campaign_count,
+                "share_of_total": round((campaign_count / total_appts * 100), 1) if total_appts > 0 else 0
+            }
+
 
         return Response({
             "system_type": shop.system_type,
@@ -227,5 +248,6 @@ class BarbershopAdvancedStatsView(generics.GenericAPIView):
             "booking_stats": booking_stats,
             "staff_performance": staff_performance,
             "top_services": top_services,
-            "daily_chart": daily_chart
+            "daily_chart": daily_chart,
+            "campaign_stats": campaign_stats
         })

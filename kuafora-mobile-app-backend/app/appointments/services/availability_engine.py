@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta, time
-from typing import List, Tuple
+from typing import List, Tuple, Optional
 
 from django.utils import timezone
 from django.db import models
@@ -18,6 +18,7 @@ from app.barbers.models import (
 )
 from app.barbers.services.breaks import collect_break_intervals
 from app.appointments.models import Appointment, AppointmentStatus
+from app.campaigns.models import Campaign, CampaignType
 
 
 Interval = Tuple[datetime, datetime]
@@ -136,7 +137,14 @@ def compute_staff_day_slots(*, staff: Staff, shop: Barbershop, date: datetime, d
     base_intervals: List[Interval] = []
     
     # Collect StaffWorkingHours for the weekday; support multiple intervals (shifts)
-    staff_wh_qs = StaffWorkingHours.objects.filter(staff=staff, day_of_week=weekday, is_closed=False)
+    staff_wh_qs = StaffWorkingHours.objects.filter(
+        staff=staff, 
+        day_of_week=weekday, 
+        is_closed=False,
+        valid_from__lte=day
+    ).filter(
+        models.Q(valid_until__isnull=True) | models.Q(valid_until__gte=day)
+    )
     
     # Shop WH resolved once for possible inheritance
     shop_wh = ShopWorkingHours.objects.filter(barbershop=shop, day_of_week=weekday, is_closed=False).first()
@@ -322,6 +330,16 @@ def compute_staff_day_slots(*, staff: Staff, shop: Barbershop, date: datetime, d
              if s < oe and e > os: return True
         return False
 
+    # Discount Calculation for Meta
+    active_campaigns = Campaign.objects.filter(
+        barbershop=shop,
+        is_active=True,
+        start_date__lte=day,
+        end_date__gte=day,
+        system_type__in=['booking', 'both'],
+        type=CampaignType.TIME_BASED
+    )
+
     for cs, ce in candidate_intervals:
         t = _align_up(cs, grid_minutes)
         while t + timedelta(minutes=duration_minutes) <= ce:
@@ -340,6 +358,34 @@ def compute_staff_day_slots(*, staff: Staff, shop: Barbershop, date: datetime, d
                     disabled_reason = "break"
                 else:
                     disabled_reason = "busy"
+            
+            # Check for campaign
+            campaign_info = None
+            if is_available:
+                for camp in active_campaigns:
+                    rules = camp.rules
+                    # Check day
+                    days = rules.get("days", [])
+                    current_weekday = date.weekday() + 1 # 1=Mon, 7=Sun
+                    if days and current_weekday not in days:
+                        continue
+                    
+                    # Check hour
+                    start_h = rules.get("start_time")
+                    end_h = rules.get("end_time")
+                    if start_h and end_h:
+                        slot_h = t.strftime("%H:%M")
+                        if not (start_h <= slot_h < end_h):
+                            continue
+                    
+                    campaign_info = {
+                        "id": camp.id,
+                        "name": camp.name,
+                        "discount_type": camp.discount_type,
+                        "discount_value": str(camp.discount_value)
+                    }
+                    break # Apply first match
+
             slot_items.append(
                 {
                     "time": label,
@@ -349,6 +395,7 @@ def compute_staff_day_slots(*, staff: Staff, shop: Barbershop, date: datetime, d
                     "break_label": (br.label or "Mola") if br else None,
                     "break_scope": br.scope if br else None,
                     "staff_break": bool(br and br.scope == BreakWindow.Scope.STAFF),
+                    "campaign": campaign_info
                 }
             )
             seen.add(label)
@@ -358,5 +405,3 @@ def compute_staff_day_slots(*, staff: Staff, shop: Barbershop, date: datetime, d
         "slot_items": slot_items,
         "break_windows": _serialize_break_windows(),
     }
-
-

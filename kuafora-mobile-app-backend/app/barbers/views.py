@@ -290,7 +290,7 @@ class BarbershopViewSet(viewsets.ReadOnlyModelViewSet):
             start_of_week = timezone.now().date() - timedelta(days=timezone.now().date().weekday())
             week_end = start_of_week + timedelta(days=6)
             week_breaks = break_windows_by_date(
-                barbershop=shop,
+                        barbershop=shop,
                 start_date=start_of_week,
                 end_date=week_end,
                 include_staff=True,
@@ -323,10 +323,10 @@ class BarbershopViewSet(viewsets.ReadOnlyModelViewSet):
                             # ShopWorkingHours var ve açık, saatleri döndür
                             day_result.update({'start_time': shop_hours.start_time, 'end_time': shop_hours.end_time, 'is_closed': False})
                     else:
-                        candidates_start = [sh.start_time or (shop_hours.start_time if shop_hours else None) for sh in staff_hours]
-                        candidates_end = [sh.end_time or (shop_hours.end_time if shop_hours else None) for sh in staff_hours]
-                        candidates_start = [c for c in candidates_start if c is not None]
-                        candidates_end = [c for c in candidates_end if c is not None]
+                    candidates_start = [sh.start_time or (shop_hours.start_time if shop_hours else None) for sh in staff_hours]
+                    candidates_end = [sh.end_time or (shop_hours.end_time if shop_hours else None) for sh in staff_hours]
+                    candidates_start = [c for c in candidates_start if c is not None]
+                    candidates_end = [c for c in candidates_end if c is not None]
                         
                         if candidates_start and candidates_end:
                             day_result.update({
@@ -1604,9 +1604,9 @@ class PartnerShopWorkingHoursViewSet(viewsets.ModelViewSet):
 
         effective_date = timezone.now().date()
         if effective_date_str:
-            try:
+                try:
                 effective_date = datetime.strptime(effective_date_str, "%Y-%m-%d").date()
-            except ValueError:
+                except ValueError:
                 pass
         
         today = timezone.now().date()
@@ -1689,52 +1689,314 @@ class PartnerStaffWorkingHoursViewSet(viewsets.ModelViewSet):
         my_staff = Staff.objects.filter(user=user).first()
         return StaffWorkingHours.objects.filter(staff=my_staff)
 
-    @action(detail=False, methods=["post"], url_path="update-schedule")
-    def update_schedule(self, request):
-        schedule_data = request.data.get("schedule", [])
-        effective_date_str = request.data.get("effective_date")
+    @action(detail=False, methods=["get"], url_path="planned-change")
+    def planned_change(self, request):
+        """
+        Gelecekte başlayacak planlanmış personel çalışma saati değişikliğini döndürür.
+        valid_from > bugünün olan ilk blok planlanmış değişiklik kabul edilir.
+        """
+        staff = Staff.objects.filter(user=request.user).order_by("-is_admin", "-id").first()
+        if not staff:
+            return Response({"has_planned_change": False})
+
+        today = timezone.now().date()
+        future_hours = StaffWorkingHours.objects.filter(staff=staff, valid_from__gt=today)
+        if not future_hours.exists():
+            return Response({"has_planned_change": False})
+
+        effective_date = future_hours.order_by("valid_from").first().valid_from
+        future_for_date = future_hours.filter(valid_from=effective_date)
+
+        valid_days = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"]
+        week = []
+        for day in valid_days:
+            sh = future_for_date.filter(day_of_week=day).first()
+            if sh:
+                week.append(
+                    {
+                        "day": day,
+                        "is_closed": bool(getattr(sh, "is_closed", False)),
+                        "open": getattr(sh, "start_time", None) and sh.start_time.strftime("%H:%M"),
+                        "close": getattr(sh, "end_time", None) and sh.end_time.strftime("%H:%M"),
+                    }
+                )
+            else:
+                week.append({"day": day, "is_closed": True, "open": None, "close": None})
+
+        return Response(
+            {
+                "has_planned_change": True,
+                "effective_date": effective_date.strftime("%Y-%m-%d"),
+                "week": week,
+            }
+        )
+
+    @action(detail=False, methods=["post"], url_path="cancel-planned-change")
+    def cancel_planned_change(self, request):
+        """
+        Gelecekteki planlanmış personel çalışma saati değişikliğini iptal eder.
+        Eski saatlerin valid_until değerini tekrar sonsuza çeker ve gelecek kayıtları siler.
+        """
+        from django.db import transaction
+
+        staff = Staff.objects.filter(user=request.user).order_by("-is_admin", "-id").first()
+        if not staff:
+            return Response({"detail": "Staff not found"}, status=404)
+
+        today = timezone.now().date()
+        future_hours = StaffWorkingHours.objects.filter(staff=staff, valid_from__gt=today)
+        if not future_hours.exists():
+            return Response({"detail": "Planlanmış bir değişiklik bulunamadı."}, status=400)
+
+        effective_date = future_hours.order_by("valid_from").first().valid_from
+        yesterday = effective_date - timedelta(days=1)
+
+        with transaction.atomic():
+            # Eski segmentleri tekrar sonsuza kadar geçerli yap
+            StaffWorkingHours.objects.filter(
+                staff=staff,
+                valid_until=yesterday,
+            ).update(valid_until=None)
+
+            # Gelecek saatleri sil
+            StaffWorkingHours.objects.filter(staff=staff, valid_from__gte=effective_date).delete()
+
+        return Response({"detail": "Planlanmış değişiklik iptal edildi."})
+
+    @action(detail=False, methods=["post"], url_path="check-impact")
+    def check_impact(self, request):
+        """
+        Check impact of schedule changes for 3 scenarios:
+        1. Immediate (Today)
+        2. Next Week (Next Monday)
+        3. Two Weeks (Monday after next)
+        """
+        from app.appointments.models import Appointment, AppointmentStatus
         
+        schedule_data = request.data.get("week", [])
+        if not schedule_data:
+            return Response({"detail": "Week data required"}, status=400)
+
         staff = Staff.objects.filter(user=request.user).order_by('-is_admin', '-id').first()
         if not staff:
-            return Response({"detail": "Staff profile not found"}, status=404)
+            return Response({"detail": "Staff not found"}, status=404)
 
-        if not schedule_data:
-             return Response({"detail": "Schedule data required"}, status=400)
-
-        effective_date = timezone.now().date()
-        if effective_date_str:
-            try:
-                effective_date = datetime.strptime(effective_date_str, "%Y-%m-%d").date()
-            except ValueError:
-                pass
-        
         today = timezone.now().date()
-        is_future = effective_date > today
+        
+        # Calculate effective dates
+        # 1. Immediate: Today
+        date_now = today
+        
+        # 2. Next Week: Next Monday
+        days_ahead = 7 - today.weekday() # 0=Mon, 6=Sun.
+        if days_ahead == 0: days_ahead = 7 
+        date_next_week = today + timedelta(days=days_ahead)
+        
+        # 3. Two Weeks: Monday after next
+        date_two_weeks = date_next_week + timedelta(days=7)
 
-        if is_future:
-            ScheduleChangeRequest.objects.create(
-                target_type=ScheduleChangeRequest.TargetType.STAFF,
-                target_id=staff.id,
-                new_schedule_json=schedule_data,
-                effective_date=effective_date,
-                applied=False
+        scenarios = [
+            {"key": "now", "label": "Hemen Uygula", "date": date_now},
+            {"key": "1_week", "label": "Gelecek Hafta Başı", "date": date_next_week},
+            {"key": "2_weeks", "label": "2 Hafta Sonra", "date": date_two_weeks},
+        ]
+
+        results = {}
+        
+        def parse_time(s):
+            if not s: return None
+            try:
+                return datetime.strptime(str(s)[:5], "%H:%M").time()
+            except:
+                return None
+
+        new_schedule = {}
+        for item in schedule_data:
+            day_code = item.get('day')
+            if day_code:
+                new_schedule[day_code] = {
+                    'is_closed': item.get('is_closed', False),
+                    'open': parse_time(item.get('open')),
+                    'close': parse_time(item.get('close'))
+                }
+
+        weekday_map = {0: 'MON', 1: 'TUE', 2: 'WED', 3: 'THU', 4: 'FRI', 5: 'SAT', 6: 'SUN'}
+
+        for scen in scenarios:
+            eff_date = scen["date"]
+            qs = Appointment.objects.filter(
+                staff=staff,
+                start_datetime__date__gte=eff_date,
+                status__in=[AppointmentStatus.PENDING, AppointmentStatus.CONFIRMED, AppointmentStatus.APPROVED]
             )
-            count = check_and_cancel_conflicts(staff, schedule_data, effective_date)
-            return Response({"detail": f"Değişiklikler {effective_date} tarihine planlandı. {count} çakışan randevu iptal edildi."})
-        else:
-            from django.db import transaction
-            with transaction.atomic():
-                StaffWorkingHours.objects.filter(staff=staff).delete()
-                # Validate against shop hours if immediate
-                # (Simplified: skipping complex validation here as service handles conflicts)
-                
-                serializer = StaffWorkingHoursSerializer(data=schedule_data, many=True)
-                serializer.is_valid(raise_exception=True)
-                serializer.save(staff=staff)
-                
-                count = check_and_cancel_conflicts(staff, schedule_data, today)
             
-            return Response({"detail": f"Çalışma saatleri güncellendi. {count} çakışan randevu iptal edildi."})
+            conflict_count = 0
+            
+            for appt in qs:
+                appt_date = appt.start_datetime.date()
+                appt_day_code = weekday_map[appt_date.weekday()]
+                day_rules = new_schedule.get(appt_day_code)
+                
+                if not day_rules or day_rules['is_closed']:
+                    conflict_count += 1
+                    continue
+                
+                open_t = day_rules['open']
+                close_t = day_rules['close']
+                
+                if not open_t or not close_t:
+                    conflict_count += 1
+                    continue
+                
+                appt_start = appt.start_datetime.time()
+                appt_end = appt.end_datetime.time()
+                
+                if appt_start < open_t or appt_end > close_t:
+                    conflict_count += 1
+            
+            results[scen["key"]] = {
+                "date": eff_date.strftime("%Y-%m-%d"),
+                "conflict_count": conflict_count
+            }
+
+        return Response(results)
+
+    @action(detail=False, methods=["post"], url_path="update-schedule-v2")
+    def update_schedule_v2(self, request):
+        from app.appointments.models import Appointment, AppointmentStatus, CancelledBy
+        from app.appointments.services import events
+        from django.db import transaction
+
+        schedule_data = request.data.get("week", [])
+        apply_option = request.data.get("apply_option", "now") # now, 1_week, 2_weeks
+        cancel_message = request.data.get("cancellation_message", "")
+
+        staff = Staff.objects.filter(user=request.user).order_by('-is_admin', '-id').first()
+        if not staff:
+            return Response({"detail": "Staff not found"}, status=404)
+
+        today = timezone.now().date()
+        
+        if apply_option == '1_week':
+            days_ahead = 7 - today.weekday()
+            if days_ahead == 0: days_ahead = 7
+            effective_date = today + timedelta(days=days_ahead)
+        elif apply_option == '2_weeks':
+            days_ahead = 7 - today.weekday()
+            if days_ahead == 0: days_ahead = 7
+            effective_date = today + timedelta(days=days_ahead + 7)
+        else: # now
+            effective_date = today
+
+        def parse_time(s):
+            if not s: return None
+            try:
+                return datetime.strptime(str(s)[:5], "%H:%M").time()
+            except:
+                return None
+
+        with transaction.atomic():
+            # 1. Versioning Logic: Terminate overlapping current hours
+            current_active = StaffWorkingHours.objects.filter(
+                staff=staff,
+                valid_from__lt=effective_date
+            ).filter(
+                Q(valid_until__isnull=True) | Q(valid_until__gte=effective_date)
+            )
+            
+            yesterday = effective_date - timedelta(days=1)
+            
+            for swh in current_active:
+                swh.valid_until = yesterday
+                swh.save()
+            
+            # Delete future hours that are fully replaced
+            StaffWorkingHours.objects.filter(
+                staff=staff,
+                valid_from__gte=effective_date
+            ).delete()
+            
+            # 2. Create New Hours
+            for item in schedule_data:
+                day = item.get('day')
+                if not day: continue
+                is_closed = item.get('is_closed', False)
+                open_t = parse_time(item.get('open'))
+                close_t = parse_time(item.get('close'))
+                
+                StaffWorkingHours.objects.create(
+                    staff=staff,
+                    day_of_week=day,
+                    is_closed=is_closed,
+                    start_time=open_t,
+                    end_time=close_t,
+                    valid_from=effective_date,
+                    valid_until=None
+                )
+            
+            # 3. Cancel Conflicts
+            qs = Appointment.objects.filter(
+                staff=staff,
+                start_datetime__date__gte=effective_date,
+                status__in=[AppointmentStatus.PENDING, AppointmentStatus.CONFIRMED, AppointmentStatus.APPROVED]
+            )
+            
+            new_schedule_map = {item.get('day'): item for item in schedule_data}
+            weekday_map = {0: 'MON', 1: 'TUE', 2: 'WED', 3: 'THU', 4: 'FRI', 5: 'SAT', 6: 'SUN'}
+            
+            cancelled_count = 0
+            for appt in qs:
+                appt_date = appt.start_datetime.date()
+                appt_day_code = weekday_map[appt_date.weekday()]
+                day_rules = new_schedule_map.get(appt_day_code)
+                
+                should_cancel = False
+                if not day_rules or day_rules.get('is_closed'):
+                    should_cancel = True
+                else:
+                    open_t = parse_time(day_rules.get('open'))
+                    close_t = parse_time(day_rules.get('close'))
+                    if not open_t or not close_t:
+                         should_cancel = True
+                    else:
+                        if appt.start_datetime.time() < open_t or appt.end_datetime.time() > close_t:
+                            should_cancel = True
+                
+                if should_cancel:
+                    appt.status = AppointmentStatus.CANCELLED
+                    appt.rejection_reason = f"Çalışma saati değişikliği: {cancel_message}"
+                    appt.cancelled_by = CancelledBy.SYSTEM
+                    appt.save()
+                    cancelled_count += 1
+
+                    # Bildirim olayı oluştur
+                    try:
+                        events.emit(
+                            events.staff_topic(appt.staff_id),
+                            {
+                                "type": "appointment_cancelled_by_schedule_change",
+                                "id": appt.id,
+                                "reason": appt.rejection_reason,
+                            },
+                        )
+                        events.emit(
+                            events.shop_topic(appt.shop_id),
+                            {
+                                "type": "appointment_cancelled_by_schedule_change",
+                                "id": appt.id,
+                                "reason": appt.rejection_reason,
+                            },
+                        )
+                    except Exception:
+                        # Bildirim tarafındaki bir hata, randevu iptal akışını bozmamalı
+                        pass
+
+        return Response({
+            "detail": "Changes saved",
+            "effective_date": effective_date,
+            "cancelled_count": cancelled_count
+        })
+
 
     @action(detail=False, methods=["get", "put"], url_path="weekly")
     def weekly(self, request):

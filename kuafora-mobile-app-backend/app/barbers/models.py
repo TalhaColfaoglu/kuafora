@@ -4,6 +4,7 @@ from django.db import models
 from django.conf import settings
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.core.exceptions import ValidationError
+from datetime import date
 
 
 class Barbershop(models.Model):
@@ -187,14 +188,19 @@ class StaffWorkingHours(models.Model):
     break_start_time = models.TimeField(null=True, blank=True)
     break_end_time = models.TimeField(null=True, blank=True)
     is_closed = models.BooleanField(default=False, help_text="Bu gün personel çalışmıyor")
+    
+    # Versioning
+    valid_from = models.DateField(default=date(2020, 1, 1))
+    valid_until = models.DateField(null=True, blank=True)
+    
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        unique_together = ("staff", "day_of_week")
+        unique_together = ("staff", "day_of_week", "valid_from")
 
     def __str__(self) -> str:
-        return f"{self.staff.user.email} - {self.get_day_of_week_display()}"
+        return f"{self.staff.user.email} - {self.get_day_of_week_display()} ({self.valid_from})"
 
 
 class ScheduleChangeRequest(models.Model):
@@ -555,9 +561,6 @@ class Favorite(models.Model):
         return f"{self.user.email} -> {self.barbershop.name}"
 
 
-
-
-
 # --- Holidays & Special Days ---
 class OfficialHoliday(models.Model):
     """Materialized list of official holidays (TR). Read-only for partners."""
@@ -653,4 +656,3 @@ class ViewEvent(models.Model):
             models.Index(fields=["barbershop", "-viewed_at"]),
             models.Index(fields=["barbershop", "user"]),
         ]
-

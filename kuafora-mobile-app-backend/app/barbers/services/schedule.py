@@ -4,6 +4,7 @@ from django.db import transaction
 from django.utils import timezone
 from app.barbers.models import Barbershop, Staff
 from app.appointments.models import Appointment, AppointmentStatus, CancelledBy
+from app.appointments.services import events
 
 def check_and_cancel_conflicts(
     target: Union[Barbershop, Staff],
@@ -12,8 +13,8 @@ def check_and_cancel_conflicts(
 ):
     """
     Checks active appointments against the new schedule starting from effective_date.
-    Cancels appointments that conflict with the new schedule.
-    
+    Cancels appointments that conflict with the new schedule and emits notification events.
+
     new_schedule format: [
         {
             'day_of_week': 'MON',
@@ -123,8 +124,28 @@ def check_and_cancel_conflicts(
             appt.rejection_reason = f"Çalışma saati değişikliği: {conflict_reason}"
             appt.save()
             cancelled_count += 1
-            
-            # TODO: Send notification (SMS/Push) to customer
+
+            # Emit notification events for async push/SMS processors
+            try:
+                events.emit(
+                    events.staff_topic(appt.staff_id),
+                    {
+                        "type": "appointment_cancelled_by_schedule_change",
+                        "id": appt.id,
+                        "reason": appt.rejection_reason,
+                    },
+                )
+                events.emit(
+                    events.shop_topic(appt.shop_id),
+                    {
+                        "type": "appointment_cancelled_by_schedule_change",
+                        "id": appt.id,
+                        "reason": appt.rejection_reason,
+                    },
+                )
+            except Exception:
+                # Bildirim hataları randevu iptalini bozmamalı
+                pass
             
     return cancelled_count
 
