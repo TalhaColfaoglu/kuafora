@@ -323,10 +323,10 @@ class BarbershopViewSet(viewsets.ReadOnlyModelViewSet):
                             # ShopWorkingHours var ve açık, saatleri döndür
                             day_result.update({'start_time': shop_hours.start_time, 'end_time': shop_hours.end_time, 'is_closed': False})
                     else:
-                    candidates_start = [sh.start_time or (shop_hours.start_time if shop_hours else None) for sh in staff_hours]
-                    candidates_end = [sh.end_time or (shop_hours.end_time if shop_hours else None) for sh in staff_hours]
-                    candidates_start = [c for c in candidates_start if c is not None]
-                    candidates_end = [c for c in candidates_end if c is not None]
+                        candidates_start = [sh.start_time or (shop_hours.start_time if shop_hours else None) for sh in staff_hours]
+                        candidates_end = [sh.end_time or (shop_hours.end_time if shop_hours else None) for sh in staff_hours]
+                        candidates_start = [c for c in candidates_start if c is not None]
+                        candidates_end = [c for c in candidates_end if c is not None]
                         
                         if candidates_start and candidates_end:
                             day_result.update({
@@ -1604,9 +1604,9 @@ class PartnerShopWorkingHoursViewSet(viewsets.ModelViewSet):
 
         effective_date = timezone.now().date()
         if effective_date_str:
-                try:
+            try:
                 effective_date = datetime.strptime(effective_date_str, "%Y-%m-%d").date()
-                except ValueError:
+            except ValueError:
                 pass
         
         today = timezone.now().date()

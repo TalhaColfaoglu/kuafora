@@ -13,14 +13,14 @@ def health(request):
 
 def schema_static(request):
     # Önce statik YAML şemayı sunmayı dene; yoksa dinamik üretime düş
-    from django.conf import settings
+        from django.conf import settings
     try:
         if getattr(settings, 'STATIC_ROOT', None):
             p = Path(settings.STATIC_ROOT) / "openapi.yaml"
-            if p.exists():
-                return FileResponse(open(p, "rb"), content_type="application/yaml")
+    if p.exists():
+        return FileResponse(open(p, "rb"), content_type="application/yaml")
     except Exception:
-        pass
+            pass
     
     # Dinamik fallback (JSON döner)
     try:
