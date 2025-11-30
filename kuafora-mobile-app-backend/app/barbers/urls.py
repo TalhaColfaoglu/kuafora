@@ -29,6 +29,7 @@ from .views import (
     ToggleTodayApi,
     ImpactPlusApi,
 )
+from .home_views import HomeDashboardApi
 from .stats_views import BarbershopAdvancedStatsView
 
 router = DefaultRouter()
@@ -73,6 +74,7 @@ urlpatterns = [
     path("special-messages/", AnnouncementsPublicApi.as_view(), name="special-messages-public"),
     # Impact plus
     path("partner/holiday/impact-plus/", ImpactPlusApi.as_view(), name="impact-plus"),
+    path("mobile/home/dashboard/", HomeDashboardApi.as_view(), name="mobile-home-dashboard"),
     # Advanced Stats
     path("partner/stats/advanced/", BarbershopAdvancedStatsView.as_view(), name="partner-stats-advanced"),
 ]

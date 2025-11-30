@@ -905,6 +905,26 @@ class ReviewViewSet(mixins.CreateModelMixin, mixins.UpdateModelMixin, mixins.Des
         serializer = self.get_serializer(qs, many=True)
         return Response(serializer.data)
 
+    @action(detail=True, methods=["post"])
+    def like(self, request, pk=None):
+        review = self.get_object()
+        if review.likes.filter(id=request.user.id).exists():
+            review.likes.remove(request.user)
+        else:
+            review.likes.add(request.user)
+            review.dislikes.remove(request.user)
+        return Response({"detail": "Toggled like"})
+
+    @action(detail=True, methods=["post"])
+    def dislike(self, request, pk=None):
+        review = self.get_object()
+        if review.dislikes.filter(id=request.user.id).exists():
+            review.dislikes.remove(request.user)
+        else:
+            review.dislikes.add(request.user)
+            review.likes.remove(request.user)
+        return Response({"detail": "Toggled dislike"})
+
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
 

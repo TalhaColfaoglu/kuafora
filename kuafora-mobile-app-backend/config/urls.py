@@ -53,6 +53,8 @@ urlpatterns = [
     path("", include(("app.appointments.urls", "appointments"))),
     path("api/", include(("app.uploads.urls", "uploads"))),
     path("api/", include(("app.campaigns.urls", "campaigns"))),
+    path("api/", include(("app.chat.urls", "chat"))),
+    path("api/", include(("app.notifications.urls", "notifications"))),
     path("api/users/resolve/", ResolveUserView.as_view(), name="resolve-user"),
     path("health/", health),
 ]

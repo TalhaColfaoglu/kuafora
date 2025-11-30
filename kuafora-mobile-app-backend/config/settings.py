@@ -67,6 +67,8 @@ INSTALLED_APPS = [
     "app.uploads",
     "app.appointments",
     "app.campaigns",
+    "app.chat",
+    "app.notifications",
 ]
 
 MIDDLEWARE = [

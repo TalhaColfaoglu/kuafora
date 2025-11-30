@@ -24,6 +24,7 @@ from .models import (
     ServiceCategory,
     LastViewed,
     BreakWindow,
+    ShopCategory,
 )
 
 
@@ -36,6 +37,7 @@ class BarbershopImageSerializer(serializers.ModelSerializer):
 class BarbershopSerializer(serializers.ModelSerializer):
     images = BarbershopImageSerializer(many=True, read_only=True)
     phone = serializers.CharField(source='phone_number', required=False)  # Frontend'den gelen 'phone' field'ını 'phone_number' olarak map et
+    categories = serializers.PrimaryKeyRelatedField(many=True, queryset=ShopCategory.objects.all(), required=False)
 
     class Meta:
         model = Barbershop
@@ -54,6 +56,7 @@ class BarbershopSerializer(serializers.ModelSerializer):
             "images",
             "is_verified",
             "description",
+            "categories",
             "created_at",
             "updated_at",
             "rating_avg",

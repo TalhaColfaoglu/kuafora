@@ -5,6 +5,40 @@ from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin, BaseUserManager
 from django.contrib.auth.models import AbstractUser
 from django.core.validators import RegexValidator
+from PIL import Image, ImageOps
+from io import BytesIO
+from django.core.files.base import ContentFile
+import os
+
+def resize_image(image_field, max_size=(1080, 1080)):
+    if not image_field:
+        return
+
+    try:
+        img = Image.open(image_field)
+        
+        # Handle EXIF orientation
+        img = ImageOps.exif_transpose(img)
+        
+        # Convert to RGB if necessary
+        if img.mode in ('RGBA', 'P'):
+            img = img.convert('RGB')
+            
+        # Check if resize is needed
+        if img.width > max_size[0] or img.height > max_size[1]:
+            img.thumbnail(max_size, Image.Resampling.LANCZOS)
+            
+            buffer = BytesIO()
+            img.save(buffer, format='JPEG', quality=85)
+            
+            filename = os.path.basename(image_field.name)
+            # Ensure extension is .jpg
+            base_name, _ = os.path.splitext(filename)
+            filename = f"{base_name}.jpg"
+            
+            image_field.save(filename, ContentFile(buffer.getvalue()), save=False)
+    except Exception as e:
+        print(f"Error resizing image: {e}")
 
 
 class UserManager(BaseUserManager):
@@ -56,6 +90,18 @@ class User(AbstractBaseUser, PermissionsMixin):
     REQUIRED_FIELDS: list[str] = []
 
     objects = UserManager()
+
+    def save(self, *args, **kwargs):
+        if self.pk:
+            try:
+                old_instance = User.objects.get(pk=self.pk)
+                if self.image != old_instance.image:
+                    resize_image(self.image)
+            except User.DoesNotExist:
+                resize_image(self.image)
+        else:
+            resize_image(self.image)
+        super().save(*args, **kwargs)
 
     def __str__(self) -> str:  # pragma: no cover - trivial
         return self.email
