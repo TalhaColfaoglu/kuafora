@@ -1,9 +1,8 @@
 from rest_framework.routers import DefaultRouter
-from .views import ChatRoomViewSet, ChatBanViewSet
+from .views import ChatRoomViewSet
 
 router = DefaultRouter()
 router.register(r"chat/rooms", ChatRoomViewSet, basename="chat-rooms")
-router.register(r"chat/bans", ChatBanViewSet, basename="chat-bans")
 
 urlpatterns = router.urls
 
