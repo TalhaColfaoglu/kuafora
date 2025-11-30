@@ -1,6 +1,6 @@
 from django.db import models
 from django.conf import settings
-from app.barbers.models import Barbershop, Service
+from app.barbers.models import Barbershop
 
 class CampaignType(models.TextChoices):
     TIME_BASED = "time_based", "Time Based"
