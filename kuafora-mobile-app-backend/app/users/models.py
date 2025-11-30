@@ -10,11 +10,12 @@ from io import BytesIO
 from django.core.files.base import ContentFile
 import os
 
-def resize_image(image_field, max_size=(1080, 1080)):
+def process_image(image_field, thumb_field=None, max_size=(1080, 1080), thumb_size=(300, 300)):
     if not image_field:
         return
 
     try:
+        # Open image
         img = Image.open(image_field)
         
         # Handle EXIF orientation
@@ -24,21 +25,39 @@ def resize_image(image_field, max_size=(1080, 1080)):
         if img.mode in ('RGBA', 'P'):
             img = img.convert('RGB')
             
-        # Check if resize is needed
+        # 1. Optimize Main Image
+        # Only resize if larger than max_size
         if img.width > max_size[0] or img.height > max_size[1]:
-            img.thumbnail(max_size, Image.Resampling.LANCZOS)
+            img_copy = img.copy()
+            img_copy.thumbnail(max_size, Image.Resampling.LANCZOS)
             
             buffer = BytesIO()
-            img.save(buffer, format='JPEG', quality=85)
+            img_copy.save(buffer, format='JPEG', quality=85)
             
             filename = os.path.basename(image_field.name)
-            # Ensure extension is .jpg
             base_name, _ = os.path.splitext(filename)
             filename = f"{base_name}.jpg"
             
+            # Save optimized main image
             image_field.save(filename, ContentFile(buffer.getvalue()), save=False)
+        
+        # 2. Generate Thumbnail if field provided
+        if thumb_field:
+            thumb_copy = img.copy()
+            thumb_copy.thumbnail(thumb_size, Image.Resampling.LANCZOS)
+            
+            thumb_buffer = BytesIO()
+            thumb_copy.save(thumb_buffer, format='JPEG', quality=80)
+            
+            filename = os.path.basename(image_field.name)
+            base_name, _ = os.path.splitext(filename)
+            thumb_filename = f"{base_name}_thumb.jpg"
+            
+            # Save thumbnail
+            thumb_field.save(thumb_filename, ContentFile(thumb_buffer.getvalue()), save=False)
+
     except Exception as e:
-        print(f"Error resizing image: {e}")
+        print(f"Error processing image: {e}")
 
 
 class UserManager(BaseUserManager):
@@ -76,6 +95,7 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     image = models.ImageField(upload_to="users/images/", null=True, blank=True)
+    image_thumb = models.ImageField(upload_to="users/images/thumbs/", null=True, blank=True)
     full_name = models.CharField(max_length=150, blank=True)
     email = models.EmailField(unique=True)
     phone = models.CharField(max_length=20, blank=True)
@@ -96,11 +116,11 @@ class User(AbstractBaseUser, PermissionsMixin):
             try:
                 old_instance = User.objects.get(pk=self.pk)
                 if self.image != old_instance.image:
-                    resize_image(self.image)
+                    process_image(self.image, self.image_thumb)
             except User.DoesNotExist:
-                resize_image(self.image)
+                process_image(self.image, self.image_thumb)
         else:
-            resize_image(self.image)
+            process_image(self.image, self.image_thumb)
         super().save(*args, **kwargs)
 
     def __str__(self) -> str:  # pragma: no cover - trivial

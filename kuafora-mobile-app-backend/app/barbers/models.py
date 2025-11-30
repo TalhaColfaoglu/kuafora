@@ -10,11 +10,12 @@ from io import BytesIO
 from django.core.files.base import ContentFile
 import os
 
-def resize_image(image_field, max_size=(1080, 1080)):
+def process_image(image_field, thumb_field=None, max_size=(1080, 1080), thumb_size=(300, 300)):
     if not image_field:
         return
 
     try:
+        # Open image
         img = Image.open(image_field)
         
         # Handle EXIF orientation
@@ -24,21 +25,39 @@ def resize_image(image_field, max_size=(1080, 1080)):
         if img.mode in ('RGBA', 'P'):
             img = img.convert('RGB')
             
-        # Check if resize is needed
+        # 1. Optimize Main Image
+        # Only resize if larger than max_size
         if img.width > max_size[0] or img.height > max_size[1]:
-            img.thumbnail(max_size, Image.Resampling.LANCZOS)
+            img_copy = img.copy()
+            img_copy.thumbnail(max_size, Image.Resampling.LANCZOS)
             
             buffer = BytesIO()
-            img.save(buffer, format='JPEG', quality=85)
+            img_copy.save(buffer, format='JPEG', quality=85)
             
             filename = os.path.basename(image_field.name)
-            # Ensure extension is .jpg
             base_name, _ = os.path.splitext(filename)
             filename = f"{base_name}.jpg"
             
+            # Save optimized main image
             image_field.save(filename, ContentFile(buffer.getvalue()), save=False)
+        
+        # 2. Generate Thumbnail if field provided
+        if thumb_field:
+            thumb_copy = img.copy()
+            thumb_copy.thumbnail(thumb_size, Image.Resampling.LANCZOS)
+            
+            thumb_buffer = BytesIO()
+            thumb_copy.save(thumb_buffer, format='JPEG', quality=80)
+            
+            filename = os.path.basename(image_field.name)
+            base_name, _ = os.path.splitext(filename)
+            thumb_filename = f"{base_name}_thumb.jpg"
+            
+            # Save thumbnail
+            thumb_field.save(thumb_filename, ContentFile(thumb_buffer.getvalue()), save=False)
+
     except Exception as e:
-        print(f"Error resizing image: {e}")
+        print(f"Error processing image: {e}")
 
 class Barbershop(models.Model):
     class Gender(models.TextChoices):
@@ -53,6 +72,7 @@ class Barbershop(models.Model):
     district = models.CharField(max_length=100)
     phone_number = models.CharField(max_length=20)
     main_image = models.ImageField(upload_to="barbershops/main/", null=True, blank=True)
+    main_image_thumb = models.ImageField(upload_to="barbershops/main/thumbs/", null=True, blank=True)
     latitude = models.FloatField(null=True, blank=True)
     longitude = models.FloatField(null=True, blank=True)
     is_verified = models.BooleanField(default=False)
@@ -90,11 +110,12 @@ class Barbershop(models.Model):
             try:
                 old_instance = Barbershop.objects.get(pk=self.pk)
                 if self.main_image != old_instance.main_image:
-                    resize_image(self.main_image)
+                    # Image changed
+                    process_image(self.main_image, self.main_image_thumb)
             except Barbershop.DoesNotExist:
-                resize_image(self.main_image)
+                process_image(self.main_image, self.main_image_thumb)
         else:
-            resize_image(self.main_image)
+            process_image(self.main_image, self.main_image_thumb)
         super().save(*args, **kwargs)
 
     def __str__(self) -> str:  # pragma: no cover - trivial
@@ -104,17 +125,18 @@ class Barbershop(models.Model):
 class BarbershopImage(models.Model):
     barbershop = models.ForeignKey(Barbershop, on_delete=models.CASCADE, related_name="images")
     image = models.ImageField(upload_to="barbershops/extra/")
+    image_thumb = models.ImageField(upload_to="barbershops/extra/thumbs/", null=True, blank=True)
 
     def save(self, *args, **kwargs):
         if self.pk:
             try:
                 old_instance = BarbershopImage.objects.get(pk=self.pk)
                 if self.image != old_instance.image:
-                    resize_image(self.image)
+                    process_image(self.image, self.image_thumb)
             except BarbershopImage.DoesNotExist:
-                resize_image(self.image)
+                process_image(self.image, self.image_thumb)
         else:
-            resize_image(self.image)
+            process_image(self.image, self.image_thumb)
         super().save(*args, **kwargs)
 
 
@@ -122,6 +144,7 @@ class Staff(models.Model):
     barbershop = models.ForeignKey(Barbershop, on_delete=models.CASCADE, related_name="staff")
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="staff_profiles")
     photo = models.ImageField(upload_to="staff/photos/", null=True, blank=True)
+    photo_thumb = models.ImageField(upload_to="staff/photos/thumbs/", null=True, blank=True)
     email = models.EmailField()
     certificate = models.BooleanField(default=False)
     is_admin = models.BooleanField(default=False)
@@ -182,11 +205,11 @@ class Staff(models.Model):
             try:
                 old_instance = Staff.objects.get(pk=self.pk)
                 if self.photo != old_instance.photo:
-                    resize_image(self.photo)
+                    process_image(self.photo, self.photo_thumb)
             except Staff.DoesNotExist:
-                resize_image(self.photo)
+                process_image(self.photo, self.photo_thumb)
         else:
-            resize_image(self.photo)
+            process_image(self.photo, self.photo_thumb)
         super().save(*args, **kwargs)
 
 
@@ -199,11 +222,12 @@ class StaffCatalogImage(models.Model):
             try:
                 old_instance = StaffCatalogImage.objects.get(pk=self.pk)
                 if self.image != old_instance.image:
-                    resize_image(self.image)
+                    # Just resize, no thumb for catalog for now as per request mainly for main/profile lists
+                    process_image(self.image) 
             except StaffCatalogImage.DoesNotExist:
-                resize_image(self.image)
+                process_image(self.image)
         else:
-            resize_image(self.image)
+            process_image(self.image)
         super().save(*args, **kwargs)
 
 
@@ -349,7 +373,6 @@ class BreakWindow(models.Model):
     def __str__(self) -> str:
         return f"{self.scope} break on {self.date} ({self.start_time}-{self.end_time})"
 
-# This was missing in the original file but referenced in Barbershop.categories
 class ShopCategory(models.Model):
     name = models.CharField(max_length=100)
     icon = models.ImageField(upload_to="categories/", null=True, blank=True)

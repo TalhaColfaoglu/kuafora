@@ -4,7 +4,6 @@ from django.core.exceptions import ValidationError
 from rest_framework import serializers
 from .models import (
     Favorite,
-    
     Barbershop,
     BarbershopImage,
     Staff,
@@ -25,13 +24,21 @@ from .models import (
     LastViewed,
     BreakWindow,
     ShopCategory,
+    OfficialHoliday,
+    ShopHolidayOverride,
+    DailyOverride,
 )
 
 
 class BarbershopImageSerializer(serializers.ModelSerializer):
     class Meta:
         model = BarbershopImage
-        fields = ("id", "image")
+        fields = ("id", "image", "image_thumb")
+
+    def validate_image(self, value):
+        if value.size > 5 * 1024 * 1024:
+            raise serializers.ValidationError("Görsel boyutu 5MB'dan büyük olamaz.")
+        return value
 
 
 class BarbershopSerializer(serializers.ModelSerializer):
@@ -53,6 +60,7 @@ class BarbershopSerializer(serializers.ModelSerializer):
             "phone_number",
             "phone",  # Frontend uyumluluğu için
             "main_image",
+            "main_image_thumb",
             "images",
             "is_verified",
             "description",
@@ -68,7 +76,7 @@ class BarbershopSerializer(serializers.ModelSerializer):
             "instagram", "facebook", "twitter", "whatsapp",
             "features",
         )
-        read_only_fields = ("rating_avg", "total_reviews", "views_weekly", "favorites_count", "created_at", "updated_at")
+        read_only_fields = ("rating_avg", "total_reviews", "views_weekly", "favorites_count", "created_at", "updated_at", "main_image_thumb")
         extra_kwargs = {
             # Alias kullandığımız için phone_number'ı zorunlu yapma; 'phone' ile beslenecek
             'phone_number': {'required': False, 'allow_blank': True},
@@ -86,11 +94,21 @@ class BarbershopSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError({'phone': 'Bu alan zorunlu.'})
         return attrs
 
+    def validate_main_image(self, value):
+        if value and value.size > 5 * 1024 * 1024:
+            raise serializers.ValidationError("Görsel boyutu 5MB'dan büyük olamaz.")
+        return value
+
 
 class StaffCatalogSerializer(serializers.ModelSerializer):
     class Meta:
         model = StaffCatalogImage
         fields = ("id", "image")
+
+    def validate_image(self, value):
+        if value.size > 5 * 1024 * 1024:
+            raise serializers.ValidationError("Görsel boyutu 5MB'dan büyük olamaz.")
+        return value
 
 
 class StaffServiceCategorySerializer(serializers.ModelSerializer):
@@ -128,16 +146,14 @@ class StaffSerializer(serializers.ModelSerializer):
     class Meta:
         model = Staff
         fields = (
-            "id", "barbershop", "user", "photo", "email", "certificate", "is_admin",
+            "id", "barbershop", "user", "photo", "photo_thumb", "email", "certificate", "is_admin",
             "catalog", "total_reviews", "user_full_name",
-            # Yeni alanlar:
             "bio", "gender_preference", "experience_years", "career_start_year", "tags",
             "rating_avg", "staff_services",
             "auto_approval", "commission_rate", "appointment_interval",
-            # Social
             "instagram", "facebook", "twitter", "whatsapp",
         )
-        read_only_fields = ("total_reviews", "rating_avg", "experience_years")
+        read_only_fields = ("total_reviews", "rating_avg", "experience_years", "photo_thumb")
 
     def get_user_full_name(self, obj):
         u = getattr(obj, "user", None)
@@ -159,8 +175,12 @@ class StaffSerializer(serializers.ModelSerializer):
         return None
     
     def get_staff_services(self, obj):
-        from .models import StaffService
         return StaffServiceSerializer(obj.staff_services.all(), many=True).data
+
+    def validate_photo(self, value):
+        if value and value.size > 5 * 1024 * 1024:
+            raise serializers.ValidationError("Görsel boyutu 5MB'dan büyük olamaz.")
+        return value
 
 
 class WorkScheduleSerializer(serializers.ModelSerializer):
@@ -170,18 +190,20 @@ class WorkScheduleSerializer(serializers.ModelSerializer):
 
 
 class ReviewReplySerializer(serializers.ModelSerializer):
-    user_display_name = serializers.SerializerMethodField()
+    user_full_name = serializers.SerializerMethodField()
     
     class Meta:
         model = ReviewReply
-        fields = ("id", "review", "user", "reply", "created_at", "user_display_name")
-        read_only_fields = ("created_at", "user")
+        fields = ("id", "review", "user", "text", "created_at", "user_full_name")
+        read_only_fields = ("created_at", "user", "user_full_name")
     
-    def get_user_display_name(self, obj):
+    def get_user_full_name(self, obj):
         u = getattr(obj, "user", None)
         if not u:
-            return "****"
-        name = getattr(u, "full_name", None) or getattr(u, "first_name", None) or getattr(u, "email", None) or "Kullanıcı"
+            return "Kullanıcı"
+        name = getattr(u, "full_name", None) or f"{getattr(u, 'first_name', '')} {getattr(u, 'last_name', '')}".strip()
+        if not name:
+            name = getattr(u, "email", None) or "Kullanıcı"
         return name
 
 
@@ -208,7 +230,6 @@ class ReviewSerializer(serializers.ModelSerializer):
         return name
 
     def get_user_full_name(self, obj):
-        # Asla anonimleştirme uygulama; gerçek görünür ad (UI karar verir)
         u = getattr(obj, "user", None)
         if not u:
             return "Kullanıcı"
@@ -237,7 +258,6 @@ class ServiceCategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = ServiceCategory
         fields = ("id", "barbershop", "name", "created_at")
-        # barbershop, perform_create içinde atanıyor → inputta zorunlu olmasın
         read_only_fields = ("barbershop", "created_at")
 
 
@@ -248,7 +268,6 @@ class ServiceSerializer(serializers.ModelSerializer):
     class Meta:
         model = Service
         fields = ("id", "barbershop", "category", "category_name", "name", "price", "duration", "is_active", "created_at", "price_range")
-        # barbershop, perform_create içinde atanıyor → inputta zorunlu olmasın
         read_only_fields = ("barbershop", "created_at", "price_range")
     
     def get_price_range(self, obj):
@@ -257,24 +276,6 @@ class ServiceSerializer(serializers.ModelSerializer):
         if not staff_prices:
             return {'min': float(obj.price), 'max': float(obj.price)}
         return {'min': float(min(staff_prices)), 'max': float(max(staff_prices))}
-
-
-class ReviewReplySerializer(serializers.ModelSerializer):
-    user_full_name = serializers.SerializerMethodField()
-    
-    class Meta:
-        model = ReviewReply
-        fields = ("id", "review", "user", "text", "created_at", "user_full_name")
-        read_only_fields = ("created_at", "user", "user_full_name")
-    
-    def get_user_full_name(self, obj):
-        u = getattr(obj, "user", None)
-        if not u:
-            return "Kullanıcı"
-        name = getattr(u, "full_name", None) or f"{getattr(u, 'first_name', '')} {getattr(u, 'last_name', '')}".strip()
-        if not name:
-            name = getattr(u, "email", None) or "Kullanıcı"
-        return name
 
 
 class LastViewedSerializer(serializers.ModelSerializer):
@@ -296,10 +297,6 @@ class StaffHoursSerializer(serializers.Serializer):
     start_time = serializers.TimeField()
     end_time = serializers.TimeField()
     break_time = serializers.IntegerField(required=False, default=0)
-
-
-
-# Test serializer removed
 
 
 class FavoriteSerializer(serializers.ModelSerializer):
@@ -428,10 +425,6 @@ class BreakWindowSerializer(serializers.ModelSerializer):
         if user and user.is_authenticated:
             attrs["created_by"] = user
         return attrs
-
-
-# --- Holidays & Special Days ---
-from .models import OfficialHoliday, ShopHolidayOverride, DailyOverride
 
 
 class OfficialHolidaySerializer(serializers.ModelSerializer):
@@ -567,7 +560,6 @@ class CalendarAuditLogSerializer(serializers.ModelSerializer):
         read_only_fields = ("timestamp",)
 
 
-# Takvim hesaplama için özel serializer'lar
 class CalendarStatusSerializer(serializers.Serializer):
     """Dükkanın günlük durumunu hesaplayan serializer"""
     date = serializers.DateField()
@@ -601,3 +593,7 @@ class WeeklyCalendarSerializer(serializers.Serializer):
     overrides = OverrideSerializer(many=True, read_only=True)
     messages = SpecialMessageSerializer(many=True, read_only=True)
 
+class ShopCategorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ShopCategory
+        fields = "__all__"

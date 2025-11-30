@@ -60,12 +60,13 @@ class LoginSerializer(serializers.Serializer):
 
 class UserSerializer(serializers.ModelSerializer):
     image = serializers.ImageField(read_only=True)
+    image_thumb = serializers.ImageField(read_only=True)
     ban_status = serializers.SerializerMethodField()
 
     class Meta:
         model = User
-        fields = ("id", "email", "full_name", "phone", "gender", "image", "ban_status")
-        read_only_fields = ("id", "image") 
+        fields = ("id", "email", "full_name", "phone", "gender", "image", "image_thumb", "ban_status")
+        read_only_fields = ("id", "image", "image_thumb") 
 
     def get_ban_status(self, obj):
         from app.appointments.models import CustomerBan
