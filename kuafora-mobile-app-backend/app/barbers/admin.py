@@ -55,5 +55,3 @@ class ServiceAdmin(admin.ModelAdmin):
 
 
 """Favorite admin kaydı kaldırıldı."""
-
-
