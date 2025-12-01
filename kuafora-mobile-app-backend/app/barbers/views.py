@@ -139,6 +139,24 @@ class BarbershopViewSet(viewsets.ReadOnlyModelViewSet):
 
     def get_queryset(self):
         qs = super().get_queryset()
+        
+        # Viewport filtreleme (Harita optimizasyonu)
+        try:
+            min_lat = self.request.query_params.get("min_lat")
+            max_lat = self.request.query_params.get("max_lat")
+            min_lng = self.request.query_params.get("min_lng")
+            max_lng = self.request.query_params.get("max_lng")
+
+            if all([min_lat, max_lat, min_lng, max_lng]):
+                qs = qs.filter(
+                    latitude__gte=float(min_lat),
+                    latitude__lte=float(max_lat),
+                    longitude__gte=float(min_lng),
+                    longitude__lte=float(max_lng)
+                )
+        except (ValueError, TypeError):
+            pass # Geçersiz parametreleri yut, tümünü döndür
+
         user = self.request.user
         if user.is_authenticated:
             if getattr(user, "gender", None) == "male":
