@@ -3,6 +3,24 @@
 from django.db import migrations, models
 
 
+def add_image_thumb_if_not_exists(apps, schema_editor):
+    """Add image_thumb column if it doesn't exist"""
+    from django.db import connection
+    with connection.cursor() as cursor:
+        # Check if column exists
+        cursor.execute("""
+            SELECT column_name 
+            FROM information_schema.columns 
+            WHERE table_name='users_user' AND column_name='image_thumb';
+        """)
+        if not cursor.fetchone():
+            # Column doesn't exist, add it
+            cursor.execute("""
+                ALTER TABLE users_user 
+                ADD COLUMN image_thumb VARCHAR(100);
+            """)
+
+
 class Migration(migrations.Migration):
 
     dependencies = [
@@ -10,9 +28,5 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.AddField(
-            model_name='user',
-            name='image_thumb',
-            field=models.ImageField(blank=True, null=True, upload_to='users/images/thumbs/'),
-        ),
+        migrations.RunPython(add_image_thumb_if_not_exists, migrations.RunPython.noop),
     ]
