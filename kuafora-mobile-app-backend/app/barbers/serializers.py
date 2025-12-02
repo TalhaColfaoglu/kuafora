@@ -356,7 +356,21 @@ class BarbershopWithFavoriteSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = Barbershop
-        fields = ("id", "name", "address", "is_favorited", "favorites_count")
+        fields = (
+            "id", 
+            "name", 
+            "address", 
+            "city",
+            "district",
+            "main_image",
+            "main_image_thumb",
+            "rating_avg",
+            "total_reviews",
+            "is_favorited", 
+            "favorites_count",
+            "description",
+            "phone_number",
+        )
     
     def get_is_favorited(self, obj):
         request = self.context.get("request")
