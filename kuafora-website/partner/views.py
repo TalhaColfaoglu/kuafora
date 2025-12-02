@@ -15,3 +15,7 @@ def partner_faq(request):
 def reviews_dashboard(request):
     """Yorumlar yönetim ekranı - kuaförler için"""
     return render(request, 'partner/reviews_dashboard.html')
+
+def appointments_dashboard(request):
+    """Randevu yönetim ekranı - kuaförler için"""
+    return render(request, 'partner/appointments_dashboard.html')

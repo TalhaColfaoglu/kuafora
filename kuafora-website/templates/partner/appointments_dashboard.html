@@ -1,0 +1,733 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Randevular - Kuafora Partner{% endblock %}
+
+{% block head %}
+<style>
+  :root {
+    --primary: #1A1C1E;
+    --primary-light: #2D3436;
+    --accent: #4F7942;
+    --accent-light: #E8F5E3;
+    --pending: #F59E0B;
+    --pending-light: #FEF3C7;
+    --confirmed: #10B981;
+    --confirmed-light: #D1FAE5;
+    --completed: #6366F1;
+    --completed-light: #E0E7FF;
+    --cancelled: #EF4444;
+    --cancelled-light: #FEE2E2;
+    --rejected: #6B7280;
+    --rejected-light: #F3F4F6;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  .appointment-card {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    border: 1px solid #E5E7EB;
+  }
+  .appointment-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.08);
+    border-color: var(--accent);
+  }
+
+  .status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .status-pending { background: var(--pending-light); color: var(--pending); }
+  .status-confirmed { background: var(--confirmed-light); color: var(--confirmed); }
+  .status-completed { background: var(--completed-light); color: var(--completed); }
+  .status-cancelled { background: var(--cancelled-light); color: var(--cancelled); }
+  .status-rejected { background: var(--rejected-light); color: var(--rejected); }
+
+  .tab-btn {
+    position: relative;
+    padding: 12px 24px;
+    font-weight: 600;
+    color: #6B7280;
+    transition: all 0.2s;
+    border-bottom: 3px solid transparent;
+  }
+  .tab-btn:hover { color: var(--primary); }
+  .tab-btn.active {
+    color: var(--primary);
+    border-bottom-color: var(--accent);
+  }
+  .tab-btn .count-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 20px;
+    height: 20px;
+    padding: 0 6px;
+    margin-left: 8px;
+    background: #E5E7EB;
+    color: #6B7280;
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: 700;
+  }
+  .tab-btn.active .count-badge {
+    background: var(--accent);
+    color: white;
+  }
+
+  .stat-card {
+    background: white;
+    border-radius: 16px;
+    padding: 24px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    border: 1px solid #F3F4F6;
+    transition: all 0.2s;
+  }
+  .stat-card:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  }
+  .stat-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .action-btn {
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 13px;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .action-btn-primary {
+    background: var(--accent);
+    color: white;
+  }
+  .action-btn-primary:hover { background: #3D5C33; }
+  .action-btn-danger {
+    background: var(--cancelled-light);
+    color: var(--cancelled);
+  }
+  .action-btn-danger:hover { background: #FECACA; }
+  .action-btn-secondary {
+    background: #F3F4F6;
+    color: #374151;
+  }
+  .action-btn-secondary:hover { background: #E5E7EB; }
+
+  .date-badge {
+    background: var(--primary);
+    color: white;
+    padding: 12px;
+    border-radius: 12px;
+    text-align: center;
+    min-width: 70px;
+  }
+  .date-badge .day {
+    font-size: 24px;
+    font-weight: 700;
+    line-height: 1;
+  }
+  .date-badge .month {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    opacity: 0.8;
+    margin-top: 4px;
+  }
+
+  .service-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 10px;
+    background: #F3F4F6;
+    border-radius: 6px;
+    font-size: 12px;
+    color: #374151;
+    margin: 2px;
+  }
+
+  .skeleton {
+    background: linear-gradient(90deg, #F3F4F6 25%, #E5E7EB 50%, #F3F4F6 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+    border-radius: 8px;
+  }
+  @keyframes shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 60px 20px;
+  }
+  .empty-state-icon {
+    width: 80px;
+    height: 80px;
+    margin: 0 auto 24px;
+    background: #F3F4F6;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 50;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s;
+  }
+  .modal-overlay.active {
+    opacity: 1;
+    visibility: visible;
+  }
+  .modal-content {
+    background: white;
+    border-radius: 20px;
+    max-width: 500px;
+    width: 90%;
+    max-height: 90vh;
+    overflow-y: auto;
+    transform: scale(0.9) translateY(20px);
+    transition: all 0.3s;
+  }
+  .modal-overlay.active .modal-content {
+    transform: scale(1) translateY(0);
+  }
+
+  @media (max-width: 768px) {
+    .tab-btn {
+      padding: 10px 16px;
+      font-size: 14px;
+    }
+    .appointment-card {
+      padding: 16px !important;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50">
+  <!-- Header -->
+  <div class="bg-white border-b border-gray-200 sticky top-0 z-40">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex items-center justify-between py-4">
+        <div>
+          <h1 class="text-2xl font-bold text-gray-900">Randevu Yönetimi</h1>
+          <p class="text-sm text-gray-500 mt-1">Randevularınızı görüntüleyin ve yönetin</p>
+        </div>
+        <div class="flex items-center gap-3">
+          <select id="barbershopSelect" class="px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm font-medium focus:ring-2 focus:ring-green-500 focus:border-transparent">
+            <option value="">Yükleniyor...</option>
+          </select>
+          <button id="refreshBtn" class="action-btn action-btn-secondary">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+            </svg>
+            Yenile
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+    <!-- Stats Grid -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+      <div class="stat-card">
+        <div class="flex items-center gap-4">
+          <div class="stat-icon" style="background: var(--pending-light);">
+            <svg class="w-6 h-6" style="color: var(--pending);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+          </div>
+          <div>
+            <p class="text-sm text-gray-500">Bekleyen</p>
+            <p id="pendingCount" class="text-2xl font-bold text-gray-900">-</p>
+          </div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="flex items-center gap-4">
+          <div class="stat-icon" style="background: var(--confirmed-light);">
+            <svg class="w-6 h-6" style="color: var(--confirmed);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+          </div>
+          <div>
+            <p class="text-sm text-gray-500">Onaylanan</p>
+            <p id="confirmedCount" class="text-2xl font-bold text-gray-900">-</p>
+          </div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="flex items-center gap-4">
+          <div class="stat-icon" style="background: var(--completed-light);">
+            <svg class="w-6 h-6" style="color: var(--completed);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+            </svg>
+          </div>
+          <div>
+            <p class="text-sm text-gray-500">Tamamlanan</p>
+            <p id="completedCount" class="text-2xl font-bold text-gray-900">-</p>
+          </div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="flex items-center gap-4">
+          <div class="stat-icon" style="background: #FEF3C7;">
+            <svg class="w-6 h-6" style="color: #D97706;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+            </svg>
+          </div>
+          <div>
+            <p class="text-sm text-gray-500">Bugün</p>
+            <p id="todayCount" class="text-2xl font-bold text-gray-900">-</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 mb-6">
+      <div class="flex overflow-x-auto border-b border-gray-100">
+        <button class="tab-btn active" data-status="all">
+          Tümü <span class="count-badge" id="allCount">0</span>
+        </button>
+        <button class="tab-btn" data-status="pending">
+          Bekleyen <span class="count-badge" id="pendingTabCount">0</span>
+        </button>
+        <button class="tab-btn" data-status="confirmed">
+          Onaylanan <span class="count-badge" id="confirmedTabCount">0</span>
+        </button>
+        <button class="tab-btn" data-status="completed">
+          Tamamlanan <span class="count-badge" id="completedTabCount">0</span>
+        </button>
+        <button class="tab-btn" data-status="cancelled">
+          İptal <span class="count-badge" id="cancelledTabCount">0</span>
+        </button>
+      </div>
+
+      <!-- Appointments List -->
+      <div id="appointmentsList" class="p-4 md:p-6">
+        <!-- Loading skeleton -->
+        <div class="space-y-4">
+          <div class="skeleton h-32 rounded-xl"></div>
+          <div class="skeleton h-32 rounded-xl"></div>
+          <div class="skeleton h-32 rounded-xl"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Login Modal -->
+<div id="loginModal" class="modal-overlay">
+  <div class="modal-content p-8">
+    <div class="text-center mb-6">
+      <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+        <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+        </svg>
+      </div>
+      <h2 class="text-2xl font-bold text-gray-900">Giriş Yapın</h2>
+      <p class="text-gray-500 mt-2">Randevuları görüntülemek için giriş yapmalısınız</p>
+    </div>
+    <form id="loginForm" class="space-y-4">
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-2">E-posta</label>
+        <input type="email" id="loginEmail" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent transition" placeholder="ornek@email.com" required>
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-2">Şifre</label>
+        <input type="password" id="loginPassword" class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent transition" placeholder="••••••••" required>
+      </div>
+      <button type="submit" class="w-full py-3 bg-green-600 text-white font-semibold rounded-xl hover:bg-green-700 transition">
+        Giriş Yap
+      </button>
+    </form>
+  </div>
+</div>
+
+<!-- Action Modal -->
+<div id="actionModal" class="modal-overlay">
+  <div class="modal-content">
+    <div class="p-6 border-b border-gray-100">
+      <h3 id="actionModalTitle" class="text-xl font-bold text-gray-900">Randevu İşlemi</h3>
+    </div>
+    <div class="p-6" id="actionModalBody">
+      <!-- Dynamic content -->
+    </div>
+    <div class="p-6 border-t border-gray-100 flex gap-3 justify-end">
+      <button onclick="closeActionModal()" class="action-btn action-btn-secondary">İptal</button>
+      <button id="actionModalConfirm" class="action-btn action-btn-primary">Onayla</button>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+const API_BASE = 'https://api.kuafora.com/api';
+let authToken = localStorage.getItem('kuafora_partner_token') || '';
+let selectedBarbershopId = null;
+let currentStatus = 'all';
+let allAppointments = [];
+
+const MONTHS_TR = ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'];
+const STATUS_LABELS = {
+  pending: 'Bekliyor',
+  confirmed: 'Onaylandı',
+  completed: 'Tamamlandı',
+  cancelled: 'İptal',
+  rejected: 'Reddedildi'
+};
+
+// Initialize
+document.addEventListener('DOMContentLoaded', () => {
+  if (!authToken) {
+    document.getElementById('loginModal').classList.add('active');
+  } else {
+    loadBarbershops();
+  }
+});
+
+// Login
+document.getElementById('loginForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const email = document.getElementById('loginEmail').value;
+  const password = document.getElementById('loginPassword').value;
+  
+  try {
+    const res = await fetch(`${API_BASE}/auth/login/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password })
+    });
+    
+    if (res.ok) {
+      const data = await res.json();
+      authToken = data.access;
+      localStorage.setItem('kuafora_partner_token', authToken);
+      document.getElementById('loginModal').classList.remove('active');
+      loadBarbershops();
+    } else {
+      alert('Giriş başarısız. Bilgilerinizi kontrol edin.');
+    }
+  } catch (err) {
+    console.error(err);
+    alert('Bir hata oluştu.');
+  }
+});
+
+// Load barbershops
+async function loadBarbershops() {
+  try {
+    const res = await fetch(`${API_BASE}/partner/barbershops/`, {
+      headers: { 'Authorization': `Bearer ${authToken}` }
+    });
+    
+    if (!res.ok) {
+      if (res.status === 401) {
+        localStorage.removeItem('kuafora_partner_token');
+        document.getElementById('loginModal').classList.add('active');
+        return;
+      }
+      throw new Error('Failed');
+    }
+    
+    const data = await res.json();
+    const select = document.getElementById('barbershopSelect');
+    select.innerHTML = '';
+    
+    if (data.length === 0) {
+      select.innerHTML = '<option value="">İşletme bulunamadı</option>';
+      return;
+    }
+    
+    data.forEach((shop, i) => {
+      const opt = document.createElement('option');
+      opt.value = shop.id;
+      opt.textContent = shop.name;
+      select.appendChild(opt);
+      if (i === 0) selectedBarbershopId = shop.id;
+    });
+    
+    select.addEventListener('change', (e) => {
+      selectedBarbershopId = e.target.value;
+      loadAppointments();
+    });
+    
+    loadAppointments();
+  } catch (err) {
+    console.error(err);
+  }
+}
+
+// Load appointments
+async function loadAppointments() {
+  if (!selectedBarbershopId) return;
+  
+  const list = document.getElementById('appointmentsList');
+  list.innerHTML = `
+    <div class="space-y-4">
+      <div class="skeleton h-32 rounded-xl"></div>
+      <div class="skeleton h-32 rounded-xl"></div>
+    </div>
+  `;
+  
+  try {
+    const res = await fetch(`${API_BASE}/partner/appointments/?shop_id=${selectedBarbershopId}`, {
+      headers: { 'Authorization': `Bearer ${authToken}` }
+    });
+    
+    if (!res.ok) throw new Error('Failed');
+    
+    const data = await res.json();
+    allAppointments = data.items || data || [];
+    
+    updateStats();
+    renderAppointments();
+  } catch (err) {
+    console.error(err);
+    list.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-state-icon">
+          <svg class="w-10 h-10 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+        </div>
+        <h3 class="text-lg font-semibold text-gray-900">Yüklenirken hata oluştu</h3>
+        <p class="text-gray-500 mt-2">Lütfen tekrar deneyin.</p>
+      </div>
+    `;
+  }
+}
+
+// Update stats
+function updateStats() {
+  const pending = allAppointments.filter(a => a.status === 'pending').length;
+  const confirmed = allAppointments.filter(a => a.status === 'confirmed').length;
+  const completed = allAppointments.filter(a => a.status === 'completed').length;
+  const cancelled = allAppointments.filter(a => a.status === 'cancelled' || a.status === 'rejected').length;
+  
+  const today = new Date().toISOString().split('T')[0];
+  const todayCount = allAppointments.filter(a => a.date === today).length;
+  
+  document.getElementById('pendingCount').textContent = pending;
+  document.getElementById('confirmedCount').textContent = confirmed;
+  document.getElementById('completedCount').textContent = completed;
+  document.getElementById('todayCount').textContent = todayCount;
+  
+  document.getElementById('allCount').textContent = allAppointments.length;
+  document.getElementById('pendingTabCount').textContent = pending;
+  document.getElementById('confirmedTabCount').textContent = confirmed;
+  document.getElementById('completedTabCount').textContent = completed;
+  document.getElementById('cancelledTabCount').textContent = cancelled;
+}
+
+// Render appointments
+function renderAppointments() {
+  let filtered = allAppointments;
+  
+  if (currentStatus !== 'all') {
+    if (currentStatus === 'cancelled') {
+      filtered = filtered.filter(a => a.status === 'cancelled' || a.status === 'rejected');
+    } else {
+      filtered = filtered.filter(a => a.status === currentStatus);
+    }
+  }
+  
+  // Sort by date desc
+  filtered.sort((a, b) => new Date(b.date + 'T' + b.start_time) - new Date(a.date + 'T' + a.start_time));
+  
+  const list = document.getElementById('appointmentsList');
+  
+  if (filtered.length === 0) {
+    list.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-state-icon">
+          <svg class="w-10 h-10 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+          </svg>
+        </div>
+        <h3 class="text-lg font-semibold text-gray-900">Randevu bulunamadı</h3>
+        <p class="text-gray-500 mt-2">Bu kategoride henüz randevu yok.</p>
+      </div>
+    `;
+    return;
+  }
+  
+  list.innerHTML = `<div class="space-y-4">${filtered.map(renderAppointmentCard).join('')}</div>`;
+}
+
+// Render single appointment card
+function renderAppointmentCard(apt) {
+  const date = new Date(apt.date);
+  const day = date.getDate();
+  const month = MONTHS_TR[date.getMonth()];
+  const statusClass = `status-${apt.status}`;
+  const statusLabel = STATUS_LABELS[apt.status] || apt.status;
+  
+  const services = (apt.services || apt.service_items || [])
+    .map(s => `<span class="service-chip">${s.name || s.service_name}</span>`)
+    .join('');
+  
+  const customerName = apt.customer_name || apt.user_name || 'Müşteri';
+  const staffName = apt.staff_name || 'Personel';
+  const time = apt.start_time?.slice(0, 5) || '--:--';
+  const endTime = apt.end_time?.slice(0, 5) || '';
+  
+  let actions = '';
+  if (apt.status === 'pending') {
+    actions = `
+      <button onclick="confirmAppointment(${apt.id})" class="action-btn action-btn-primary">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+        </svg>
+        Onayla
+      </button>
+      <button onclick="rejectAppointment(${apt.id})" class="action-btn action-btn-danger">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+        </svg>
+        Reddet
+      </button>
+    `;
+  } else if (apt.status === 'confirmed') {
+    actions = `
+      <button onclick="completeAppointment(${apt.id})" class="action-btn action-btn-primary">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+        </svg>
+        Tamamla
+      </button>
+      <button onclick="cancelAppointment(${apt.id})" class="action-btn action-btn-danger">
+        İptal Et
+      </button>
+    `;
+  }
+  
+  return `
+    <div class="appointment-card bg-white rounded-2xl p-5 md:p-6">
+      <div class="flex gap-4">
+        <!-- Date Badge -->
+        <div class="date-badge flex-shrink-0">
+          <div class="day">${day}</div>
+          <div class="month">${month}</div>
+        </div>
+        
+        <!-- Content -->
+        <div class="flex-1 min-w-0">
+          <div class="flex flex-wrap items-start justify-between gap-2 mb-3">
+            <div>
+              <h3 class="font-semibold text-gray-900 text-lg">${customerName}</h3>
+              <p class="text-sm text-gray-500 flex items-center gap-2 mt-1">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+                ${time}${endTime ? ' - ' + endTime : ''}
+                <span class="text-gray-300">•</span>
+                ${staffName}
+              </p>
+            </div>
+            <span class="status-badge ${statusClass}">
+              ${statusLabel}
+            </span>
+          </div>
+          
+          ${services ? `<div class="flex flex-wrap gap-1 mb-4">${services}</div>` : ''}
+          
+          ${apt.note ? `
+            <div class="bg-gray-50 rounded-lg p-3 mb-4">
+              <p class="text-sm text-gray-600">"${apt.note}"</p>
+            </div>
+          ` : ''}
+          
+          ${actions ? `<div class="flex flex-wrap gap-2">${actions}</div>` : ''}
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+// Actions
+async function confirmAppointment(id) {
+  await updateAppointmentStatus(id, 'confirm');
+}
+
+async function rejectAppointment(id) {
+  if (!confirm('Bu randevuyu reddetmek istediğinizden emin misiniz?')) return;
+  await updateAppointmentStatus(id, 'reject');
+}
+
+async function completeAppointment(id) {
+  await updateAppointmentStatus(id, 'complete');
+}
+
+async function cancelAppointment(id) {
+  if (!confirm('Bu randevuyu iptal etmek istediğinizden emin misiniz?')) return;
+  await updateAppointmentStatus(id, 'cancel');
+}
+
+async function updateAppointmentStatus(id, action) {
+  try {
+    const res = await fetch(`${API_BASE}/partner/appointments/${id}/${action}/`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${authToken}` }
+    });
+    
+    if (!res.ok) throw new Error('Failed');
+    
+    loadAppointments();
+  } catch (err) {
+    console.error(err);
+    alert('İşlem sırasında bir hata oluştu.');
+  }
+}
+
+// Tab switching
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', (e) => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    e.currentTarget.classList.add('active');
+    currentStatus = e.currentTarget.dataset.status;
+    renderAppointments();
+  });
+});
+
+// Refresh
+document.getElementById('refreshBtn').addEventListener('click', loadAppointments);
+
+// Modal helpers
+function closeActionModal() {
+  document.getElementById('actionModal').classList.remove('active');
+}
+</script>
+{% endblock %}
