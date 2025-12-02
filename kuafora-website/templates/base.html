@@ -52,12 +52,13 @@
           
           <!-- Navigation - Dynamic based on current path -->
           <nav class="hidden sm:flex items-center gap-6 text-sm">
-            {% if request.resolver_match.url_name|slice:":7" == "partner" %}
+            {% if request.resolver_match.url_name|slice:":7" == "partner" or request.resolver_match.url_name == 'reviews_dashboard' %}
               <!-- Partner Navigation -->
               <a href="/partner/kuafora-partner/" class="nav-link {% if request.resolver_match.url_name == 'partner_landing' %}active{% endif %}">Ana Sayfa</a>
               <a href="/partner/kuafora-partner/ozellikler/" class="nav-link {% if request.resolver_match.url_name == 'partner_features' %}active{% endif %}">Özellikler</a>
               <a href="/partner/kuafora-partner/ekranlar/" class="nav-link {% if request.resolver_match.url_name == 'partner_screens' %}active{% endif %}">Ekranlar</a>
               <a href="/partner/kuafora-partner/sss/" class="nav-link {% if request.resolver_match.url_name == 'partner_faq' %}active{% endif %}">SSS</a>
+              <a href="/partner/kuafora-partner/yorumlar/" class="nav-link {% if request.resolver_match.url_name == 'reviews_dashboard' %}active{% endif %}">Yorumlar</a>
             {% else %}
               <!-- Main Site Navigation -->
               <a href="/" class="nav-link">Ana Sayfa</a>

@@ -45,6 +45,7 @@ class BarbershopSerializer(serializers.ModelSerializer):
     images = BarbershopImageSerializer(many=True, read_only=True)
     phone = serializers.CharField(source='phone_number', required=False)  # Frontend'den gelen 'phone' field'ını 'phone_number' olarak map et
     categories = serializers.PrimaryKeyRelatedField(many=True, queryset=ShopCategory.objects.all(), required=False)
+    weekly_schedule = serializers.SerializerMethodField()
 
     class Meta:
         model = Barbershop
@@ -65,6 +66,7 @@ class BarbershopSerializer(serializers.ModelSerializer):
             "is_verified",
             "description",
             "categories",
+            "weekly_schedule",
             "created_at",
             "updated_at",
             "rating_avg",
@@ -81,6 +83,22 @@ class BarbershopSerializer(serializers.ModelSerializer):
             # Alias kullandığımız için phone_number'ı zorunlu yapma; 'phone' ile beslenecek
             'phone_number': {'required': False, 'allow_blank': True},
         }
+
+    def get_weekly_schedule(self, obj):
+        schedule = {}
+        hours = obj.shop_working_hours.all()
+        for h in hours:
+            # MON -> mon
+            day_code = h.day_of_week.lower()
+            if h.is_closed:
+                # Frontend treats invalid times as not working
+                schedule[day_code] = {"start": -1, "end": -1}
+            else:
+                schedule[day_code] = {
+                    "start": h.start_time.strftime("%H:%M") if h.start_time else "09:00",
+                    "end": h.end_time.strftime("%H:%M") if h.end_time else "18:00"
+                }
+        return schedule
 
     def validate(self, attrs):
         # phone aliası ile gelen değeri yakala; en az birinin dolu olması zorunlu
@@ -142,6 +160,7 @@ class StaffSerializer(serializers.ModelSerializer):
     staff_services = serializers.SerializerMethodField()
     rating_avg = serializers.FloatField(read_only=True)
     experience_years = serializers.SerializerMethodField()
+    weekly_schedule = serializers.SerializerMethodField()
 
     class Meta:
         model = Staff
@@ -149,11 +168,38 @@ class StaffSerializer(serializers.ModelSerializer):
             "id", "barbershop", "user", "photo", "photo_thumb", "email", "certificate", "is_admin",
             "catalog", "total_reviews", "user_full_name",
             "bio", "gender_preference", "experience_years", "career_start_year", "tags",
-            "rating_avg", "staff_services",
+            "rating_avg", "staff_services", "weekly_schedule",
             "auto_approval", "commission_rate", "appointment_interval",
             "instagram", "facebook", "twitter", "whatsapp",
         )
         read_only_fields = ("total_reviews", "rating_avg", "experience_years", "photo_thumb")
+
+    def get_weekly_schedule(self, obj):
+        schedule = {}
+        # 1. Try StaffWorkingHours (new model)
+        new_hours = obj.staff_working_hours.all()
+        if new_hours.exists():
+            for h in new_hours:
+                day_code = h.day_of_week.lower()
+                if h.is_closed:
+                    schedule[day_code] = {"start": -1, "end": -1}
+                elif h.start_time:
+                    schedule[day_code] = {
+                        "start": h.start_time.strftime("%H:%M"),
+                        "end": h.end_time.strftime("%H:%M") if h.end_time else "18:00"
+                    }
+                # If start_time is None, we rely on inheritance, so omit key
+            return schedule
+        
+        # 2. Fallback to WorkSchedule (old model)
+        old_hours = obj.work_schedules.all()
+        for h in old_hours:
+            day_code = h.day_of_week.lower()
+            schedule[day_code] = {
+                "start": h.start_time.strftime("%H:%M"),
+                "end": h.end_time.strftime("%H:%M")
+            }
+        return schedule
 
     def get_user_full_name(self, obj):
         u = getattr(obj, "user", None)

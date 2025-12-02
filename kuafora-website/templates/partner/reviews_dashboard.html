@@ -1,0 +1,431 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Yorumlar - Kuafora Partner{% endblock %}
+
+{% block head %}
+<style>
+  .review-card {
+    transition: all 0.2s ease;
+  }
+  .review-card:hover {
+    box-shadow: 0 4px 12px rgba(79, 121, 66, 0.1);
+    border-color: #4F7942;
+  }
+  .star-filled {
+    color: #FFC107;
+  }
+  .star-empty {
+    color: #E0E0E0;
+  }
+  .reply-form {
+    display: none;
+    animation: slideDown 0.3s ease;
+  }
+  .reply-form.active {
+    display: block;
+  }
+  @keyframes slideDown {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .filter-btn {
+    transition: all 0.2s;
+  }
+  .filter-btn.active {
+    background-color: #4F7942;
+    color: white;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50 py-8">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    
+    <!-- Header -->
+    <div class="mb-8">
+      <h1 class="text-3xl font-bold text-gray-900">Yorumlar Yönetimi</h1>
+      <p class="mt-2 text-gray-600">Müşterilerinizin yorumlarını görüntüleyin ve yanıt verin</p>
+    </div>
+
+    <!-- Stats -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+      <div class="bg-white rounded-lg shadow p-6">
+        <div class="text-sm text-gray-600">Toplam Yorum</div>
+        <div id="totalReviews" class="text-3xl font-bold text-gray-900 mt-1">-</div>
+      </div>
+      <div class="bg-white rounded-lg shadow p-6">
+        <div class="text-sm text-gray-600">Ortalama Puan</div>
+        <div id="avgRating" class="text-3xl font-bold text-ayder mt-1">-</div>
+      </div>
+      <div class="bg-white rounded-lg shadow p-6">
+        <div class="text-sm text-gray-600">Yanıtlanmamış</div>
+        <div id="unansweredCount" class="text-3xl font-bold text-orange-600 mt-1">-</div>
+      </div>
+      <div class="bg-white rounded-lg shadow p-6">
+        <div class="text-sm text-gray-600">Bu Ay</div>
+        <div id="monthlyCount" class="text-3xl font-bold text-blue-600 mt-1">-</div>
+      </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="bg-white rounded-lg shadow p-4 mb-6">
+      <div class="flex flex-wrap gap-4 items-center">
+        <div>
+          <label class="text-sm font-medium text-gray-700 mr-2">İşletme Seç:</label>
+          <select id="barbershopSelect" class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ayder focus:border-transparent">
+            <option value="">Yükleniyor...</option>
+          </select>
+        </div>
+        
+        <div>
+          <label class="text-sm font-medium text-gray-700 mr-2">Yıldız:</label>
+          <div class="inline-flex rounded-lg border border-gray-300">
+            <button class="filter-btn active px-4 py-2 text-sm font-medium rounded-l-lg" data-filter="all">Tümü</button>
+            <button class="filter-btn px-4 py-2 text-sm font-medium border-l" data-filter="5">5★</button>
+            <button class="filter-btn px-4 py-2 text-sm font-medium border-l" data-filter="4">4★</button>
+            <button class="filter-btn px-4 py-2 text-sm font-medium border-l" data-filter="3">3★</button>
+            <button class="filter-btn px-4 py-2 text-sm font-medium border-l" data-filter="2">2★</button>
+            <button class="filter-btn px-4 py-2 text-sm font-medium border-l rounded-r-lg" data-filter="1">1★</button>
+          </div>
+        </div>
+
+        <div>
+          <label class="text-sm font-medium text-gray-700 mr-2">Sıralama:</label>
+          <select id="sortSelect" class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ayder focus:border-transparent">
+            <option value="recent">En Yeni</option>
+            <option value="oldest">En Eski</option>
+            <option value="highest">En Yüksek Puan</option>
+            <option value="lowest">En Düşük Puan</option>
+          </select>
+        </div>
+
+        <button id="refreshBtn" class="ml-auto px-4 py-2 bg-ayder text-white rounded-lg hover:bg-opacity-90 transition">
+          Yenile
+        </button>
+      </div>
+    </div>
+
+    <!-- Reviews List -->
+    <div id="reviewsList" class="space-y-4">
+      <div class="text-center py-12">
+        <div class="inline-block animate-spin rounded-full h-12 w-12 border-4 border-ayder border-t-transparent"></div>
+        <p class="mt-4 text-gray-600">Yorumlar yükleniyor...</p>
+      </div>
+    </div>
+
+    <!-- Pagination -->
+    <div id="pagination" class="mt-8 flex justify-center gap-2" style="display: none;">
+      <!-- Pagination buttons will be added here -->
+    </div>
+
+  </div>
+</div>
+
+<!-- Login Modal -->
+<div id="loginModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" style="display: none;">
+  <div class="bg-white rounded-lg p-8 max-w-md w-full mx-4">
+    <h2 class="text-2xl font-bold mb-4">Giriş Yapın</h2>
+    <p class="text-gray-600 mb-6">Yorumları görüntülemek için işletme yöneticisi olarak giriş yapmalısınız.</p>
+    <form id="loginForm" class="space-y-4">
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-2">E-posta</label>
+        <input type="email" id="loginEmail" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ayder focus:border-transparent" required>
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-2">Şifre</label>
+        <input type="password" id="loginPassword" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ayder focus:border-transparent" required>
+      </div>
+      <button type="submit" class="w-full px-4 py-2 bg-ayder text-white rounded-lg hover:bg-opacity-90 transition">
+        Giriş Yap
+      </button>
+    </form>
+    <p class="mt-4 text-sm text-gray-600 text-center">
+      Hesabınız yok mu? <a href="/partner/kuafora-partner/#join" class="text-ayder font-medium hover:underline">Partner Olun</a>
+    </p>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+const API_BASE = 'https://api.kuafora.com/api';
+let authToken = localStorage.getItem('kuafora_partner_token') || '';
+let selectedBarbershopId = null;
+let currentFilter = 'all';
+let currentSort = 'recent';
+let currentPage = 1;
+const itemsPerPage = 10;
+
+// Show login modal if no token
+if (!authToken) {
+  document.getElementById('loginModal').style.display = 'flex';
+}
+
+// Login form
+document.getElementById('loginForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const email = document.getElementById('loginEmail').value;
+  const password = document.getElementById('loginPassword').value;
+  
+  try {
+    const response = await fetch(`${API_BASE}/auth/login/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password })
+    });
+    
+    if (response.ok) {
+      const data = await response.json();
+      authToken = data.access;
+      localStorage.setItem('kuafora_partner_token', authToken);
+      document.getElementById('loginModal').style.display = 'none';
+      loadBarbershops();
+    } else {
+      alert('Giriş başarısız. E-posta ve şifrenizi kontrol edin.');
+    }
+  } catch (error) {
+    console.error('Login error:', error);
+    alert('Giriş sırasında bir hata oluştu.');
+  }
+});
+
+// Load user's barbershops
+async function loadBarbershops() {
+  try {
+    const response = await fetch(`${API_BASE}/partner/barbershops/`, {
+      headers: { 'Authorization': `Bearer ${authToken}` }
+    });
+    
+    if (!response.ok) {
+      if (response.status === 401) {
+        localStorage.removeItem('kuafora_partner_token');
+        document.getElementById('loginModal').style.display = 'flex';
+        return;
+      }
+      throw new Error('Failed to load barbershops');
+    }
+    
+    const data = await response.json();
+    const select = document.getElementById('barbershopSelect');
+    select.innerHTML = '';
+    
+    if (data.length === 0) {
+      select.innerHTML = '<option value="">İşletme bulunamadı</option>';
+      return;
+    }
+    
+    data.forEach((shop, index) => {
+      const option = document.createElement('option');
+      option.value = shop.id;
+      option.textContent = shop.name;
+      select.appendChild(option);
+      
+      if (index === 0) {
+        selectedBarbershopId = shop.id;
+      }
+    });
+    
+    select.addEventListener('change', (e) => {
+      selectedBarbershopId = e.target.value;
+      currentPage = 1;
+      loadReviews();
+    });
+    
+    loadReviews();
+  } catch (error) {
+    console.error('Error loading barbershops:', error);
+  }
+}
+
+// Load reviews
+async function loadReviews() {
+  if (!selectedBarbershopId) return;
+  
+  const reviewsList = document.getElementById('reviewsList');
+  reviewsList.innerHTML = '<div class="text-center py-12"><div class="inline-block animate-spin rounded-full h-12 w-12 border-4 border-ayder border-t-transparent"></div></div>';
+  
+  try {
+    let url = `${API_BASE}/barbershops/${selectedBarbershopId}/reviews/?order=${currentSort}`;
+    if (currentFilter !== 'all') {
+      url += `&stars=${currentFilter}`;
+    }
+    
+    const response = await fetch(url);
+    
+    if (!response.ok) throw new Error('Failed to load reviews');
+    
+    const data = await response.json();
+    const reviews = data.items || [];
+    const meta = data.meta || {};
+    
+    // Update stats
+    document.getElementById('totalReviews').textContent = meta.total_reviews || 0;
+    document.getElementById('avgRating').textContent = (meta.rating_avg || 0).toFixed(1);
+    
+    // Calculate unanswered (mock - need backend support)
+    const unanswered = reviews.filter(r => !r.reply).length;
+    document.getElementById('unansweredCount').textContent = unanswered;
+    
+    // Calculate monthly (mock)
+    const thisMonth = reviews.filter(r => {
+      const date = new Date(r.created_at);
+      const now = new Date();
+      return date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear();
+    }).length;
+    document.getElementById('monthlyCount').textContent = thisMonth;
+    
+    // Render reviews
+    if (reviews.length === 0) {
+      reviewsList.innerHTML = '<div class="text-center py-12 text-gray-500">Henüz yorum bulunmuyor.</div>';
+      return;
+    }
+    
+    reviewsList.innerHTML = reviews.map(review => renderReview(review)).join('');
+    
+    // Attach event listeners
+    attachReviewEventListeners();
+    
+  } catch (error) {
+    console.error('Error loading reviews:', error);
+    reviewsList.innerHTML = '<div class="text-center py-12 text-red-600">Yorumlar yüklenirken bir hata oluştu.</div>';
+  }
+}
+
+// Render a single review
+function renderReview(review) {
+  const stars = '★'.repeat(review.rating) + '☆'.repeat(5 - review.rating);
+  const date = new Date(review.created_at).toLocaleDateString('tr-TR');
+  const userName = review.is_anonymous ? 'Anonim Kullanıcı' : (review.user_name || 'Kullanıcı');
+  const likesCount = review.likes_count || 0;
+  const dislikesCount = review.dislikes_count || 0;
+  const hasReply = review.reply && review.reply.text;
+  
+  return `
+    <div class="review-card bg-white rounded-lg shadow p-6 border border-gray-200">
+      <div class="flex justify-between items-start mb-4">
+        <div class="flex-1">
+          <div class="flex items-center gap-3 mb-2">
+            <span class="text-2xl star-filled">${stars}</span>
+            <span class="text-sm text-gray-500">${date}</span>
+          </div>
+          <h3 class="font-semibold text-gray-900">${userName}</h3>
+        </div>
+        <div class="flex gap-2">
+          <span class="text-sm text-gray-600">
+            👍 ${likesCount} &nbsp; 👎 ${dislikesCount}
+          </span>
+        </div>
+      </div>
+      
+      ${review.comment ? `
+        <p class="text-gray-700 mb-4">${review.comment}</p>
+      ` : ''}
+      
+      ${hasReply ? `
+        <div class="bg-ayderLight border-l-4 border-ayder p-4 rounded mt-4">
+          <div class="flex items-center gap-2 mb-2">
+            <svg class="w-5 h-5 text-ayder" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M18 10c0 3.866-3.582 7-8 7a8.841 8.841 0 01-4.083-.98L2 17l1.338-3.123C2.493 12.767 2 11.434 2 10c0-3.866 3.582-7 8-7s8 3.134 8 7zM7 9H5v2h2V9zm8 0h-2v2h2V9zM9 9h2v2H9V9z" clip-rule="evenodd"/>
+            </svg>
+            <span class="font-medium text-ayder">İşletme Yanıtı</span>
+          </div>
+          <p class="text-gray-700">${review.reply.text}</p>
+          <p class="text-xs text-gray-500 mt-2">${new Date(review.reply.created_at).toLocaleDateString('tr-TR')}</p>
+        </div>
+      ` : `
+        <div class="mt-4 flex gap-2">
+          <button onclick="toggleReplyForm(${review.id})" class="px-4 py-2 bg-ayder text-white rounded-lg hover:bg-opacity-90 transition text-sm">
+            Yanıtla
+          </button>
+        </div>
+        <div id="reply-form-${review.id}" class="reply-form mt-4">
+          <textarea id="reply-text-${review.id}" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-ayder focus:border-transparent" rows="3" placeholder="Yanıtınızı yazın..."></textarea>
+          <div class="mt-2 flex gap-2">
+            <button onclick="submitReply(${review.id})" class="px-4 py-2 bg-ayder text-white rounded-lg hover:bg-opacity-90 transition text-sm">
+              Gönder
+            </button>
+            <button onclick="toggleReplyForm(${review.id})" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition text-sm">
+              İptal
+            </button>
+          </div>
+        </div>
+      `}
+    </div>
+  `;
+}
+
+// Toggle reply form
+function toggleReplyForm(reviewId) {
+  const form = document.getElementById(`reply-form-${reviewId}`);
+  form.classList.toggle('active');
+}
+
+// Submit reply
+async function submitReply(reviewId) {
+  const text = document.getElementById(`reply-text-${reviewId}`).value.trim();
+  
+  if (!text) {
+    alert('Lütfen bir yanıt yazın.');
+    return;
+  }
+  
+  try {
+    const response = await fetch(`${API_BASE}/partner/review-replies/reply-to-review/`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${authToken}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ review_id: reviewId, text })
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.detail || 'Yanıt gönderilemedi');
+    }
+    
+    alert('Yanıt başarıyla gönderildi!');
+    loadReviews();
+  } catch (error) {
+    console.error('Error submitting reply:', error);
+    alert(`Hata: ${error.message}`);
+  }
+}
+
+// Attach event listeners
+function attachReviewEventListeners() {
+  // Already handled via onclick in HTML
+}
+
+// Filter buttons
+document.querySelectorAll('.filter-btn').forEach(btn => {
+  btn.addEventListener('click', (e) => {
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    e.target.classList.add('active');
+    currentFilter = e.target.dataset.filter;
+    currentPage = 1;
+    loadReviews();
+  });
+});
+
+// Sort select
+document.getElementById('sortSelect').addEventListener('change', (e) => {
+  currentSort = e.target.value;
+  currentPage = 1;
+  loadReviews();
+});
+
+// Refresh button
+document.getElementById('refreshBtn').addEventListener('click', () => {
+  loadReviews();
+});
+
+// Initialize
+if (authToken) {
+  loadBarbershops();
+}
+</script>
+{% endblock %}

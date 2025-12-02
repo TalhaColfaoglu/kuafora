@@ -11,3 +11,7 @@ def partner_screens(request):
 
 def partner_faq(request):
     return render(request, 'partner/partner_faq.html')
+
+def reviews_dashboard(request):
+    """Yorumlar yönetim ekranı - kuaförler için"""
+    return render(request, 'partner/reviews_dashboard.html')
