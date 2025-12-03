@@ -50,7 +50,7 @@ INSTALLED_APPS = [
     "unfold",
     "unfold.contrib.filters",
     "unfold.contrib.forms",
-    "unfold.contrib.inlines",
+    # "unfold.contrib.inlines",
     "unfold.contrib.import_export",
     "unfold.contrib.guardians",
     "unfold.contrib.simple_history",
