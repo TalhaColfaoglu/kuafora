@@ -48,10 +48,17 @@ class Migration(migrations.Migration):
             name='image_thumb',
             field=models.ImageField(blank=True, null=True, upload_to='users/images/thumbs/'),
         ),
-        # LastViewed ve Favorite modellerini state'den kaldırıyoruz
-        # Veritabanı işlemini RunSQL ile yapıyoruz ama hata verirse yoksayıyoruz
+        # Kritik Düzeltme: Önce state'de unique_together'ı kaldırıyoruz
         migrations.SeparateDatabaseAndState(
             state_operations=[
+                migrations.AlterUniqueTogether(
+                    name='lastviewed',
+                    unique_together=set(),
+                ),
+                migrations.AlterUniqueTogether(
+                    name='favorite',
+                    unique_together=set(),
+                ),
                 migrations.DeleteModel(
                     name='LastViewed',
                 ),
