@@ -3,9 +3,8 @@ from django.db import migrations, models
 
 def drop_old_tables_if_exist(apps, schema_editor):
     """Eğer users_lastviewed ve users_favorite tabloları varsa sil"""
-    db_alias = schema_editor.connection.alias
     with schema_editor.connection.cursor() as cursor:
-        # PostgreSQL için tablo kontrolü
+        # Tabloların varlığını kontrol et
         cursor.execute("""
             SELECT tablename FROM pg_tables 
             WHERE schemaname = 'public' 
@@ -13,12 +12,12 @@ def drop_old_tables_if_exist(apps, schema_editor):
         """)
         tables = [row[0] for row in cursor.fetchall()]
         
+        # Varsa sil
         for table in tables:
             cursor.execute(f"DROP TABLE IF EXISTS {table} CASCADE;")
 
 
 def reverse_drop_tables(apps, schema_editor):
-    """Reverse migration için - tabloları geri oluşturma gerekmez"""
     pass
 
 
@@ -73,7 +72,7 @@ class Migration(migrations.Migration):
             drop_old_tables_if_exist,
             reverse_drop_tables,
         ),
-        # State'den modelleri kaldır (migration state'i için)
+        # State'den modelleri kaldır
         migrations.SeparateDatabaseAndState(
             state_operations=[
                 migrations.DeleteModel(
