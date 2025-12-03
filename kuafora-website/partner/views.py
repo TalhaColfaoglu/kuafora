@@ -19,3 +19,7 @@ def reviews_dashboard(request):
 def appointments_dashboard(request):
     """Randevu yönetim ekranı - kuaförler için"""
     return render(request, 'partner/appointments_dashboard.html')
+
+def staff_dashboard(request):
+    """Personel yönetim ekranı - kuaförler için"""
+    return render(request, 'partner/staff_dashboard.html')

@@ -8,4 +8,5 @@ urlpatterns = [
     path('kuafora-partner/sss/', views.partner_faq, name='partner_faq'),
     path('kuafora-partner/yorumlar/', views.reviews_dashboard, name='reviews_dashboard'),
     path('kuafora-partner/randevular/', views.appointments_dashboard, name='appointments_dashboard'),
+    path('kuafora-partner/personel/', views.staff_dashboard, name='staff_dashboard'),
 ]

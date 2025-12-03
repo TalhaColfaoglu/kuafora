@@ -61,9 +61,21 @@ class BarbershopAdvancedStatsView(generics.GenericAPIView):
         curr_views = ViewEvent.objects.filter(barbershop=shop, viewed_at__range=(range_start, range_end)).count()
         prev_views = ViewEvent.objects.filter(barbershop=shop, viewed_at__range=(prev_start, prev_end)).count()
         
-        # 2. Unique Visitors
-        curr_unique = ViewEvent.objects.filter(barbershop=shop, viewed_at__range=(range_start, range_end)).values('user').distinct().count()
-        prev_unique = ViewEvent.objects.filter(barbershop=shop, viewed_at__range=(prev_start, prev_end)).values('user').distinct().count()
+        # 2. Unique Visitors (user_id veya device_id'ye göre tekil sayım)
+        # Giriş yapmış kullanıcılar için user_id, misafirler için device_id kullanılır
+        curr_qs = ViewEvent.objects.filter(barbershop=shop, viewed_at__range=(range_start, range_end))
+        prev_qs = ViewEvent.objects.filter(barbershop=shop, viewed_at__range=(prev_start, prev_end))
+        
+        # Giriş yapmış kullanıcılar (user not null)
+        curr_unique_users = curr_qs.filter(user__isnull=False).values('user').distinct().count()
+        prev_unique_users = prev_qs.filter(user__isnull=False).values('user').distinct().count()
+        
+        # Misafir kullanıcılar (user null, device_id not null)
+        curr_unique_devices = curr_qs.filter(user__isnull=True, device_id__isnull=False).values('device_id').distinct().count()
+        prev_unique_devices = prev_qs.filter(user__isnull=True, device_id__isnull=False).values('device_id').distinct().count()
+        
+        curr_unique = curr_unique_users + curr_unique_devices
+        prev_unique = prev_unique_users + prev_unique_devices
 
         # 3. Favorites Gained
         curr_favs = Favorite.objects.filter(barbershop=shop, created_at__range=(range_start, range_end)).count()

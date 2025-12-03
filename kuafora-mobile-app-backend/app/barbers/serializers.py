@@ -55,6 +55,7 @@ class BarbershopSerializer(serializers.ModelSerializer):
             "gender",
             "address",
             "system_type",
+            "external_booking",
             "latitude","longitude",
             "city",
             "district",
@@ -110,6 +111,24 @@ class BarbershopSerializer(serializers.ModelSerializer):
             phone_val = raw.get('phone') or raw.get('phone_number')
         if (not phone_val or str(phone_val).strip() == ''):
             raise serializers.ValidationError({'phone': 'Bu alan zorunlu.'})
+        
+        # External booking validation
+        system_type = attrs.get('system_type')
+        external_booking = attrs.get('external_booking', {})
+        
+        if system_type == 'external':
+            # En az bir harici yontem secilmeli
+            has_enabled_method = False
+            for method in ['whatsapp', 'website', 'instagram', 'other_app', 'custom']:
+                method_data = external_booking.get(method, {})
+                if isinstance(method_data, dict) and method_data.get('enabled'):
+                    has_enabled_method = True
+                    break
+            if not has_enabled_method:
+                raise serializers.ValidationError({
+                    'external_booking': 'En az bir harici randevu yontemi secmelisiniz.'
+                })
+        
         return attrs
 
     def validate_main_image(self, value):

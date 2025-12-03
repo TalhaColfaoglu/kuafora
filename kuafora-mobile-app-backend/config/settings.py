@@ -70,6 +70,7 @@ INSTALLED_APPS = [
     "app.campaigns",
     "app.chat",
     "app.notifications",
+    "app.subscriptions",
 ]
 
 MIDDLEWARE = [

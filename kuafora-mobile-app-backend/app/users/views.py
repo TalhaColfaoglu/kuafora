@@ -416,10 +416,16 @@ class BarbershopStatsView(generics.GenericAPIView):
             Barbershop.objects.filter(id=barbershop_id).values_list('favorites_count', flat=True).first()
             or 0
         )
-        # Toplam görüntülenme: ViewEvent sayısı, Unique: farklı kullanıcı sayısı
+        # Toplam görüntülenme: ViewEvent sayısı
         views_qs = ViewEvent.objects.filter(barbershop_id=barbershop_id)
         views_count = views_qs.count()
-        unique_views_count = views_qs.values('user').distinct().count()
+        
+        # Unique: user_id veya device_id'ye göre tekil sayım
+        # Giriş yapmış kullanıcılar
+        unique_users = views_qs.filter(user__isnull=False).values('user').distinct().count()
+        # Misafir kullanıcılar (user null, device_id not null)
+        unique_devices = views_qs.filter(user__isnull=True, device_id__isnull=False).values('device_id').distinct().count()
+        unique_views_count = unique_users + unique_devices
         
         return Response({'favorites_count': favorites_count, 'views_count': views_count, 'unique_views_count': unique_views_count})
 

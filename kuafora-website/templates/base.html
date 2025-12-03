@@ -52,22 +52,23 @@
           
           <!-- Navigation - Dynamic based on current path -->
           <nav class="hidden sm:flex items-center gap-6 text-sm">
-            {% if request.resolver_match.url_name|slice:":7" == "partner" or request.resolver_match.url_name == 'reviews_dashboard' or request.resolver_match.url_name == 'appointments_dashboard' %}
+            {% if request.resolver_match.url_name|slice:":7" == "partner" or request.resolver_match.url_name == 'reviews_dashboard' or request.resolver_match.url_name == 'appointments_dashboard' or request.resolver_match.url_name == 'staff_dashboard' %}
               <!-- Partner Navigation -->
               <a href="/partner/kuafora-partner/" class="nav-link {% if request.resolver_match.url_name == 'partner_landing' %}active{% endif %}">Ana Sayfa</a>
               <a href="/partner/kuafora-partner/ozellikler/" class="nav-link {% if request.resolver_match.url_name == 'partner_features' %}active{% endif %}">Özellikler</a>
               <a href="/partner/kuafora-partner/ekranlar/" class="nav-link {% if request.resolver_match.url_name == 'partner_screens' %}active{% endif %}">Ekranlar</a>
               <a href="/partner/kuafora-partner/sss/" class="nav-link {% if request.resolver_match.url_name == 'partner_faq' %}active{% endif %}">SSS</a>
               <a href="/partner/kuafora-partner/randevular/" class="nav-link {% if request.resolver_match.url_name == 'appointments_dashboard' %}active{% endif %}">Randevular</a>
+              <a href="/partner/kuafora-partner/personel/" class="nav-link {% if request.resolver_match.url_name == 'staff_dashboard' %}active{% endif %}">Personel</a>
               <a href="/partner/kuafora-partner/yorumlar/" class="nav-link {% if request.resolver_match.url_name == 'reviews_dashboard' %}active{% endif %}">Yorumlar</a>
             {% else %}
               <!-- Main Site Navigation -->
               <a href="/" class="nav-link">Ana Sayfa</a>
-              <a href="#features" class="nav-link">Özellikler</a>
-              <a href="#models" class="nav-link">Çalışma Modelleri</a>
-              <a href="#pricing" class="nav-link">Fiyatlandırma</a>
-              <a href="#faq" class="nav-link">SSS</a>
-              <a href="/partner/kuafora-partner/" class="nav-link brand font-medium">Kuafora Partner</a>
+              <a href="{% url 'customer_app' %}" class="nav-link">Müşteri Uygulaması</a>
+              <a href="/partner/kuafora-partner/" class="nav-link">Partner Uygulaması</a>
+              <a href="/#pricing" class="nav-link">Fiyatlandırma</a>
+              <a href="/#faq" class="nav-link">SSS</a>
+              <a href="#contact" class="nav-link">İletişim</a>
             {% endif %}
           </nav>
           
@@ -97,7 +98,7 @@
       {% block content %}{% endblock %}
     </main>
 
-    <footer class="mt-24 border-t border-gray-100 bg-gray-50">
+    <footer id="contact" class="mt-24 border-t border-gray-100 bg-gray-50">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 grid gap-8 sm:grid-cols-4">
         <div>
           <div class="flex items-center gap-2">

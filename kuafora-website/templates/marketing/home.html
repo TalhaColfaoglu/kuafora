@@ -1,334 +1,300 @@
 {% extends 'base.html' %}
-{% block title %}Kuafora — Kuaförünü Dijitalde Keşfet{% endblock %}
+{% load static %}
+
+{% block title %}Kuafora — Kuaförünü Keşfet, Randevunu Al{% endblock %}
 
 {% block content %}
-<!-- Hero (full screen) with subtle decorations and grid overlay -->
-<section class="bg-white-section relative min-h-[92vh] flex items-center overflow-hidden">
+<!-- Hero Section -->
+<section class="relative min-h-[92vh] flex items-center overflow-hidden bg-white-section">
   <div class="pointer-events-none absolute inset-0 opacity-[0.06] bg-[radial-gradient(circle_at_center,rgba(79,121,66,0.25)_1px,transparent_1.2px)] [background-size:28px_28px]"></div>
   <div class="pointer-events-none absolute -top-20 -left-20 w-72 h-72 rounded-full bg-[#EAF6E9] blur-3xl opacity-60"></div>
   <div class="pointer-events-none absolute -bottom-16 -right-16 w-80 h-80 rounded-full bg-[#EAF6E9] blur-3xl opacity-60"></div>
-
+  
   <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 sm:py-28 grid lg:grid-cols-2 gap-12 items-center">
     <div data-reveal>
-      <h1 class="brand font-display font-semibold text-center lg:text-left text-4xl sm:text-5xl lg:text-6xl leading-tight tracking-tight">
-        <span class="text-[#4F7942]">Kuafora</span> — Kuaförünü Dijitalde Keşfet
+      <h1 class="brand font-display font-semibold text-4xl sm:text-5xl lg:text-6xl leading-tight tracking-tight">
+        <span class="text-[#4F7942]">Kuaförünü Keşfet</span>,<br> Randevunu Al
       </h1>
-      <p class="mt-6 text-lg text-gray-600 max-w-xl mx-auto lg:mx-0 text-center lg:text-left">
-        Türkiye’deki tüm kuaför ve salonlar için uygun bir dijital platform. Hangi çalışma düzenine sahip olursanız olun, size uyan bir model var.
-      </p>
-      <ul class="mt-6 grid sm:grid-cols-3 gap-3 text-sm text-gray-700 max-w-2xl mx-auto lg:mx-0">
-        <li class="bubble-badge justify-center lg:justify-start"><span>🔎</span> Yakındaki kuaförleri keşfet</li>
-        <li class="bubble-badge justify-center lg:justify-start"><span>⏱️</span> Beklemeden randevu/sıra</li>
-        <li class="bubble-badge justify-center lg:justify-start"><span>✅</span> Güvenli ve şeffaf bilgiler</li>
-      </ul>
-      <div class="mt-8 flex flex-col sm:flex-row gap-3 justify-center lg:justify-start" data-reveal>
-        <a href="/partner/kuafora-partner/" class="btn-bubble">
-          Partner Ol
-        </a>
-        <a href="#pricing" class="btn-bubble-secondary">
-          Kuaförümle Katılmak İstiyorum
-        </a>
-      </div>
-    </div>
-    <div class="relative" data-reveal>
-      <div class="aspect-[4/3] rounded-2xl bg-gradient-to-br from-[#EAF6E9] to-white border border-gray-100 shadow-sm"></div>
-    </div>
-  </div>
-</section>
-
-<!-- Partner Teaser Section -->
-<section id="partner-teaser" class="bg-ayder-section relative min-h-[92vh] flex items-center overflow-hidden">
-  <div class="pointer-events-none absolute inset-0 opacity-[0.04] bg-[radial-gradient(circle_at_center,rgba(79,121,66,0.15)_1px,transparent_1.2px)] [background-size:24px_24px]"></div>
-  <div class="pointer-events-none absolute -top-24 -right-24 w-96 h-96 rounded-full bg-gradient-to-br from-[#4F7942]/5 to-transparent blur-3xl"></div>
-  <div class="pointer-events-none absolute -bottom-24 -left-24 w-80 h-80 rounded-full bg-gradient-to-tr from-[#4F7942]/5 to-transparent blur-3xl"></div>
-
-  <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 text-center">
-    <div data-animate>
-      <h2 class="brand font-display font-semibold text-4xl sm:text-5xl lg:text-6xl leading-tight tracking-tight text-[#0F172A]">
-        Yönetim Paneliniz: <span class="text-[#4F7942]">Kuafora Partner</span>
-      </h2>
-      <p class="mt-6 text-lg sm:text-xl leading-relaxed text-gray-700 max-w-4xl mx-auto">
-        Kuafora Partner ile işletmenizi kolayca yönetin. Patron tüm yetkiye sahip olurken, çalışanlar yalnızca görevlerine odaklanır. Sıra, randevu ve bilgi modelleri sayesinde akışınız her zaman düzenli kalır.
+      <p class="mt-6 text-lg text-gray-600 max-w-xl">
+        Türkiye’nin en kapsamlı kuaför platformu. Size en yakın kuaförü bulun, yorumları inceleyin ve saniyeler içinde randevunuzu oluşturun.
       </p>
       
-      <div class="mt-8 flex flex-wrap justify-center gap-3 text-sm">
-        <div class="flex items-center gap-2 px-4 py-2 rounded-full border border-[#4F7942]/20 bg-white/80 backdrop-blur-sm hover:shadow-sm transition-all duration-200">
-          <span>🧑‍💼</span>
-          <span>Patron Tam Yetki</span>
-        </div>
-        <div class="flex items-center gap-2 px-4 py-2 rounded-full border border-[#4F7942]/20 bg-white/80 backdrop-blur-sm hover:shadow-sm transition-all duration-200">
-          <span>👥</span>
-          <span>Çalışan Görünümleri</span>
-        </div>
-        <div class="flex items-center gap-2 px-4 py-2 rounded-full border border-[#4F7942]/20 bg-white/80 backdrop-blur-sm hover:shadow-sm transition-all duration-200">
-          <span>📶</span>
-          <span>Sıra Sistemi</span>
-        </div>
-        <div class="flex items-center gap-2 px-4 py-2 rounded-full border border-[#4F7942]/20 bg-white/80 backdrop-blur-sm hover:shadow-sm transition-all duration-200">
-          <span>📅</span>
-          <span>Randevu Takvimi</span>
-        </div>
-        <div class="flex items-center gap-2 px-4 py-2 rounded-full border border-[#4F7942]/20 bg-white/80 backdrop-blur-sm hover:shadow-sm transition-all duration-200">
-          <span>🗂️</span>
-          <span>Bilgi Ekranı</span>
-        </div>
-      </div>
-
-      <div class="mt-10 flex flex-col sm:flex-row gap-4 justify-center" data-animate>
-        <a href="/partner/kuafora-partner/" class="btn-bubble">
-          Uygulama Detayları
+      <div class="mt-8 flex flex-col sm:flex-row gap-4">
+        <a href="#download" class="btn-bubble">
+          Uygulamayı İndir
         </a>
         <a href="/partner/kuafora-partner/" class="btn-bubble-secondary">
-          Kuafora Partner'e Katıl
+          Partner Ol
         </a>
       </div>
     </div>
-  </div>
-</section>
-
-<!-- Features (full screen, Light Ayder) -->
-<section id="features" class="bg-white-section min-h-[92vh] flex items-center">
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
-    <div class="max-w-2xl mx-auto text-center" data-reveal>
-      <h2 class="font-display text-3xl sm:text-4xl font-semibold">Özellikler ✨</h2>
-      <p class="mt-2 text-gray-700">Kuafora; bilgi görüntüleme, sıra ve randevu deneyimini tek çatı altında toplar.</p>
-    </div>
-    <div class="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-      <div class="p-6 bubble-card" data-reveal>
-        <div class="w-10 h-10 rounded-md bg-[#4F7942]/10 flex items-center justify-center">
-          <div class="w-5 h-5 bg-[#4F7942] rounded"></div>
-        </div>
-        <h3 class="mt-4 font-medium">🗂️ Bilgi Gösterimi</h3>
-        <p class="mt-2 text-sm text-gray-600">Fiyat listesi, adres, çalışma saatleri, konum ve fotoğraflar tek yerde.</p>
-      </div>
-      <div class="p-6 bubble-card" data-reveal>
-        <div class="w-10 h-10 rounded-md bg-[#4F7942]/10 flex items-center justify-center">
-          <div class="w-5 h-5 bg-[#4F7942] rounded"></div>
-        </div>
-        <h3 class="mt-4 font-medium">📶 Sıra Sistemi</h3>
-        <p class="mt-2 text-sm text-gray-600">“Sıraya gir” ile anlık sıra durumu ve tahmini bekleme süresi.</p>
-      </div>
-      <div class="p-6 bubble-card" data-reveal>
-        <div class="w-10 h-10 rounded-md bg-[#4F7942]/10 flex items-center justify-center">
-          <div class="w-5 h-5 bg-[#4F7942] rounded"></div>
-        </div>
-        <h3 class="mt-4 font-medium">📅 Randevu Sistemi</h3>
-        <p class="mt-2 text-sm text-gray-600">Tarih/saat seç, personele göre planla; hatırlatmalarla gelmeme oranı düşer.</p>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- Models (expandable cards, full screen, white) -->
-<section id="models" class="bg-ayder-section min-h-[92vh] flex items-center">
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
-    <div class="max-w-2xl mx-auto text-center" data-reveal>
-      <h2 class="font-display text-3xl sm:text-4xl font-semibold">Çalışma Modelleri ⚙️</h2>
-      <p class="mt-2 text-gray-600">Nasıl çalışırsanız çalışın, Kuafora’da size uygun bir model var.</p>
-    </div>
-    <div class="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-      <div class="model-card p-6 bubble-card" data-reveal>
-        <button type="button" class="w-full text-left flex flex-col" aria-expanded="false" aria-controls="model1">
-          <div class="flex items-center justify-between">
-            <div class="flex items-center gap-3">
-              <div class="w-10 h-10 rounded-md bg-[#4F7942]/10 flex items-center justify-center">
-                <div class="w-5 h-5 bg-[#4F7942] rounded"></div>
-              </div>
-              <div class="font-medium">🗂️ Bilgi Gösterimi</div>
-            </div>
-            <span class="ml-4 text-gray-400 transition">▾</span>
-          </div>
-          <div id="model1" class="mt-3 text-sm text-gray-600 max-h-0 overflow-hidden transition-all duration-300">
-            <p><em>Nasıl çalışır?</em> Dükkan profiliniz yayınlanır; müşteriler fiyat ve bilgilerinizi görür.</p>
-            <p class="mt-2"><em>Kime uygun?</em> Her ölçekte kuaför/salon.</p>
-            <p class="mt-2"><em>Faydalar:</em> Görünürlük, güven, aramalarda bulunabilirlik.</p>
-          </div>
-        </button>
-      </div>
-      <div class="model-card p-6 bubble-card" data-reveal>
-        <button type="button" class="w-full text-left flex flex-col" aria-expanded="false" aria-controls="model2">
-          <div class="flex items-center justify-between">
-            <div class="flex items-center gap-3">
-              <div class="w-10 h-10 rounded-md bg-[#4F7942]/10 flex items-center justify-center">
-                <div class="w-5 h-5 bg-[#4F7942] rounded"></div>
-              </div>
-              <div class="font-medium">📶 Sıra Sistemi</div>
-            </div>
-            <span class="ml-4 text-gray-400 transition">▾</span>
-          </div>
-          <div id="model2" class="mt-3 text-sm text-gray-600 max-h-0 overflow-hidden transition-all duration-300 ">
-            <p><em>Nasıl çalışır?</em> Müşteri uygulamadan sıraya girer; kalan süreyi görür; bildirim alır.</p>
-            <p class="mt-2"><em>Kime uygun?</em> Hızlı servis veren, gün içi akışı yoğun işletmeler.</p>
-            <p class="mt-2"><em>Faydalar:</em> Bekleme yönetimi, kayıp müşteri azalır, memnuniyet artar.</p>
-          </div>
-        </button>
-      </div>
-      <div class="model-card p-6 bubble-card" data-reveal>
-        <button type="button" class="w-full text-left flex flex-col" aria-expanded="false" aria-controls="model3">
-          <div class="flex items-center justify-between">
-            <div class="flex items-center gap-3">
-              <div class="w-10 h-10 rounded-md bg-[#4F7942]/10 flex items-center justify-center">
-                <div class="w-5 h-5 bg-[#4F7942] rounded"></div>
-              </div>
-              <div class="font-medium">📅 Randevu Sistemi</div>
-            </div>
-            <span class="ml-4 text-gray-400 transition">▾</span>
-          </div>
-          <div id="model3" class="mt-3 text-sm text-gray-600 max-h-0 overflow-hidden transition-all duration-300 ">
-            <p><em>Nasıl çalışır?</em> İleri tarih/saat seç; personele göre rezervasyon yap; %25 ön ödeme ile garanti.</p>
-            <p class="mt-2"><em>Kime uygun?</em> Programlı çalışan, no-show’dan etkilenen işletmeler.</p>
-            <p class="mt-2"><em>Faydalar:</em> No-show azalır, planlama netleşir, kasa akışı öngörülebilir.</p>
-          </div>
-        </button>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- For Customers (full screen, Light Ayder) -->
-<section id="customers" class="bg-white-section min-h-[92vh] flex items-center">
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full grid lg:grid-cols-2 gap-10 items-center">
-    <div class="col-span-2" data-reveal>
-      <h2 class="font-display text-center text-3xl sm:text-4xl font-semibold">Müşteriler için 🧭</h2>
-    </div>
-    <div data-reveal class="lg:col-span-1">
-      <p class="text-gray-700 text-center lg:text-left">Kuafora, doğru kuaförü hızlıca bulmanı ve beklemeden hizmet almanı sağlar.</p>
-      <ul class="mt-6 space-y-3 text-gray-800">
-        <li>📍 Yakındakileri keşfet, yol tarifi al</li>
-        <li>⭐ Puan & yorumlarla güvenle seç</li>
-        <li>🕒 Sıra/tahmini bekleme süresi görünürlüğü</li>
-        <li>📅 İleri tarih randevu + hatırlatıcılar</li>
-        <li>💳 Güvenli ön ödeme (randevuda %25)</li>
-      </ul>
-    </div>
-    <div class="aspect-[4/3] rounded-2xl bg-white border border-gray-200" data-reveal></div>
-  </div>
-</section>
-
-<!-- For Barbers (full screen, white) -->
-<section id="barbers" class="bg-ayder-section min-h-[92vh] flex items-center">
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full grid lg:grid-cols-2 gap-10 items-center">
-    <div class="col-span-2" data-reveal>
-      <h2 class="font-display text-center text-3xl sm:text-4xl font-semibold">Kuaförler için 🧑‍🔧</h2>
-    </div>
-    <div class="order-2 lg:order-1" data-reveal>
-      <div class="aspect-[4/3] rounded-2xl bg-gray-50 border border-gray-200"></div>
-    </div>
-    <div class="order-1 lg:order-2" data-reveal>
-      <p class="text-gray-700 text-center lg:text-left">Dijital tabelanız Kuafora olsun.</p>
-      <ul class="mt-6 space-y-3 text-gray-800">
-        <li>🧭 Online görünürlük ve keşfedilebilirlik</li>
-        <li>👥 Yeni müşteri edinimi</li>
-        <li>🗓️ Sıra ve takvim yönetimi</li>
-        <li>⚠️ No-show düşüşü (%25 ön ödeme)</li>
-        <li>📊 Basit raporlama ve içgörüler</li>
-        <li>✉️ SMS bildirimleri (opsiyonel, ek ücretli)</li>
-      </ul>
-    </div>
-  </div>
-</section>
-
-<!-- Pricing (full screen, Light Ayder) -->
-<section id="pricing" class="bg-white-section min-h-[92vh] flex items-center">
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
-    <div class="max-w-2xl mx-auto text-center" data-reveal>
-      <h2 class="font-display text-3xl sm:text-4xl font-semibold">💵 Fiyatlandırma</h2>
-      <p class="mt-2 text-gray-700">İhtiyacınıza göre fiyatlandırma ve komisyon yapısı.</p>
-    </div>
-    <div class="mt-10 grid gap-6 md:grid-cols-3">
-      <div class="p-6 rounded-2xl border border-gray-200 bg-white hover:shadow-md transition" data-reveal>
-        <h3 class="text-xl font-semibold">🗂️ Bilgi Gösterimi</h3>
-        <p class="mt-2 text-sm text-gray-600"><span class="font-semibold">190 TL / ay</span></p>
-        <p class="mt-2 text-sm text-gray-700">Sabit ücret; tıklama/komisyon yok.</p>
-        <a href="/partner/kuafora-partner/" class="mt-6 btn-primary">Başla</a>
-      </div>
-      <div class="p-6 rounded-2xl border border-gray-200 bg-white hover:shadow-md transition" data-reveal>
-        <h3 class="text-xl font-semibold">📶 Sıra Sistemi</h3>
-        <p class="mt-2 text-sm text-gray-600"><span class="font-semibold">290 TL / ay</span></p>
-        <p class="mt-2 text-sm text-gray-700">Sabit ücret; SMS bildirimleri opsiyonel ve ekstra ücretlidir.</p>
-        <a href="/partner/kuafora-partner/" class="mt-6 btn-primary">Başla</a>
-      </div>
-      <div class="p-6 rounded-2xl border border-gray-200 bg-white hover:shadow-md transition" data-reveal>
-        <h3 class="text-xl font-semibold">📅 Randevu Sistemi</h3>
-        <p class="mt-2 text-sm text-gray-600">Kuaför için <span class="font-semibold">ücretsiz</span></p>
-        <p class="mt-2 text-sm text-gray-700">Müşteri randevuda %25 ön ödeme yapar; uygulama %3 komisyon alır.</p>
-        <a href="/partner/kuafora-partner/" class="mt-6 btn-primary">Başla</a>
-      </div>
-    </div>
-    <p class="mt-6 text-xs text-gray-600 text-center" data-reveal>Not: Banka/ödeme kuruluşu kesintileri ve KDV koşullara göre değişebilir.</p>
-  </div>
-</section>
-
-<!-- FAQ (bottom, full screen, Light Ayder) -->
-<section id="faq" class="bg-ayder-section min-h-[92vh] flex items-center">
-  <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
-    <h2 class="font-display text-center text-3xl sm:text-4xl font-semibold" data-reveal>SSS ❓</h2>
-    <div class="mt-8 divide-y divide-gray-200 border border-gray-200 rounded-2xl overflow-hidden" data-reveal>
-      <details class="group p-6">
-        <summary class="flex cursor-pointer list-none items-center justify-between text-base font-medium">Kuafora nedir?<span class="ml-4 text-gray-400 group-open:rotate-180 transition">▾</span></summary>
-        <p class="mt-3 text-gray-600">Kuaför ve müşteriyi buluşturan; bilgi, sıra ve randevuyu tek yerde sunan dijital platformdur.</p>
-      </details>
-      <details class="group p-6">
-        <summary class="flex cursor-pointer list-none items-center justify-between text-base font-medium">Hangi model bana uygun?<span class="ml-4 text-gray-400 group-open:rotate-180 transition">▾</span></summary>
-        <p class="mt-3 text-gray-600">Hızlı akış: Sıra; programlı çalışma: Randevu; hepsi için başlangıç: Bilgi Gösterimi.</p>
-      </details>
-      <details class="group p-6">
-        <summary class="flex cursor-pointer list-none items-center justify-between text-base font-medium">Randevu komisyonu nasıl?<span class="ml-4 text-gray-400 group-open:rotate-180 transition">▾</span></summary>
-        <p class="mt-3 text-gray-600">Kuaför için kullanım ücretsizdir; müşteri %25 ön ödeme yapar, uygulama %3 komisyon alır.</p>
-      </details>
-      <details class="group p-6">
-        <summary class="flex cursor-pointer list-none items-center justify-between text-base font-medium">Ön ödeme iadesi?<span class="ml-4 text-gray-400 group-open:rotate-180 transition">▾</span></summary>
-        <p class="mt-3 text-gray-600">İptal/iade politikası işletmenin kurallarına göre yapılandırılır; sistem iade akışını destekler.</p>
-      </details>
-      <details class="group p-6">
-        <summary class="flex cursor-pointer list-none items-center justify-between text-base font-medium">SMS ücretleri?<span class="ml-4 text-gray-400 group-open:rotate-180 transition">▾</span></summary>
-        <p class="mt-3 text-gray-600">Sıra modelinde opsiyoneldir; kullanılan SMS adedine göre ek ücretlendirilir.</p>
-      </details>
-      <details class="group p-6">
-        <summary class="flex cursor-pointer list-none items-center justify-between text-base font-medium">Taahhüt/sözleşme var mı?<span class="ml-4 text-gray-400 group-open:rotate-180 transition">▾</span></summary>
-        <p class="mt-3 text-gray-600">Aylık esnek planlar; sözleşme koşulları işletme kaydı sırasında onaylanır.</p>
-      </details>
-      <details class="group p-6">
-        <summary class="flex cursor-pointer list-none items-center justify-between text-base font-medium">Veri güvenliği?<span class="ml-4 text-gray-400 group-open:rotate-180 transition">▾</span></summary>
-        <p class="mt-3 text-gray-600">Kişisel veriler KVKK uyumlu süreçlerle korunur; ödeme verileri yetkili kuruluşlar üzerinden yönetilir.</p>
-      </details>
-    </div>
-  </div>
-</section>
-
-
-
-{% endblock %}
-
-{% block scripts %}
-{{ block.super }}
-<script>
-  document.addEventListener('DOMContentLoaded', function() {
-    // Working models accordion functionality
-    const modelButtons = document.querySelectorAll('#models .model-card button');
     
-    modelButtons.forEach(button => {
-      button.addEventListener('click', function(e) {
-        e.preventDefault();
-        e.stopPropagation();
+    <!-- Phone Mockup Placeholder -->
+    <div class="relative flex justify-center" data-reveal>
+        <div class="relative w-[280px] sm:w-[320px] aspect-[9/19] bg-gray-900 rounded-[3rem] shadow-2xl border-[8px] border-gray-900 overflow-hidden">
+            <div class="absolute inset-0 bg-gray-100 flex items-center justify-center text-gray-400">
+                <div class="text-center p-4">
+                    <span class="text-4xl block mb-2">📱</span>
+                    <span class="text-sm">Uygulama Ana Ekranı</span>
+                </div>
+            </div>
+            <!-- Notch -->
+            <div class="absolute top-0 left-1/2 -translate-x-1/2 h-6 w-32 bg-gray-900 rounded-b-xl"></div>
+        </div>
+    </div>
+  </div>
+</section>
+
+<!-- Features Grid -->
+<section class="py-20 bg-ayder-section">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="text-center max-w-3xl mx-auto mb-16" data-reveal>
+            <h2 class="font-display text-3xl sm:text-4xl font-semibold mb-4">Neden Kuafora?</h2>
+            <p class="text-gray-600">Güzellik ve bakım ihtiyaçlarınız için en akıllı çözüm.</p>
+        </div>
         
-        const card = this.closest('.model-card');
-        const isExpanded = this.getAttribute('aria-expanded') === 'true';
+        <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+            <!-- Feature 1 -->
+            <div class="bg-white p-6 rounded-2xl shadow-sm hover:-translate-y-1 transition duration-300" data-reveal>
+                <div class="w-12 h-12 bg-[#EAF6E9] rounded-xl flex items-center justify-center mb-4 text-2xl">📍</div>
+                <h3 class="font-semibold text-lg mb-2">Harita ile Keşfet</h3>
+                <p class="text-sm text-gray-600">Konumunuza en yakın, en iyi puanlı kuaförleri harita üzerinde görüntüleyin.</p>
+            </div>
+            <!-- Feature 2 -->
+            <div class="bg-white p-6 rounded-2xl shadow-sm hover:-translate-y-1 transition duration-300" data-reveal>
+                <div class="w-12 h-12 bg-[#EAF6E9] rounded-xl flex items-center justify-center mb-4 text-2xl">📅</div>
+                <h3 class="font-semibold text-lg mb-2">Kolay Randevu</h3>
+                <p class="text-sm text-gray-600">Telefon trafiğine son. Müsait saatleri görün, tek tıkla yerinizi ayırtın.</p>
+            </div>
+            <!-- Feature 3 -->
+            <div class="bg-white p-6 rounded-2xl shadow-sm hover:-translate-y-1 transition duration-300" data-reveal>
+                <div class="w-12 h-12 bg-[#EAF6E9] rounded-xl flex items-center justify-center mb-4 text-2xl">⭐</div>
+                <h3 class="font-semibold text-lg mb-2">Gerçek Yorumlar</h3>
+                <p class="text-sm text-gray-600">Doğrulanmış müşteri yorumları ve puanlarıyla en doğru seçimi yapın.</p>
+            </div>
+            <!-- Feature 4 -->
+            <div class="bg-white p-6 rounded-2xl shadow-sm hover:-translate-y-1 transition duration-300" data-reveal>
+                <div class="w-12 h-12 bg-[#EAF6E9] rounded-xl flex items-center justify-center mb-4 text-2xl">🔒</div>
+                <h3 class="font-semibold text-lg mb-2">Güvenli Ödeme</h3>
+                <p class="text-sm text-gray-600">%25 ön ödeme sistemi ile randevunuz garanti altında. İptal koruması aktif.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- App Features Showcase -->
+<section class="py-20 bg-white overflow-hidden">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <!-- Feature Row 1 -->
+        <div class="flex flex-col lg:flex-row items-center gap-12 mb-24">
+            <div class="lg:w-1/2 order-2 lg:order-1 flex justify-center" data-reveal>
+                 <div class="relative w-[260px] aspect-[9/19] bg-gray-900 rounded-[2.5rem] shadow-xl border-[6px] border-gray-900 overflow-hidden">
+                    <div class="absolute inset-0 bg-gray-50 flex items-center justify-center text-gray-400">
+                        <span class="text-sm">Harita Arama Ekranı</span>
+                    </div>
+                </div>
+            </div>
+            <div class="lg:w-1/2 order-1 lg:order-2" data-reveal>
+                <h3 class="font-display text-3xl font-semibold mb-4">Aradığınız Hizmeti <span class="text-[#4F7942]">Anında Bulun</span></h3>
+                <p class="text-gray-600 mb-6 text-lg">
+                    Şehir, ilçe veya kategoriye göre arama yapın. "Saç Kesimi", "Manikür", "Cilt Bakımı" gibi kategorilerle ihtiyacınız olan uzmanı bulun.
+                </p>
+                <ul class="space-y-3">
+                    <li class="flex items-center gap-3"><span class="text-[#4F7942]">✓</span> Konum bazlı akıllı sıralama</li>
+                    <li class="flex items-center gap-3"><span class="text-[#4F7942]">✓</span> Açık/Kapalı durumu filtresi</li>
+                    <li class="flex items-center gap-3"><span class="text-[#4F7942]">✓</span> Kampanyalı salonları görme</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Feature Row 2 -->
+        <div class="flex flex-col lg:flex-row items-center gap-12 mb-24">
+            <div class="lg:w-1/2" data-reveal>
+                <h3 class="font-display text-3xl font-semibold mb-4">Detaylı Profil ve <span class="text-[#4F7942]">Personel Seçimi</span></h3>
+                <p class="text-gray-600 mb-6 text-lg">
+                    Salonun fotoğraflarını inceleyin, hizmet fiyatlarını görün ve favori personelinizi seçerek randevunuzu ona göre oluşturun.
+                </p>
+                <ul class="space-y-3">
+                    <li class="flex items-center gap-3"><span class="text-[#4F7942]">✓</span> Personel bazlı müsaitlik takvimi</li>
+                    <li class="flex items-center gap-3"><span class="text-[#4F7942]">✓</span> Şeffaf fiyat listesi</li>
+                    <li class="flex items-center gap-3"><span class="text-[#4F7942]">✓</span> Hizmet süreleri ve detayları</li>
+                </ul>
+            </div>
+             <div class="lg:w-1/2 flex justify-center" data-reveal>
+                 <div class="relative w-[260px] aspect-[9/19] bg-gray-900 rounded-[2.5rem] shadow-xl border-[6px] border-gray-900 overflow-hidden">
+                    <div class="absolute inset-0 bg-gray-50 flex items-center justify-center text-gray-400">
+                        <span class="text-sm">Salon Detay & Randevu Ekranı</span>
+                    </div>
+                </div>
+            </div>
+        </div>
         
-        // Close all other cards
-        modelButtons.forEach(otherBtn => {
-          const otherCard = otherBtn.closest('.model-card');
-          otherBtn.setAttribute('aria-expanded', 'false');
-          otherCard.classList.remove('expanded');
-        });
+         <!-- Feature Row 3 -->
+        <div class="flex flex-col lg:flex-row items-center gap-12">
+            <div class="lg:w-1/2 order-2 lg:order-1 flex justify-center" data-reveal>
+                 <div class="relative w-[260px] aspect-[9/19] bg-gray-900 rounded-[2.5rem] shadow-xl border-[6px] border-gray-900 overflow-hidden">
+                    <div class="absolute inset-0 bg-gray-50 flex items-center justify-center text-gray-400">
+                        <span class="text-sm">Mesajlaşma & Bildirimler</span>
+                    </div>
+                </div>
+            </div>
+            <div class="lg:w-1/2 order-1 lg:order-2" data-reveal>
+                <h3 class="font-display text-3xl font-semibold mb-4">İletişimde Kalın</h3>
+                <p class="text-gray-600 mb-6 text-lg">
+                    Sorularınız mı var? Kuaförünüze uygulama üzerinden direkt mesaj atın. Randevu hatırlatmaları ile zamanınızı yönetin.
+                </p>
+                <ul class="space-y-3">
+                    <li class="flex items-center gap-3"><span class="text-[#4F7942]">✓</span> Uygulama içi güvenli chat</li>
+                    <li class="flex items-center gap-3"><span class="text-[#4F7942]">✓</span> Randevu onayı ve hatırlatma bildirimleri</li>
+                    <li class="flex items-center gap-3"><span class="text-[#4F7942]">✓</span> Yorumlarınıza gelen yanıtlar</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Partner Teaser -->
+<section class="py-20 bg-[#F3FAF2]">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+        <span class="text-[#4F7942] font-semibold tracking-wider uppercase text-sm">İşletmeler İçin</span>
+        <h2 class="font-display text-3xl sm:text-4xl font-semibold mt-2 mb-6">Kuafora Partner ile İşinizi Büyütün</h2>
+        <p class="text-gray-600 max-w-2xl mx-auto mb-8">
+            Randevularınızı, personelinizi ve gelirinizi tek bir yerden yönetin. Dijital dönüşüme katılın.
+        </p>
+        <a href="/partner/kuafora-partner/" class="btn-bubble">Detaylı Bilgi & Başvuru</a>
+    </div>
+</section>
+
+<!-- How it Works -->
+<section class="py-20 bg-white">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <h2 class="font-display text-3xl sm:text-4xl font-semibold text-center mb-16">Nasıl Çalışır?</h2>
+        <div class="grid md:grid-cols-3 gap-8 relative">
+            <!-- Connecting Line (Desktop) -->
+            <div class="hidden md:block absolute top-12 left-[16%] right-[16%] h-0.5 bg-gray-200 -z-10"></div>
+            
+            <!-- Step 1 -->
+            <div class="text-center bg-white" data-reveal>
+                <div class="w-24 h-24 mx-auto bg-white border-4 border-[#EAF6E9] rounded-full flex items-center justify-center text-3xl mb-6">
+                    📱
+                </div>
+                <h3 class="font-semibold text-xl mb-2">1. İndir</h3>
+                <p class="text-gray-600 text-sm">App Store veya Google Play'den Kuafora uygulamasını ücretsiz indirin.</p>
+            </div>
+             <!-- Step 2 -->
+            <div class="text-center bg-white" data-reveal>
+                <div class="w-24 h-24 mx-auto bg-white border-4 border-[#EAF6E9] rounded-full flex items-center justify-center text-3xl mb-6">
+                    🔍
+                </div>
+                <h3 class="font-semibold text-xl mb-2">2. Keşfet</h3>
+                <p class="text-gray-600 text-sm">Size en yakın ve en uygun kuaförü bulun, hizmetleri inceleyin.</p>
+            </div>
+             <!-- Step 3 -->
+            <div class="text-center bg-white" data-reveal>
+                <div class="w-24 h-24 mx-auto bg-white border-4 border-[#EAF6E9] rounded-full flex items-center justify-center text-3xl mb-6">
+                    ✅
+                </div>
+                <h3 class="font-semibold text-xl mb-2">3. Randevu Al</h3>
+                <p class="text-gray-600 text-sm">Tarih ve saati seçin, ön ödeme ile randevunuzu garantileyin.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Pricing (For Partners - As requested in plan to be on Home) -->
+<section id="pricing" class="py-20 bg-ayder-section">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="text-center max-w-3xl mx-auto mb-16" data-reveal>
+            <h2 class="font-display text-3xl sm:text-4xl font-semibold mb-4">İşletme Modelleri ve Fiyatlandırma</h2>
+            <p class="text-gray-600">İhtiyacınıza uygun modeli seçin, hemen kazanmaya başlayın.</p>
+        </div>
         
-        // Toggle current card
-        if (!isExpanded) {
-          this.setAttribute('aria-expanded', 'true');
-          card.classList.add('expanded');
-        }
-      });
-    });
-  });
-</script>
+        <div class="grid md:grid-cols-3 gap-8">
+            <!-- Bilgi Modeli -->
+            <div class="bg-white p-8 rounded-2xl shadow-sm hover:shadow-md transition border border-gray-100" data-reveal>
+                <h3 class="font-semibold text-xl mb-2">Bilgi Gösterimi</h3>
+                <div class="text-3xl font-bold text-[#4F7942] mb-4">190 TL<span class="text-sm font-normal text-gray-500">/ay</span></div>
+                <p class="text-gray-600 text-sm mb-6">Sadece dijital vitrinim olsun diyenler için.</p>
+                <ul class="space-y-3 text-sm text-gray-600 mb-8">
+                    <li class="flex items-center gap-2"><span>✓</span> İşletme Profili</li>
+                    <li class="flex items-center gap-2"><span>✓</span> Hizmet & Fiyat Listesi</li>
+                    <li class="flex items-center gap-2"><span>✓</span> Haritada Görünürlük</li>
+                    <li class="flex items-center gap-2"><span>✕</span> Randevu/Sıra Sistemi Yok</li>
+                </ul>
+                <a href="/partner/kuafora-partner/" class="block w-full py-3 text-center border-2 border-[#4F7942] text-[#4F7942] font-semibold rounded-xl hover:bg-[#4F7942] hover:text-white transition">Partner Ol</a>
+            </div>
+            
+            <!-- Sıra Modeli -->
+            <div class="bg-white p-8 rounded-2xl shadow-sm hover:shadow-md transition border border-gray-100" data-reveal>
+                <h3 class="font-semibold text-xl mb-2">Sıra Sistemi</h3>
+                <div class="text-3xl font-bold text-[#4F7942] mb-4">290 TL<span class="text-sm font-normal text-gray-500">/ay</span></div>
+                <p class="text-gray-600 text-sm mb-6">Hızlı akışlı, randevusuz çalışan berberler için.</p>
+                <ul class="space-y-3 text-sm text-gray-600 mb-8">
+                    <li class="flex items-center gap-2"><span>✓</span> Tüm Bilgi Özellikleri</li>
+                    <li class="flex items-center gap-2"><span>✓</span> Online Sıra Alma</li>
+                    <li class="flex items-center gap-2"><span>✓</span> Canlı Sıra Takibi</li>
+                    <li class="flex items-center gap-2"><span>✓</span> SMS Bildirimleri (Opsiyonel)</li>
+                </ul>
+                <a href="/partner/kuafora-partner/" class="block w-full py-3 text-center border-2 border-[#4F7942] text-[#4F7942] font-semibold rounded-xl hover:bg-[#4F7942] hover:text-white transition">Partner Ol</a>
+            </div>
+            
+            <!-- Randevu Modeli (Featured) -->
+            <div class="bg-white p-8 rounded-2xl shadow-lg transform md:-translate-y-4 border-2 border-[#4F7942] relative" data-reveal>
+                <div class="absolute top-0 left-1/2 -translate-x-1/2 bg-[#4F7942] text-white px-4 py-1 rounded-b-lg text-sm font-semibold">En Popüler</div>
+                <h3 class="font-semibold text-xl mb-2 mt-2">Randevu Sistemi</h3>
+                <div class="text-3xl font-bold text-[#4F7942] mb-4">Ücretsiz<span class="text-sm font-normal text-gray-500">*</span></div>
+                <p class="text-gray-600 text-sm mb-6">Tam profesyonel yönetim isteyenler için.</p>
+                <ul class="space-y-3 text-sm text-gray-600 mb-8">
+                    <li class="flex items-center gap-2"><span>✓</span> Gelişmiş Takvim</li>
+                    <li class="flex items-center gap-2"><span>✓</span> Personel Yönetimi</li>
+                    <li class="flex items-center gap-2"><span>✓</span> %25 Ön Ödeme Koruması</li>
+                    <li class="flex items-center gap-2"><span>✓</span> Gelir Raporları</li>
+                </ul>
+                <a href="/partner/kuafora-partner/" class="block w-full py-3 text-center bg-[#4F7942] text-white font-semibold rounded-xl hover:bg-[#3d6132] transition">Hemen Başla</a>
+                <p class="text-xs text-center text-gray-400 mt-4">*Randevulardan %3 hizmet komisyonu alınır.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- FAQ -->
+<section id="faq" class="py-20 bg-white">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+        <h2 class="font-display text-3xl sm:text-4xl font-semibold text-center mb-12" data-reveal>Sıkça Sorulan Sorular</h2>
+        
+        <div class="space-y-4" data-reveal>
+             <details class="group bg-gray-50 p-6 rounded-xl cursor-pointer">
+                <summary class="flex justify-between items-center font-medium list-none">
+                    <span>Kuafora ücretli mi?</span>
+                    <span class="transition group-open:rotate-180">▾</span>
+                </summary>
+                <p class="text-gray-600 mt-4 text-sm">Müşteriler için uygulama kullanımı tamamen ücretsizdir. Sadece aldığınız hizmetin bedelini ödersiniz.</p>
+            </details>
+            
+            <details class="group bg-gray-50 p-6 rounded-xl cursor-pointer">
+                <summary class="flex justify-between items-center font-medium list-none">
+                    <span>Ön ödeme neden var?</span>
+                    <span class="transition group-open:rotate-180">▾</span>
+                </summary>
+                <p class="text-gray-600 mt-4 text-sm">Randevunuzu garanti altına almak ve işletmelerin zaman kaybını (no-show) önlemek için %25 ön ödeme alınır. Kalan tutarı salonda ödersiniz.</p>
+            </details>
+            
+             <details class="group bg-gray-50 p-6 rounded-xl cursor-pointer">
+                <summary class="flex justify-between items-center font-medium list-none">
+                    <span>Randevumu iptal edebilir miyim?</span>
+                    <span class="transition group-open:rotate-180">▾</span>
+                </summary>
+                <p class="text-gray-600 mt-4 text-sm">Evet, işletmenin belirlediği iptal süresi (örneğin randevudan 24 saat önce) içinde iptal ederseniz ön ödemeniz iade edilir.</p>
+            </details>
+            
+             <details class="group bg-gray-50 p-6 rounded-xl cursor-pointer">
+                <summary class="flex justify-between items-center font-medium list-none">
+                    <span>İşletme sahibiyim, nasıl katılabilirim?</span>
+                    <span class="transition group-open:rotate-180">▾</span>
+                </summary>
+                <p class="text-gray-600 mt-4 text-sm">Kuafora Partner programına başvurarak işletmenizi dakikalar içinde dijitalleştirebilirsiniz. "Partner Ol" butonuna tıklamanız yeterli.</p>
+            </details>
+        </div>
+    </div>
+</section>
 {% endblock %}

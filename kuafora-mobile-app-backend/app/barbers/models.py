@@ -91,10 +91,19 @@ class Barbershop(models.Model):
     description = models.TextField(blank=True)
     categories = models.ManyToManyField(ShopCategory, blank=True, related_name="barbershops")
     system_type = models.CharField(
-        max_length=10,
-        choices=[("info", "Information"), ("booking", "Booking")],
+        max_length=15,
+        choices=[
+            ("info", "Information"),
+            ("booking", "Kuafora Booking"),
+            ("external", "External Booking")
+        ],
         default="info",
-        help_text="Isletme sistem modu: info veya booking"
+        help_text="Isletme sistem modu: info, booking veya external"
+    )
+    external_booking = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text="Harici randevu yontemleri: whatsapp, website, instagram, other_app, custom"
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -588,15 +597,19 @@ class LastViewed(models.Model):
 class ViewEvent(models.Model):
     """Her BarberDetailScreen ziyaretini ayrı kayıt eden etkinlik tablosu.
     Toplam görüntülenme ve unique kişi sayısı bu tablodan hesaplanır.
+    user: Giriş yapmış kullanıcı (opsiyonel - misafirler için null)
+    device_id: Cihaz benzersiz ID'si (misafir kullanıcıları takip etmek için)
     """
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="barbershop_view_events")
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="barbershop_view_events", null=True, blank=True)
     barbershop = models.ForeignKey(Barbershop, on_delete=models.CASCADE, related_name="view_events")
+    device_id = models.CharField(max_length=100, null=True, blank=True, help_text="Cihaz benzersiz ID'si - misafir kullanıcılar için")
     viewed_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         indexes = [
             models.Index(fields=["barbershop", "-viewed_at"]),
             models.Index(fields=["barbershop", "user"]),
+            models.Index(fields=["barbershop", "device_id"]),
         ]
 
 class Override(models.Model):

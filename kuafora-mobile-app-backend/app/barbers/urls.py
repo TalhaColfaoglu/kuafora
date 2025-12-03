@@ -17,6 +17,7 @@ from .views import (
     PartnerWorkScheduleViewSet,
     ReviewReplyViewSet,
     LastViewedViewSet,
+    TrackViewApi,
     PartnerShopWorkingHoursViewSet,
     PartnerStaffWorkingHoursViewSet,
     PartnerBreakWindowViewSet,
@@ -72,6 +73,8 @@ urlpatterns = [
     # Public announcements for mobile app
     path("announcements/", AnnouncementsPublicApi.as_view(), name="announcements-public"),
     path("special-messages/", AnnouncementsPublicApi.as_view(), name="special-messages-public"),
+    # Track view - Hem misafir hem giriş yapmış kullanıcılar için görüntülenme takibi
+    path("track-view/", TrackViewApi.as_view(), name="track-view"),
     # Impact plus
     path("partner/holiday/impact-plus/", ImpactPlusApi.as_view(), name="impact-plus"),
     path("mobile/home/dashboard/", HomeDashboardApi.as_view(), name="mobile-home-dashboard"),

@@ -140,6 +140,18 @@ class BarbershopViewSet(viewsets.ReadOnlyModelViewSet):
     def get_queryset(self):
         qs = super().get_queryset()
         
+        # Abonelik filtreleme: Sadece aktif aboneliği olanları göster (Ana uygulama için)
+        # Partner/Vitrin uygulaması include_inactive=true gönderebilir
+        include_inactive = self.request.query_params.get("include_inactive", "").lower() == "true"
+        
+        if not include_inactive:
+            # Aktif abonelik durumları: trial, active, lifetime, grace_period
+            # Aboneliği olmayan veya suspended/cancelled olanları hariç tut
+            qs = qs.filter(
+                Q(subscription__status__in=['trial', 'active', 'lifetime', 'grace_period']) |
+                Q(subscription__isnull=True)  # Geçici: Abonelik sistemi yeni, eski salonlar için
+            )
+        
         # Viewport filtreleme (Harita optimizasyonu)
         try:
             min_lat = self.request.query_params.get("min_lat")
@@ -896,8 +908,14 @@ class LastViewedViewSet(mixins.ListModelMixin, mixins.CreateModelMixin, viewsets
             except Exception:
                 pass
         # Her giriş için ViewEvent ekleyerek toplam görüntülenmeyi arttır
+        # device_id varsa onu da kaydet
+        device_id = self.request.data.get('device_id')
         try:
-            ViewEvent.objects.create(user=self.request.user, barbershop_id=self.request.data.get('barbershop'))
+            ViewEvent.objects.create(
+                user=self.request.user, 
+                barbershop_id=self.request.data.get('barbershop'),
+                device_id=device_id
+            )
         except Exception:
             pass
         # ensure at most 7 entries
@@ -906,6 +924,48 @@ class LastViewedViewSet(mixins.ListModelMixin, mixins.CreateModelMixin, viewsets
         if len(ids) > 7:
             LastViewed.objects.filter(id__in=ids[7:]).delete()
         return
+
+
+class TrackViewApi(generics.GenericAPIView):
+    """
+    Hem misafir hem de giriş yapmış kullanıcılar için görüntülenme takibi.
+    POST /track-view/
+    Body: { "barbershop": <id>, "device_id": "<uuid>" }
+    
+    - Giriş yapmış kullanıcı: user + device_id kaydedilir
+    - Misafir kullanıcı: sadece device_id kaydedilir
+    
+    Tekil kullanıcı sayısı: user_id veya device_id'ye göre distinct count yapılır
+    """
+    permission_classes = [permissions.AllowAny]
+    
+    def post(self, request):
+        barbershop_id = request.data.get('barbershop')
+        device_id = request.data.get('device_id')
+        
+        if not barbershop_id:
+            return Response({'error': 'barbershop is required'}, status=400)
+        
+        if not device_id:
+            return Response({'error': 'device_id is required'}, status=400)
+        
+        # Barbershop var mı kontrol et
+        if not Barbershop.objects.filter(id=barbershop_id).exists():
+            return Response({'error': 'barbershop not found'}, status=404)
+        
+        # Kullanıcı giriş yapmışsa user'ı da kaydet
+        user = request.user if request.user.is_authenticated else None
+        
+        try:
+            ViewEvent.objects.create(
+                user=user,
+                barbershop_id=barbershop_id,
+                device_id=device_id
+            )
+        except Exception as e:
+            return Response({'error': str(e)}, status=500)
+        
+        return Response({'status': 'ok'})
 
 
 

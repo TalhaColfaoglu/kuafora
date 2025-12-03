@@ -1,0 +1,1229 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Personel Yönetimi - Kuafora Partner{% endblock %}
+
+{% block head %}
+<style>
+  :root {
+    --primary: #1A1C1E;
+    --primary-light: #2D3436;
+    --accent: #4F7942;
+    --accent-light: #E8F5E3;
+    --info: #3B82F6;
+    --info-light: #DBEAFE;
+    --warning: #F59E0B;
+    --warning-light: #FEF3C7;
+    --success: #10B981;
+    --success-light: #D1FAE5;
+    --danger: #EF4444;
+    --danger-light: #FEE2E2;
+  }
+
+  * { box-sizing: border-box; }
+
+  /* Staff Card */
+  .staff-card {
+    background: white;
+    border-radius: 20px;
+    border: 1px solid #E5E7EB;
+    overflow: hidden;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .staff-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.08);
+    border-color: var(--accent);
+  }
+
+  .staff-avatar {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 3px solid white;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  }
+  .staff-avatar-placeholder {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent) 0%, #3D5C33 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 28px;
+    font-weight: 700;
+    border: 3px solid white;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  }
+
+  .role-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .role-admin { background: #FEF3C7; color: #D97706; }
+  .role-staff { background: #DBEAFE; color: #2563EB; }
+
+  .stat-mini {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    background: #F9FAFB;
+    border-radius: 10px;
+    font-size: 13px;
+    color: #6B7280;
+  }
+  .stat-mini svg { width: 16px; height: 16px; }
+  .stat-mini span { font-weight: 600; color: var(--primary); }
+
+  /* Action Buttons */
+  .action-btn {
+    padding: 10px 18px;
+    border-radius: 10px;
+    font-weight: 600;
+    font-size: 13px;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    border: none;
+  }
+  .action-btn svg { width: 18px; height: 18px; }
+  .action-btn-primary { background: var(--accent); color: white; }
+  .action-btn-primary:hover { background: #3D5C33; transform: translateY(-1px); }
+  .action-btn-secondary { background: #F3F4F6; color: #374151; }
+  .action-btn-secondary:hover { background: #E5E7EB; }
+  .action-btn-danger { background: var(--danger-light); color: var(--danger); }
+  .action-btn-danger:hover { background: #FECACA; }
+  .action-btn-icon {
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* Modal */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 50;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s;
+  }
+  .modal-overlay.active {
+    opacity: 1;
+    visibility: visible;
+  }
+  .modal-content {
+    background: white;
+    border-radius: 24px;
+    max-width: 600px;
+    width: 95%;
+    max-height: 90vh;
+    overflow-y: auto;
+    transform: scale(0.9) translateY(20px);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .modal-overlay.active .modal-content {
+    transform: scale(1) translateY(0);
+  }
+
+  /* Form Elements */
+  .form-group { margin-bottom: 20px; }
+  .form-label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: #374151;
+    margin-bottom: 8px;
+  }
+  .form-input {
+    width: 100%;
+    padding: 12px 16px;
+    background: #F9FAFB;
+    border: 1px solid #E5E7EB;
+    border-radius: 12px;
+    font-size: 14px;
+    transition: all 0.2s;
+  }
+  .form-input:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(79, 121, 66, 0.1);
+  }
+  .form-select {
+    width: 100%;
+    padding: 12px 16px;
+    background: #F9FAFB;
+    border: 1px solid #E5E7EB;
+    border-radius: 12px;
+    font-size: 14px;
+    cursor: pointer;
+  }
+
+  /* Skeleton */
+  .skeleton {
+    background: linear-gradient(90deg, #F3F4F6 25%, #E5E7EB 50%, #F3F4F6 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+    border-radius: 12px;
+  }
+  @keyframes shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+
+  /* Working Hours */
+  .hours-grid {
+    display: grid;
+    gap: 8px;
+  }
+  .hours-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    background: #F9FAFB;
+    border-radius: 12px;
+  }
+  .hours-day {
+    width: 90px;
+    font-weight: 600;
+    font-size: 14px;
+    color: var(--primary);
+  }
+  .hours-toggle {
+    width: 44px;
+    height: 24px;
+    background: #E5E7EB;
+    border-radius: 12px;
+    position: relative;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .hours-toggle.active { background: var(--accent); }
+  .hours-toggle::after {
+    content: '';
+    position: absolute;
+    width: 18px;
+    height: 18px;
+    background: white;
+    border-radius: 50%;
+    top: 3px;
+    left: 3px;
+    transition: all 0.2s;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  }
+  .hours-toggle.active::after { left: 23px; }
+  .hours-time-input {
+    padding: 8px 12px;
+    background: white;
+    border: 1px solid #E5E7EB;
+    border-radius: 8px;
+    font-size: 13px;
+    width: 100px;
+    text-align: center;
+  }
+
+  /* Tabs */
+  .tabs-container {
+    display: flex;
+    gap: 4px;
+    background: #F3F4F6;
+    padding: 4px;
+    border-radius: 14px;
+  }
+  .tab-btn {
+    padding: 10px 20px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #6B7280;
+    background: transparent;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .tab-btn:hover { color: var(--primary); }
+  .tab-btn.active {
+    background: white;
+    color: var(--primary);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  }
+
+  /* Services List */
+  .service-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    background: #F9FAFB;
+    border-radius: 12px;
+    margin-bottom: 8px;
+  }
+  .service-checkbox {
+    width: 20px;
+    height: 20px;
+    border-radius: 6px;
+    border: 2px solid #D1D5DB;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+  }
+  .service-checkbox.checked {
+    background: var(--accent);
+    border-color: var(--accent);
+  }
+  .service-checkbox.checked::after {
+    content: '✓';
+    color: white;
+    font-size: 12px;
+    font-weight: bold;
+  }
+
+  /* Toast */
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    padding: 16px 24px;
+    background: var(--primary);
+    color: white;
+    border-radius: 14px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    z-index: 100;
+    transform: translateY(100px);
+    opacity: 0;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .toast.show {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  .toast.success { background: var(--success); }
+  .toast.error { background: var(--danger); }
+
+  /* Empty State */
+  .empty-state {
+    text-align: center;
+    padding: 60px 20px;
+  }
+  .empty-icon {
+    width: 100px;
+    height: 100px;
+    background: #F3F4F6;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 24px;
+  }
+  .empty-icon svg { width: 48px; height: 48px; color: #9CA3AF; }
+
+  @media (max-width: 768px) {
+    .staff-card { padding: 16px !important; }
+    .modal-content { margin: 16px; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50">
+  <!-- Header -->
+  <div class="bg-white border-b border-gray-200 sticky top-0 z-40">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex items-center justify-between py-4">
+        <div>
+          <h1 class="text-2xl font-bold text-gray-900">Personel Yönetimi</h1>
+          <p class="text-sm text-gray-500 mt-1">Ekibinizi yönetin ve performansı takip edin</p>
+        </div>
+        <div class="flex items-center gap-3">
+          <select id="barbershopSelect" class="px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm font-medium focus:ring-2 focus:ring-green-500 focus:border-transparent">
+            <option value="">Yükleniyor...</option>
+          </select>
+          <button onclick="openAddStaffModal()" class="action-btn action-btn-primary">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
+            </svg>
+            Personel Ekle
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+    <!-- Stats -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+      <div class="bg-white rounded-2xl p-5 border border-gray-100">
+        <div class="flex items-center gap-4">
+          <div class="w-12 h-12 rounded-xl flex items-center justify-center" style="background: var(--accent-light);">
+            <svg class="w-6 h-6" style="color: var(--accent);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
+            </svg>
+          </div>
+          <div>
+            <p class="text-sm text-gray-500">Toplam Personel</p>
+            <p id="totalStaff" class="text-2xl font-bold text-gray-900">-</p>
+          </div>
+        </div>
+      </div>
+      <div class="bg-white rounded-2xl p-5 border border-gray-100">
+        <div class="flex items-center gap-4">
+          <div class="w-12 h-12 rounded-xl flex items-center justify-center" style="background: var(--warning-light);">
+            <svg class="w-6 h-6" style="color: var(--warning);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"/>
+            </svg>
+          </div>
+          <div>
+            <p class="text-sm text-gray-500">Sertifikalı</p>
+            <p id="certifiedCount" class="text-2xl font-bold text-gray-900">-</p>
+          </div>
+        </div>
+      </div>
+      <div class="bg-white rounded-2xl p-5 border border-gray-100">
+        <div class="flex items-center gap-4">
+          <div class="w-12 h-12 rounded-xl flex items-center justify-center" style="background: var(--info-light);">
+            <svg class="w-6 h-6" style="color: var(--info);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/>
+            </svg>
+          </div>
+          <div>
+            <p class="text-sm text-gray-500">Ort. Puan</p>
+            <p id="avgRating" class="text-2xl font-bold text-gray-900">-</p>
+          </div>
+        </div>
+      </div>
+      <div class="bg-white rounded-2xl p-5 border border-gray-100">
+        <div class="flex items-center gap-4">
+          <div class="w-12 h-12 rounded-xl flex items-center justify-center" style="background: var(--success-light);">
+            <svg class="w-6 h-6" style="color: var(--success);" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
+            </svg>
+          </div>
+          <div>
+            <p class="text-sm text-gray-500">Toplam Yorum</p>
+            <p id="totalReviews" class="text-2xl font-bold text-gray-900">-</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Staff Grid -->
+    <div id="staffGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <!-- Skeleton Loading -->
+      <div class="skeleton h-64 rounded-2xl"></div>
+      <div class="skeleton h-64 rounded-2xl"></div>
+      <div class="skeleton h-64 rounded-2xl"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Login Modal -->
+<div id="loginModal" class="modal-overlay">
+  <div class="modal-content p-8">
+    <div class="text-center mb-6">
+      <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+        <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+        </svg>
+      </div>
+      <h2 class="text-2xl font-bold text-gray-900">Giriş Yapın</h2>
+      <p class="text-gray-500 mt-2">Personel yönetimi için giriş yapmalısınız</p>
+    </div>
+    <form id="loginForm" class="space-y-4">
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-2">E-posta</label>
+        <input type="email" id="loginEmail" class="form-input" placeholder="ornek@email.com" required>
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-2">Şifre</label>
+        <input type="password" id="loginPassword" class="form-input" placeholder="••••••••" required>
+      </div>
+      <button type="submit" class="w-full py-3 bg-green-600 text-white font-semibold rounded-xl hover:bg-green-700 transition">
+        Giriş Yap
+      </button>
+    </form>
+  </div>
+</div>
+
+<!-- Add/Edit Staff Modal -->
+<div id="staffModal" class="modal-overlay">
+  <div class="modal-content">
+    <div class="p-6 border-b border-gray-100 flex items-center justify-between">
+      <h3 id="staffModalTitle" class="text-xl font-bold text-gray-900">Personel Ekle</h3>
+      <button onclick="closeStaffModal()" class="action-btn-icon action-btn-secondary">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+        </svg>
+      </button>
+    </div>
+    
+    <div class="p-6">
+      <!-- Tabs -->
+      <div class="tabs-container mb-6">
+        <button class="tab-btn active" data-tab="info" onclick="switchTab('info')">Bilgiler</button>
+        <button class="tab-btn" data-tab="hours" onclick="switchTab('hours')">Çalışma Saatleri</button>
+        <button class="tab-btn" data-tab="services" onclick="switchTab('services')">Hizmetler</button>
+      </div>
+
+      <!-- Info Tab -->
+      <div id="tab-info" class="tab-content">
+        <form id="staffForm">
+          <input type="hidden" id="staffId">
+          
+          <div class="grid grid-cols-2 gap-4">
+            <div class="form-group">
+              <label class="form-label">Ad *</label>
+              <input type="text" id="staffFirstName" class="form-input" placeholder="Ad" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Soyad *</label>
+              <input type="text" id="staffLastName" class="form-input" placeholder="Soyad" required>
+            </div>
+          </div>
+          
+          <div class="form-group">
+            <label class="form-label">E-posta *</label>
+            <input type="email" id="staffEmail" class="form-input" placeholder="personel@email.com" required>
+          </div>
+          
+          <div class="form-group">
+            <label class="form-label">Telefon</label>
+            <input type="tel" id="staffPhone" class="form-input" placeholder="05XX XXX XX XX">
+          </div>
+          
+          <div class="grid grid-cols-2 gap-4">
+            <div class="form-group">
+              <label class="form-label">Deneyim (Yıl)</label>
+              <input type="number" id="staffExperience" class="form-input" placeholder="5" min="0">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Cinsiyet Tercihi</label>
+              <select id="staffGenderPref" class="form-select">
+                <option value="all">Herkese Hizmet</option>
+                <option value="male">Sadece Erkek</option>
+                <option value="female">Sadece Kadın</option>
+              </select>
+            </div>
+          </div>
+          
+          <div class="form-group">
+            <label class="form-label">Biyografi</label>
+            <textarea id="staffBio" class="form-input" rows="3" placeholder="Personel hakkında kısa bilgi..."></textarea>
+          </div>
+          
+          <div class="form-group">
+            <label class="form-label">Instagram</label>
+            <input type="text" id="staffInstagram" class="form-input" placeholder="@kullanici_adi">
+          </div>
+          
+          <div class="flex items-center gap-6 mt-4">
+            <label class="flex items-center gap-3 cursor-pointer">
+              <input type="checkbox" id="staffCertificate" class="w-5 h-5 rounded border-gray-300 text-green-600 focus:ring-green-500">
+              <span class="text-sm font-medium text-gray-700">Sertifikalı</span>
+            </label>
+            <label class="flex items-center gap-3 cursor-pointer">
+              <input type="checkbox" id="staffIsAdmin" class="w-5 h-5 rounded border-gray-300 text-green-600 focus:ring-green-500">
+              <span class="text-sm font-medium text-gray-700">Yönetici</span>
+            </label>
+          </div>
+        </form>
+      </div>
+
+      <!-- Hours Tab -->
+      <div id="tab-hours" class="tab-content" style="display: none;">
+        <div class="hours-grid" id="hoursGrid">
+          <!-- Will be populated by JS -->
+        </div>
+      </div>
+
+      <!-- Services Tab -->
+      <div id="tab-services" class="tab-content" style="display: none;">
+        <div id="servicesGrid">
+          <!-- Will be populated by JS -->
+        </div>
+      </div>
+    </div>
+
+    <div class="p-6 border-t border-gray-100 flex gap-3 justify-end">
+      <button onclick="closeStaffModal()" class="action-btn action-btn-secondary">İptal</button>
+      <button onclick="saveStaff()" id="saveStaffBtn" class="action-btn action-btn-primary">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+        </svg>
+        Kaydet
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div id="deleteModal" class="modal-overlay">
+  <div class="modal-content p-6" style="max-width: 400px;">
+    <div class="text-center">
+      <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+        <svg class="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+        </svg>
+      </div>
+      <h3 class="text-xl font-bold text-gray-900 mb-2">Personeli Sil</h3>
+      <p class="text-gray-500 mb-6">Bu personeli silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.</p>
+      <div class="flex gap-3">
+        <button onclick="closeDeleteModal()" class="flex-1 action-btn action-btn-secondary justify-center">İptal</button>
+        <button onclick="confirmDelete()" class="flex-1 action-btn action-btn-danger justify-center">Sil</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div id="toast" class="toast">
+  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+  </svg>
+  <span id="toastMessage">İşlem başarılı</span>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+const API_BASE = 'https://api.kuafora.com/api';
+let authToken = localStorage.getItem('kuafora_partner_token') || '';
+let selectedBarbershopId = null;
+let allStaff = [];
+let allServices = [];
+let currentStaffId = null;
+let staffWorkingHours = {};
+let staffServices = [];
+
+const DAYS_TR = ['Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi', 'Pazar'];
+const DAYS_EN = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+
+// Initialize
+document.addEventListener('DOMContentLoaded', () => {
+  if (!authToken) {
+    document.getElementById('loginModal').classList.add('active');
+  } else {
+    loadBarbershops();
+  }
+});
+
+// Login
+document.getElementById('loginForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const email = document.getElementById('loginEmail').value;
+  const password = document.getElementById('loginPassword').value;
+  
+  try {
+    const res = await fetch(`${API_BASE}/auth/login/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password })
+    });
+    
+    if (res.ok) {
+      const data = await res.json();
+      authToken = data.access;
+      localStorage.setItem('kuafora_partner_token', authToken);
+      document.getElementById('loginModal').classList.remove('active');
+      loadBarbershops();
+    } else {
+      showToast('Giriş başarısız', 'error');
+    }
+  } catch (err) {
+    showToast('Bir hata oluştu', 'error');
+  }
+});
+
+// Load barbershops
+async function loadBarbershops() {
+  try {
+    const res = await fetch(`${API_BASE}/partner/barbershops/`, {
+      headers: { 'Authorization': `Bearer ${authToken}` }
+    });
+    
+    if (!res.ok) {
+      if (res.status === 401) {
+        localStorage.removeItem('kuafora_partner_token');
+        document.getElementById('loginModal').classList.add('active');
+        return;
+      }
+      throw new Error('Failed');
+    }
+    
+    const data = await res.json();
+    const select = document.getElementById('barbershopSelect');
+    select.innerHTML = '';
+    
+    if (data.length === 0) {
+      select.innerHTML = '<option value="">İşletme bulunamadı</option>';
+      return;
+    }
+    
+    data.forEach((shop, i) => {
+      const opt = document.createElement('option');
+      opt.value = shop.id;
+      opt.textContent = shop.name;
+      select.appendChild(opt);
+      if (i === 0) selectedBarbershopId = shop.id;
+    });
+    
+    select.addEventListener('change', (e) => {
+      selectedBarbershopId = e.target.value;
+      loadStaff();
+      loadServices();
+    });
+    
+    loadStaff();
+    loadServices();
+  } catch (err) {
+    console.error(err);
+  }
+}
+
+// Load staff
+async function loadStaff() {
+  if (!selectedBarbershopId) return;
+  
+  const grid = document.getElementById('staffGrid');
+  grid.innerHTML = `
+    <div class="skeleton h-64 rounded-2xl"></div>
+    <div class="skeleton h-64 rounded-2xl"></div>
+    <div class="skeleton h-64 rounded-2xl"></div>
+  `;
+  
+  try {
+    const res = await fetch(`${API_BASE}/partner/staff/?barbershop=${selectedBarbershopId}`, {
+      headers: { 'Authorization': `Bearer ${authToken}` }
+    });
+    
+    if (!res.ok) throw new Error('Failed');
+    
+    const data = await res.json();
+    allStaff = data.results || data || [];
+    
+    updateStats();
+    renderStaff();
+  } catch (err) {
+    console.error(err);
+    grid.innerHTML = `
+      <div class="col-span-full empty-state">
+        <div class="empty-icon">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+        </div>
+        <h3 class="text-lg font-semibold text-gray-900">Yüklenirken hata oluştu</h3>
+      </div>
+    `;
+  }
+}
+
+// Load services
+async function loadServices() {
+  if (!selectedBarbershopId) return;
+  
+  try {
+    const res = await fetch(`${API_BASE}/partner/services/?barbershop=${selectedBarbershopId}`, {
+      headers: { 'Authorization': `Bearer ${authToken}` }
+    });
+    
+    if (res.ok) {
+      const data = await res.json();
+      allServices = data.results || data || [];
+    }
+  } catch (err) {
+    console.error(err);
+  }
+}
+
+// Update stats
+function updateStats() {
+  const certified = allStaff.filter(s => s.certificate).length;
+  const totalReviews = allStaff.reduce((sum, s) => sum + (s.total_reviews || 0), 0);
+  const avgRating = allStaff.length > 0 
+    ? (allStaff.reduce((sum, s) => sum + (s.rating_avg || 0), 0) / allStaff.length).toFixed(1)
+    : '0.0';
+  
+  document.getElementById('totalStaff').textContent = allStaff.length;
+  document.getElementById('certifiedCount').textContent = certified;
+  document.getElementById('avgRating').textContent = avgRating;
+  document.getElementById('totalReviews').textContent = totalReviews;
+}
+
+// Render staff
+function renderStaff() {
+  const grid = document.getElementById('staffGrid');
+  
+  if (allStaff.length === 0) {
+    grid.innerHTML = `
+      <div class="col-span-full empty-state">
+        <div class="empty-icon">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
+          </svg>
+        </div>
+        <h3 class="text-lg font-semibold text-gray-900 mb-2">Henüz personel eklenmemiş</h3>
+        <p class="text-gray-500 mb-4">Ekibinize ilk personeli ekleyerek başlayın</p>
+        <button onclick="openAddStaffModal()" class="action-btn action-btn-primary">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
+          </svg>
+          Personel Ekle
+        </button>
+      </div>
+    `;
+    return;
+  }
+  
+  grid.innerHTML = allStaff.map(renderStaffCard).join('');
+}
+
+// Render staff card
+function renderStaffCard(staff) {
+  const name = staff.user ? `${staff.user.first_name || ''} ${staff.user.last_name || ''}`.trim() : 'İsimsiz';
+  const initials = name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || '?';
+  const roleClass = staff.is_admin ? 'role-admin' : 'role-staff';
+  const roleLabel = staff.is_admin ? 'Yönetici' : 'Personel';
+  const rating = (staff.rating_avg || 0).toFixed(1);
+  const reviews = staff.total_reviews || 0;
+  const experience = staff.experience_years || '-';
+  
+  const photoUrl = staff.photo || staff.photo_thumb;
+  const avatarHtml = photoUrl 
+    ? `<img src="${photoUrl}" class="staff-avatar" alt="${name}">`
+    : `<div class="staff-avatar-placeholder">${initials}</div>`;
+  
+  return `
+    <div class="staff-card p-6">
+      <div class="flex items-start justify-between mb-4">
+        <div class="flex items-center gap-4">
+          ${avatarHtml}
+          <div>
+            <h3 class="font-bold text-lg text-gray-900">${name}</h3>
+            <p class="text-sm text-gray-500">${staff.email || '-'}</p>
+            <span class="role-badge ${roleClass} mt-2">${roleLabel}</span>
+          </div>
+        </div>
+        ${staff.certificate ? `
+          <div class="w-8 h-8 rounded-full bg-yellow-100 flex items-center justify-center" title="Sertifikalı">
+            <svg class="w-4 h-4 text-yellow-600" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+            </svg>
+          </div>
+        ` : ''}
+      </div>
+      
+      ${staff.bio ? `<p class="text-sm text-gray-600 mb-4 line-clamp-2">${staff.bio}</p>` : ''}
+      
+      <div class="flex flex-wrap gap-2 mb-4">
+        <div class="stat-mini">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/>
+          </svg>
+          <span>${rating}</span> (${reviews})
+        </div>
+        <div class="stat-mini">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+          <span>${experience}</span> yıl
+        </div>
+      </div>
+      
+      <div class="flex gap-2">
+        <button onclick="editStaff(${staff.id})" class="flex-1 action-btn action-btn-secondary justify-center">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+          </svg>
+          Düzenle
+        </button>
+        <button onclick="openDeleteModal(${staff.id})" class="action-btn-icon action-btn-danger">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+  `;
+}
+
+// Tab switching
+function switchTab(tabName) {
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.tab === tabName);
+  });
+  document.querySelectorAll('.tab-content').forEach(content => {
+    content.style.display = content.id === `tab-${tabName}` ? 'block' : 'none';
+  });
+}
+
+// Open add staff modal
+function openAddStaffModal() {
+  currentStaffId = null;
+  document.getElementById('staffModalTitle').textContent = 'Personel Ekle';
+  document.getElementById('staffForm').reset();
+  document.getElementById('staffId').value = '';
+  staffWorkingHours = {};
+  staffServices = [];
+  
+  renderHoursGrid();
+  renderServicesGrid();
+  switchTab('info');
+  
+  document.getElementById('staffModal').classList.add('active');
+}
+
+// Edit staff
+async function editStaff(id) {
+  currentStaffId = id;
+  const staff = allStaff.find(s => s.id === id);
+  if (!staff) return;
+  
+  document.getElementById('staffModalTitle').textContent = 'Personel Düzenle';
+  document.getElementById('staffId').value = id;
+  document.getElementById('staffFirstName').value = staff.user?.first_name || '';
+  document.getElementById('staffLastName').value = staff.user?.last_name || '';
+  document.getElementById('staffEmail').value = staff.email || '';
+  document.getElementById('staffPhone').value = staff.user?.phone || '';
+  document.getElementById('staffExperience').value = staff.experience_years || '';
+  document.getElementById('staffGenderPref').value = staff.gender_preference || 'all';
+  document.getElementById('staffBio').value = staff.bio || '';
+  document.getElementById('staffInstagram').value = staff.instagram || '';
+  document.getElementById('staffCertificate').checked = staff.certificate || false;
+  document.getElementById('staffIsAdmin').checked = staff.is_admin || false;
+  
+  // Load working hours
+  await loadStaffWorkingHours(id);
+  
+  // Load staff services
+  await loadStaffServices(id);
+  
+  renderHoursGrid();
+  renderServicesGrid();
+  switchTab('info');
+  
+  document.getElementById('staffModal').classList.add('active');
+}
+
+// Load staff working hours
+async function loadStaffWorkingHours(staffId) {
+  try {
+    const res = await fetch(`${API_BASE}/partner/staff-working-hours/?staff=${staffId}`, {
+      headers: { 'Authorization': `Bearer ${authToken}` }
+    });
+    if (res.ok) {
+      const data = await res.json();
+      const hours = data.results || data || [];
+      staffWorkingHours = {};
+      hours.forEach(h => {
+        staffWorkingHours[h.day_of_week] = {
+          id: h.id,
+          is_working: h.is_working,
+          start_time: h.start_time,
+          end_time: h.end_time
+        };
+      });
+    }
+  } catch (err) {
+    console.error(err);
+  }
+}
+
+// Load staff services
+async function loadStaffServices(staffId) {
+  try {
+    const res = await fetch(`${API_BASE}/partner/staff-services/?staff=${staffId}`, {
+      headers: { 'Authorization': `Bearer ${authToken}` }
+    });
+    if (res.ok) {
+      const data = await res.json();
+      staffServices = (data.results || data || []).map(s => s.service?.id || s.service_id);
+    }
+  } catch (err) {
+    console.error(err);
+  }
+}
+
+// Render hours grid
+function renderHoursGrid() {
+  const grid = document.getElementById('hoursGrid');
+  grid.innerHTML = DAYS_EN.map((day, i) => {
+    const h = staffWorkingHours[i] || { is_working: true, start_time: '09:00', end_time: '18:00' };
+    const isWorking = h.is_working !== false;
+    return `
+      <div class="hours-row">
+        <span class="hours-day">${DAYS_TR[i]}</span>
+        <div class="hours-toggle ${isWorking ? 'active' : ''}" onclick="toggleDay(this, ${i})" data-day="${i}"></div>
+        <input type="time" class="hours-time-input" value="${h.start_time || '09:00'}" data-day="${i}" data-type="start" ${!isWorking ? 'disabled' : ''}>
+        <span class="text-gray-400">-</span>
+        <input type="time" class="hours-time-input" value="${h.end_time || '18:00'}" data-day="${i}" data-type="end" ${!isWorking ? 'disabled' : ''}>
+      </div>
+    `;
+  }).join('');
+}
+
+// Toggle day
+function toggleDay(el, dayIndex) {
+  el.classList.toggle('active');
+  const isActive = el.classList.contains('active');
+  const row = el.closest('.hours-row');
+  row.querySelectorAll('.hours-time-input').forEach(input => {
+    input.disabled = !isActive;
+  });
+}
+
+// Render services grid
+function renderServicesGrid() {
+  const grid = document.getElementById('servicesGrid');
+  
+  if (allServices.length === 0) {
+    grid.innerHTML = '<p class="text-gray-500 text-center py-8">Henüz hizmet eklenmemiş</p>';
+    return;
+  }
+  
+  // Group by category
+  const byCategory = {};
+  allServices.forEach(s => {
+    const cat = s.category?.name || 'Diğer';
+    if (!byCategory[cat]) byCategory[cat] = [];
+    byCategory[cat].push(s);
+  });
+  
+  grid.innerHTML = Object.entries(byCategory).map(([cat, services]) => `
+    <div class="mb-4">
+      <h4 class="font-semibold text-gray-700 mb-2">${cat}</h4>
+      ${services.map(s => `
+        <div class="service-item">
+          <div class="flex items-center gap-3">
+            <div class="service-checkbox ${staffServices.includes(s.id) ? 'checked' : ''}" 
+                 onclick="toggleService(this, ${s.id})" data-service="${s.id}"></div>
+            <span class="text-sm font-medium text-gray-800">${s.name}</span>
+          </div>
+          <span class="text-sm text-gray-500">${s.price || 0} ₺</span>
+        </div>
+      `).join('')}
+    </div>
+  `).join('');
+}
+
+// Toggle service
+function toggleService(el, serviceId) {
+  el.classList.toggle('checked');
+  if (el.classList.contains('checked')) {
+    if (!staffServices.includes(serviceId)) staffServices.push(serviceId);
+  } else {
+    staffServices = staffServices.filter(id => id !== serviceId);
+  }
+}
+
+// Save staff
+async function saveStaff() {
+  const id = document.getElementById('staffId').value;
+  const firstName = document.getElementById('staffFirstName').value.trim();
+  const lastName = document.getElementById('staffLastName').value.trim();
+  const email = document.getElementById('staffEmail').value.trim();
+  
+  if (!firstName || !lastName || !email) {
+    showToast('Lütfen zorunlu alanları doldurun', 'error');
+    return;
+  }
+  
+  const payload = {
+    barbershop: selectedBarbershopId,
+    email: email,
+    user: {
+      first_name: firstName,
+      last_name: lastName,
+      phone: document.getElementById('staffPhone').value.trim()
+    },
+    experience_years: parseInt(document.getElementById('staffExperience').value) || null,
+    gender_preference: document.getElementById('staffGenderPref').value,
+    bio: document.getElementById('staffBio').value.trim(),
+    instagram: document.getElementById('staffInstagram').value.trim(),
+    certificate: document.getElementById('staffCertificate').checked,
+    is_admin: document.getElementById('staffIsAdmin').checked
+  };
+  
+  try {
+    const url = id ? `${API_BASE}/partner/staff/${id}/` : `${API_BASE}/partner/staff/`;
+    const method = id ? 'PATCH' : 'POST';
+    
+    const res = await fetch(url, {
+      method,
+      headers: {
+        'Authorization': `Bearer ${authToken}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(payload)
+    });
+    
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.detail || JSON.stringify(err));
+    }
+    
+    const savedStaff = await res.json();
+    const staffId = savedStaff.id || id;
+    
+    // Save working hours
+    await saveWorkingHours(staffId);
+    
+    // Save services
+    await saveStaffServicesData(staffId);
+    
+    showToast(id ? 'Personel güncellendi' : 'Personel eklendi', 'success');
+    closeStaffModal();
+    loadStaff();
+  } catch (err) {
+    console.error(err);
+    showToast('Hata: ' + err.message, 'error');
+  }
+}
+
+// Save working hours
+async function saveWorkingHours(staffId) {
+  const rows = document.querySelectorAll('.hours-row');
+  
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i];
+    const toggle = row.querySelector('.hours-toggle');
+    const isWorking = toggle.classList.contains('active');
+    const startInput = row.querySelector('[data-type="start"]');
+    const endInput = row.querySelector('[data-type="end"]');
+    
+    const payload = {
+      staff: staffId,
+      day_of_week: i,
+      is_working: isWorking,
+      start_time: startInput.value + ':00',
+      end_time: endInput.value + ':00'
+    };
+    
+    try {
+      const existing = staffWorkingHours[i];
+      if (existing?.id) {
+        await fetch(`${API_BASE}/partner/staff-working-hours/${existing.id}/`, {
+          method: 'PATCH',
+          headers: {
+            'Authorization': `Bearer ${authToken}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(payload)
+        });
+      } else {
+        await fetch(`${API_BASE}/partner/staff-working-hours/`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${authToken}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(payload)
+        });
+      }
+    } catch (err) {
+      console.error('Error saving hours:', err);
+    }
+  }
+}
+
+// Save staff services
+async function saveStaffServicesData(staffId) {
+  // This would require more complex logic to sync services
+  // For now, we'll handle it simply
+  for (const serviceId of staffServices) {
+    try {
+      await fetch(`${API_BASE}/partner/staff-services/`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${authToken}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          staff: staffId,
+          service: serviceId
+        })
+      });
+    } catch (err) {
+      // May fail if already exists, which is fine
+    }
+  }
+}
+
+// Close staff modal
+function closeStaffModal() {
+  document.getElementById('staffModal').classList.remove('active');
+}
+
+// Delete
+let deleteStaffId = null;
+
+function openDeleteModal(id) {
+  deleteStaffId = id;
+  document.getElementById('deleteModal').classList.add('active');
+}
+
+function closeDeleteModal() {
+  document.getElementById('deleteModal').classList.remove('active');
+  deleteStaffId = null;
+}
+
+async function confirmDelete() {
+  if (!deleteStaffId) return;
+  
+  try {
+    const res = await fetch(`${API_BASE}/partner/staff/${deleteStaffId}/`, {
+      method: 'DELETE',
+      headers: { 'Authorization': `Bearer ${authToken}` }
+    });
+    
+    if (res.ok || res.status === 204) {
+      showToast('Personel silindi', 'success');
+      closeDeleteModal();
+      loadStaff();
+    } else {
+      throw new Error('Silinemedi');
+    }
+  } catch (err) {
+    showToast('Hata: ' + err.message, 'error');
+  }
+}
+
+// Toast
+function showToast(message, type = 'success') {
+  const toast = document.getElementById('toast');
+  const msg = document.getElementById('toastMessage');
+  msg.textContent = message;
+  toast.className = `toast ${type}`;
+  toast.classList.add('show');
+  setTimeout(() => toast.classList.remove('show'), 3000);
+}
+</script>
+{% endblock %}
