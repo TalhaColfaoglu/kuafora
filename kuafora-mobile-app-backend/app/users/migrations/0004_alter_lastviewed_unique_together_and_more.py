@@ -67,12 +67,13 @@ class Migration(migrations.Migration):
             name='image_thumb',
             field=models.ImageField(blank=True, null=True, upload_to='users/images/thumbs/'),
         ),
-        # Eski tabloları güvenli şekilde sil
+        # Önemli: Django'nun otomatik unique_together kaldırma işlemini yapmasına izin verme!
+        # Onun yerine manuel SQL ile tabloları siliyoruz.
         migrations.RunPython(
             drop_old_tables_if_exist,
             reverse_drop_tables,
         ),
-        # State'den modelleri kaldır
+        # State'den modelleri kaldır (veritabanına dokunmadan)
         migrations.SeparateDatabaseAndState(
             state_operations=[
                 migrations.DeleteModel(
