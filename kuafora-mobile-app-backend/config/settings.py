@@ -47,6 +47,13 @@ CSRF_TRUSTED_ORIGINS = [
 ]
 
 INSTALLED_APPS = [
+    "unfold",
+    "unfold.contrib.filters",
+    "unfold.contrib.forms",
+    "unfold.contrib.inlines",
+    "unfold.contrib.import_export",
+    "unfold.contrib.guardians",
+    "unfold.contrib.simple_history",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -86,6 +93,161 @@ MIDDLEWARE = [
 
 ROOT_URLCONF = "config.urls"
 
+from django.urls import reverse_lazy
+from django.utils.translation import gettext_lazy as _
+
+UNFOLD = {
+    "SITE_TITLE": "Kuafora Yönetim",
+    "SITE_HEADER": "Kuafora Admin",
+    "SITE_URL": "https://kuafora.com",
+    "SITE_ICON": {
+        "light": lambda request: static("images/logo-icon.png"),  # light mode
+        "dark": lambda request: static("images/logo-icon-dark.png"),  # dark mode
+    },
+    # "SITE_LOGO": {
+    #     "light": lambda request: static("images/logo.svg"),
+    #     "dark": lambda request: static("images/logo-dark.svg"),
+    # },
+    "THEME": "dark",  # Force dark mode or "light"
+    "STYLES": [
+        lambda request: static("css/admin.css"),
+    ],
+    "COLORS": {
+        "primary": {
+            "50": "250 245 255",
+            "100": "243 232 255",
+            "200": "221 214 254",
+            "300": "196 181 253",
+            "400": "167 139 250",
+            "500": "139 92 246",
+            "600": "124 58 237",
+            "700": "109 40 217",
+            "800": "91 33 182",
+            "900": "76 29 149",
+            "950": "46 16 101",
+        },
+    },
+    "SIDEBAR": {
+        "show_search": True,
+        "show_all_applications": True,
+        "navigation": [
+            {
+                "title": _("Yönetim"),
+                "separator": True,
+                "collapsible": True,
+                "items": [
+                    {
+                        "title": _("Kullanıcılar"),
+                        "icon": "people",
+                        "link": reverse_lazy("admin:users_user_changelist"),
+                    },
+                    {
+                        "title": _("Gruplar"),
+                        "icon": "groups",
+                        "link": reverse_lazy("admin:auth_group_changelist"),
+                    },
+                ],
+            },
+            {
+                "title": _("Abonelik & Finans"),
+                "separator": True,
+                "collapsible": True,
+                "items": [
+                    {
+                        "title": _("Abonelikler"),
+                        "icon": "card_membership",
+                        "link": reverse_lazy("admin:subscriptions_subscription_changelist"),
+                    },
+                    {
+                        "title": _("Planlar"),
+                        "icon": "view_agenda",
+                        "link": reverse_lazy("admin:subscriptions_subscriptionplan_changelist"),
+                    },
+                    {
+                        "title": _("Kuponlar"),
+                        "icon": "confirmation_number",
+                        "link": reverse_lazy("admin:subscriptions_coupon_changelist"),
+                    },
+                ],
+            },
+            {
+                "title": _("İşletmeler"),
+                "separator": True,
+                "collapsible": True,
+                "items": [
+                    {
+                        "title": _("Kuaför Salonları"),
+                        "icon": "store",
+                        "link": reverse_lazy("admin:barbers_barbershop_changelist"),
+                    },
+                    {
+                        "title": _("Personeller"),
+                        "icon": "badge",
+                        "link": reverse_lazy("admin:barbers_staff_changelist"),
+                    },
+                    {
+                        "title": _("Hizmetler"),
+                        "icon": "content_cut",
+                        "link": reverse_lazy("admin:barbers_service_changelist"),
+                    },
+                ],
+            },
+            {
+                "title": _("Operasyon"),
+                "separator": True,
+                "collapsible": True,
+                "items": [
+                    {
+                        "title": _("Randevular"),
+                        "icon": "calendar_today",
+                        "link": reverse_lazy("admin:appointments_appointment_changelist"),
+                    },
+                    {
+                        "title": _("Kampanyalar"),
+                        "icon": "campaign",
+                        "link": reverse_lazy("admin:campaigns_campaign_changelist"),
+                    },
+                ],
+            },
+            {
+                "title": _("İletişim & İçerik"),
+                "separator": True,
+                "collapsible": True,
+                "items": [
+                    {
+                        "title": _("Mesajlar"),
+                        "icon": "chat",
+                        "link": reverse_lazy("admin:chat_chatroom_changelist"),
+                    },
+                    {
+                        "title": _("Yorumlar"),
+                        "icon": "reviews",
+                        "link": reverse_lazy("admin:barbers_review_changelist"),
+                    },
+                    {
+                        "title": _("Bildirimler"),
+                        "icon": "notifications",
+                        "link": reverse_lazy("admin:notifications_notification_changelist"),
+                    },
+                ],
+            },
+            {
+                "title": _("Sistem"),
+                "separator": True,
+                "collapsible": True,
+                "items": [
+                    {
+                        "title": _("Yüklenen Görseller"),
+                        "icon": "image",
+                        "link": reverse_lazy("admin:uploads_uploadedimage_changelist"),
+                    },
+                ],
+            },
+        ],
+    },
+}
+
+# Using Unfold templates
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",

@@ -1,21 +1,24 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
+from django.utils.html import format_html
+from unfold.admin import ModelAdmin
 from .models import User
 
 
 @admin.register(User)
-class UserAdmin(BaseUserAdmin):
+class UserAdmin(BaseUserAdmin, ModelAdmin):
     ordering = ("email",)
-    list_display = ("email", "full_name", "gender", "is_active", "is_staff", "is_superuser")
+    list_display = ("email", "full_name_display", "gender", "is_active_badge", "is_staff_badge", "is_superuser_badge")
     search_fields = ("email", "full_name")
+    
     fieldsets = (
         (None, {"fields": ("email", "password")}),
-        ("Personal info", {"fields": ("full_name", "gender", "phone", "image")} ),
+        ("Kişisel Bilgiler", {"fields": ("full_name", "gender", "phone", "image")} ),
         (
-            "Permissions",
+            "Yetkiler",
             {"fields": ("is_active", "is_staff", "is_superuser", "groups", "user_permissions")},
         ),
-        ("Important dates", {"fields": ("last_login", "created_at", "updated_at")}),
+        ("Önemli Tarihler", {"fields": ("last_login", "created_at", "updated_at")}),
     )
     add_fieldsets = (
         (None, {"classes": ("wide",), "fields": ("email", "full_name", "gender", "password1", "password2")} ),
@@ -23,8 +26,27 @@ class UserAdmin(BaseUserAdmin):
     readonly_fields = ("created_at", "updated_at")
     filter_horizontal = ("groups", "user_permissions")
     list_filter = ("is_staff", "is_superuser", "is_active", "gender")
-    # Map username to email
-    def get_fieldsets(self, request, obj=None):  # pragma: no cover - admin
-        return super().get_fieldsets(request, obj)
+    
+    def full_name_display(self, obj):
+        return obj.full_name
+    full_name_display.short_description = "Ad Soyad"
 
+    def is_active_badge(self, obj):
+        return format_html(
+            '<span style="color: {}; font-weight: 600;">{}</span>',
+            '#10B981' if obj.is_active else '#EF4444',
+            'Aktif' if obj.is_active else 'Pasif'
+        )
+    is_active_badge.short_description = "Durum"
 
+    def is_staff_badge(self, obj):
+        if obj.is_staff:
+            return format_html('<span style="background-color: #3B82F6; color: white; padding: 2px 6px; border-radius: 4px; font-size: 11px;">Personel</span>')
+        return ""
+    is_staff_badge.short_description = "Personel"
+
+    def is_superuser_badge(self, obj):
+        if obj.is_superuser:
+            return format_html('<span style="background-color: #8B5CF6; color: white; padding: 2px 6px; border-radius: 4px; font-size: 11px;">Süper Admin</span>')
+        return ""
+    is_superuser_badge.short_description = "Süper Admin"

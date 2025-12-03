@@ -1,12 +1,14 @@
 from django.contrib import admin
 from django.utils.html import format_html
 from django.utils import timezone
+from unfold.admin import ModelAdmin, TabularInline
+from unfold.decorators import action
 from .models import SubscriptionPlan, Subscription, Coupon, CouponUsage
 
 
 @admin.register(SubscriptionPlan)
-class SubscriptionPlanAdmin(admin.ModelAdmin):
-    list_display = ('name', 'slug', 'price_display', 'booking_systems_display', 'is_active', 'sort_order')
+class SubscriptionPlanAdmin(ModelAdmin):
+    list_display = ('name', 'slug', 'price_display', 'booking_systems_display', 'is_active_badge', 'sort_order')
     list_filter = ('is_active',)
     search_fields = ('name', 'slug')
     ordering = ('sort_order', 'price_monthly')
@@ -35,19 +37,24 @@ class SubscriptionPlanAdmin(admin.ModelAdmin):
         return ", ".join(types) if types else "-"
     booking_systems_display.short_description = "Sistemler"
 
+    def is_active_badge(self, obj):
+        return format_html('<span class="text-green-600">✓</span>') if obj.is_active else format_html('<span class="text-red-600">✗</span>')
+    is_active_badge.short_description = "Aktif"
 
-class CouponUsageInline(admin.TabularInline):
+
+class CouponUsageInline(TabularInline):
     model = CouponUsage
     extra = 0
     readonly_fields = ('coupon', 'subscription', 'applied_at')
     can_delete = False
+    tab = True
     
     def has_add_permission(self, request, obj=None):
         return False
 
 
 @admin.register(Subscription)
-class SubscriptionAdmin(admin.ModelAdmin):
+class SubscriptionAdmin(ModelAdmin):
     list_display = (
         'barbershop', 
         'plan', 
@@ -59,8 +66,8 @@ class SubscriptionAdmin(admin.ModelAdmin):
     list_filter = ('status', 'plan', 'created_at')
     search_fields = ('barbershop__name', 'coupon__code')
     readonly_fields = ('created_at', 'updated_at', 'started_at')
-    raw_id_fields = ('barbershop', 'coupon')
     inlines = [CouponUsageInline]
+    actions = ['make_lifetime', 'extend_trial_30_days']
     
     fieldsets = (
         ('Temel Bilgiler', {
@@ -88,19 +95,16 @@ class SubscriptionAdmin(admin.ModelAdmin):
     
     def status_badge(self, obj):
         colors = {
-            'trial': '#3B82F6',  # blue
-            'active': '#10B981',  # green
-            'lifetime': '#8B5CF6',  # purple
-            'grace_period': '#F59E0B',  # orange
-            'suspended': '#EF4444',  # red
-            'cancelled': '#6B7280',  # gray
+            'trial': 'bg-blue-100 text-blue-800',
+            'active': 'bg-green-100 text-green-800',
+            'lifetime': 'bg-purple-100 text-purple-800',
+            'grace_period': 'bg-orange-100 text-orange-800',
+            'suspended': 'bg-red-100 text-red-800',
+            'cancelled': 'bg-gray-100 text-gray-800',
         }
-        color = colors.get(obj.status, '#6B7280')
+        color_class = colors.get(obj.status, 'bg-gray-100 text-gray-800')
         return format_html(
-            '<span style="background-color: {}; color: white; padding: 3px 8px; '
-            'border-radius: 4px; font-size: 11px; font-weight: 600;">{}</span>',
-            color,
-            obj.get_status_display()
+            f'<span class="px-2 py-1 rounded text-xs font-medium {color_class}">{obj.get_status_display()}</span>'
         )
     status_badge.short_description = "Durum"
     
@@ -108,11 +112,9 @@ class SubscriptionAdmin(admin.ModelAdmin):
         if obj.status == 'trial':
             days = obj.days_until_trial_ends
             if days is not None:
-                color = '#10B981' if days > 7 else '#F59E0B' if days > 0 else '#EF4444'
+                color = 'text-green-600' if days > 7 else 'text-orange-600' if days > 0 else 'text-red-600'
                 return format_html(
-                    '<span style="color: {}; font-weight: 600;">{} gün</span>',
-                    color,
-                    days
+                    f'<span class="{color} font-bold">{days} gün</span>'
                 )
         return "-"
     trial_info.short_description = "Trial"
@@ -120,30 +122,26 @@ class SubscriptionAdmin(admin.ModelAdmin):
     def coupon_info(self, obj):
         if obj.coupon:
             return format_html(
-                '<span style="background-color: #FEF3C7; color: #92400E; padding: 2px 6px; '
-                'border-radius: 3px; font-size: 11px;">{}</span>',
-                obj.coupon.code
+                f'<span class="bg-yellow-100 text-yellow-800 px-2 py-1 rounded text-xs">{obj.coupon.code}</span>'
             )
         return "-"
     coupon_info.short_description = "Kupon"
     
-    actions = ['make_lifetime', 'extend_trial_30_days']
-    
+    @action(description="Seçilenleri ömür boyu yap")
     def make_lifetime(self, request, queryset):
         updated = queryset.update(status='lifetime')
         self.message_user(request, f'{updated} abonelik ömür boyu yapıldı.')
-    make_lifetime.short_description = "Seçilenleri ömür boyu yap"
     
+    @action(description="Trial süresini 30 gün uzat")
     def extend_trial_30_days(self, request, queryset):
         for sub in queryset:
             sub.trial_ends_at = sub.trial_ends_at + timezone.timedelta(days=30)
             sub.save()
         self.message_user(request, f'{queryset.count()} aboneliğin trial süresi 30 gün uzatıldı.')
-    extend_trial_30_days.short_description = "Trial süresini 30 gün uzat"
 
 
 @admin.register(Coupon)
-class CouponAdmin(admin.ModelAdmin):
+class CouponAdmin(ModelAdmin):
     list_display = (
         'code', 
         'discount_badge',
@@ -157,6 +155,7 @@ class CouponAdmin(admin.ModelAdmin):
     readonly_fields = ('current_uses', 'created_at', 'updated_at')
     filter_horizontal = ('applicable_plans',)
     inlines = [CouponUsageInline]
+    actions = ['deactivate_coupons', 'activate_coupons']
     
     fieldsets = (
         ('Kupon Bilgileri', {
@@ -179,29 +178,23 @@ class CouponAdmin(admin.ModelAdmin):
     
     def discount_badge(self, obj):
         colors = {
-            'lifetime': '#8B5CF6',  # purple
-            'free_months': '#10B981',  # green
-            'percent': '#3B82F6',  # blue
-            'fixed': '#F59E0B',  # orange
+            'lifetime': 'bg-purple-100 text-purple-800',
+            'free_months': 'bg-green-100 text-green-800',
+            'percent': 'bg-blue-100 text-blue-800',
+            'fixed': 'bg-orange-100 text-orange-800',
         }
-        color = colors.get(obj.discount_type, '#6B7280')
+        color_class = colors.get(obj.discount_type, 'bg-gray-100 text-gray-800')
         return format_html(
-            '<span style="background-color: {}; color: white; padding: 3px 8px; '
-            'border-radius: 4px; font-size: 11px; font-weight: 600;">{}</span>',
-            color,
-            obj.discount_display
+            f'<span class="px-2 py-1 rounded text-xs font-medium {color_class}">{obj.discount_display}</span>'
         )
     discount_badge.short_description = "İndirim"
     
     def usage_info(self, obj):
         if obj.max_uses:
             percent = (obj.current_uses / obj.max_uses) * 100
-            color = '#10B981' if percent < 80 else '#F59E0B' if percent < 100 else '#EF4444'
+            color = 'text-green-600' if percent < 80 else 'text-orange-600' if percent < 100 else 'text-red-600'
             return format_html(
-                '<span style="color: {};">{}/{}</span>',
-                color,
-                obj.current_uses,
-                obj.max_uses
+                f'<span class="{color}">{obj.current_uses}/{obj.max_uses}</span>'
             )
         return f"{obj.current_uses}/∞"
     usage_info.short_description = "Kullanım"
@@ -210,7 +203,7 @@ class CouponAdmin(admin.ModelAdmin):
         now = timezone.now()
         if obj.valid_until:
             if obj.valid_until < now:
-                return format_html('<span style="color: #EF4444;">Süresi doldu</span>')
+                return format_html('<span class="text-red-600">Süresi doldu</span>')
             days_left = (obj.valid_until - now).days
             return f"{days_left} gün kaldı"
         return "Süresiz"
@@ -218,25 +211,19 @@ class CouponAdmin(admin.ModelAdmin):
     
     def is_valid_badge(self, obj):
         if obj.is_valid:
-            return format_html(
-                '<span style="color: #10B981; font-weight: 600;">✓ Geçerli</span>'
-            )
-        return format_html(
-            '<span style="color: #EF4444; font-weight: 600;">✗ Geçersiz</span>'
-        )
+            return format_html('<span class="text-green-600 font-bold">✓ Geçerli</span>')
+        return format_html('<span class="text-red-600 font-bold">✗ Geçersiz</span>')
     is_valid_badge.short_description = "Durum"
     
-    actions = ['deactivate_coupons', 'activate_coupons']
-    
+    @action(description="Seçilen kuponları pasif yap")
     def deactivate_coupons(self, request, queryset):
         updated = queryset.update(is_active=False)
         self.message_user(request, f'{updated} kupon pasif yapıldı.')
-    deactivate_coupons.short_description = "Seçilen kuponları pasif yap"
     
+    @action(description="Seçilen kuponları aktif yap")
     def activate_coupons(self, request, queryset):
         updated = queryset.update(is_active=True)
         self.message_user(request, f'{updated} kupon aktif yapıldı.')
-    activate_coupons.short_description = "Seçilen kuponları aktif yap"
     
     def save_model(self, request, obj, form, change):
         if not change:  # Yeni kupon oluşturulurken
@@ -245,7 +232,7 @@ class CouponAdmin(admin.ModelAdmin):
 
 
 @admin.register(CouponUsage)
-class CouponUsageAdmin(admin.ModelAdmin):
+class CouponUsageAdmin(ModelAdmin):
     list_display = ('coupon', 'subscription', 'barbershop_name', 'applied_at')
     list_filter = ('coupon', 'applied_at')
     search_fields = ('coupon__code', 'subscription__barbershop__name')
@@ -256,7 +243,7 @@ class CouponUsageAdmin(admin.ModelAdmin):
     barbershop_name.short_description = "Kuaför Salonu"
     
     def has_add_permission(self, request):
-        return False  # Manuel ekleme yok, sadece API'den
+        return False
     
     def has_change_permission(self, request, obj=None):
         return False
