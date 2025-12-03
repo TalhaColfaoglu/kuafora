@@ -1,12 +1,13 @@
 # Generated migration for adding device_id to ViewEvent
 
 from django.db import migrations, models
-
+from django.conf import settings
 
 class Migration(migrations.Migration):
 
     dependencies = [
         ('barbers', '0020_external_booking'),
+        migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
     operations = [
@@ -19,7 +20,7 @@ class Migration(migrations.Migration):
                 null=True,
                 on_delete=models.deletion.CASCADE,
                 related_name='barbershop_view_events',
-                to='users.customuser',
+                to=settings.AUTH_USER_MODEL,
             ),
         ),
         # Add device_id field
