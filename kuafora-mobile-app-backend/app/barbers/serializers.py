@@ -282,8 +282,39 @@ class ReviewSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Review
-        fields = ("id", "user", "barbershop", "staff", "rating", "comment", "is_anonymous", "created_at", "updated_at", "user_display_name", "user_full_name", "barbershop_name", "staff_name", "replies", "replies_count")
-        read_only_fields = ("created_at", "updated_at", "user", "barbershop", "user_display_name", "user_full_name", "barbershop_name", "staff_name", "replies", "replies_count")
+        fields = (
+            "id", 
+            "user", 
+            "barbershop", 
+            "staff", 
+            "rating", 
+            "comment", 
+            "reply", 
+            "replied_at", 
+            "is_anonymous", 
+            "created_at", 
+            "updated_at", 
+            "user_display_name", 
+            "user_full_name", 
+            "barbershop_name", 
+            "staff_name", 
+            "replies", 
+            "replies_count"
+        )
+        read_only_fields = (
+            "created_at", 
+            "updated_at", 
+            "user", 
+            "barbershop", 
+            "reply", 
+            "replied_at", 
+            "user_display_name", 
+            "user_full_name", 
+            "barbershop_name", 
+            "staff_name", 
+            "replies", 
+            "replies_count"
+        )
 
     def get_user_display_name(self, obj):
         if obj.is_anonymous:
@@ -317,7 +348,6 @@ class ReviewSerializer(serializers.ModelSerializer):
     
     def get_replies_count(self, obj):
         return obj.replies.count()
-
 
 class ServiceCategorySerializer(serializers.ModelSerializer):
     class Meta:
@@ -379,16 +409,16 @@ class BarbershopWithFavoriteSerializer(serializers.ModelSerializer):
             "id", 
             "name", 
             "address", 
-            "city",
-            "district",
-            "main_image",
-            "main_image_thumb",
-            "rating_avg",
-            "total_reviews",
+            "city", 
+            "district", 
+            "main_image", 
+            "main_image_thumb", 
+            "rating_avg", 
+            "total_reviews", 
             "is_favorited", 
-            "favorites_count",
-            "description",
-            "phone_number",
+            "favorites_count", 
+            "description", 
+            "phone_number", 
         )
     
     def get_is_favorited(self, obj):
@@ -676,3 +706,4 @@ class ShopCategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = ShopCategory
         fields = "__all__"
+

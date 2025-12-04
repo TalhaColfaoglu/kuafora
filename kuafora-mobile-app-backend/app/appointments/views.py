@@ -298,7 +298,7 @@ class HoldCreateApi(APIView):
             staff=staff,
             start_datetime=start,
             end_datetime=end,
-            expires_at=timezone.now() + timedelta(seconds=60),
+            expires_at=timezone.now() + timedelta(minutes=5),
             service_items=service_items_payload,
             price_total=total_price,
         )
@@ -314,6 +314,7 @@ class HoldCreateApi(APIView):
             resp_data["campaign_applied"] = {
                 "id": applied_campaign.id,
                 "name": applied_campaign.name,
+                "description": applied_campaign.description,
                 "discount_amount": best_discount_amount
             }
 
@@ -324,6 +325,7 @@ class HoldCreateApi(APIView):
             resp["campaign_applied"] = {
                 "id": applied_campaign.id,
                 "name": applied_campaign.name,
+                "description": applied_campaign.description,
                 "discount_amount": str(best_discount_amount)
             }
 

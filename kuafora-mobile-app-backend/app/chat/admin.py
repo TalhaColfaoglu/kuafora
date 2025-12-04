@@ -1,13 +1,13 @@
 from django.contrib import admin
 from django.utils.html import format_html
 from unfold.admin import ModelAdmin
-from .models import ChatRoom, Message, ChatBan
+from .models import ChatRoom, ChatMessage, ChatBan
 
 
 @admin.register(ChatRoom)
 class ChatRoomAdmin(ModelAdmin):
-    list_display = ("user", "barbershop", "last_message_preview", "updated_at")
-    search_fields = ("user__full_name", "barbershop__name")
+    list_display = ("customer", "barbershop", "last_message_preview", "updated_at")
+    search_fields = ("customer__full_name", "barbershop__name")
     list_filter = ("updated_at",)
     
     def last_message_preview(self, obj):
@@ -19,14 +19,16 @@ class ChatRoomAdmin(ModelAdmin):
     last_message_preview.short_description = "Son Mesaj"
 
 
-@admin.register(Message)
-class MessageAdmin(ModelAdmin):
+@admin.register(ChatMessage)
+class ChatMessageAdmin(ModelAdmin):
     list_display = ("room_link", "sender_display", "content_preview", "is_staff_reply", "created_at")
     list_filter = ("is_staff_reply", "created_at")
-    search_fields = ("content", "room__user__full_name", "room__barbershop__name")
+    search_fields = ("content", "room__customer__full_name", "room__barbershop__name")
     
     def room_link(self, obj):
-        return f"{obj.room.user.full_name} - {obj.room.barbershop.name}"
+        # Use customer instead of user for ChatRoom relationship
+        customer_name = obj.room.customer.full_name if obj.room.customer else "Anonim"
+        return f"{customer_name} - {obj.room.barbershop.name}"
     room_link.short_description = "Oda"
     
     def sender_display(self, obj):

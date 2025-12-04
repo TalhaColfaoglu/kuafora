@@ -472,6 +472,10 @@ class Review(models.Model):
     )
     rating = models.IntegerField(validators=[MinValueValidator(1), MaxValueValidator(5)])
     comment = models.TextField(blank=True)
+    # --- NEW FIELDS ---
+    reply = models.TextField(blank=True, null=True)
+    replied_at = models.DateTimeField(null=True, blank=True)
+    # ------------------
     is_anonymous = models.BooleanField(default=False)
     likes = models.ManyToManyField(settings.AUTH_USER_MODEL, blank=True, related_name="liked_reviews")
     dislikes = models.ManyToManyField(settings.AUTH_USER_MODEL, blank=True, related_name="disliked_reviews")
