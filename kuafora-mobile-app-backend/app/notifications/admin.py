@@ -6,9 +6,9 @@ from .models import Notification
 
 @admin.register(Notification)
 class NotificationAdmin(ModelAdmin):
-    list_display = ("recipient", "title", "message_preview", "type_badge", "is_read", "created_at")
+    list_display = ("user", "title", "message_preview", "type_badge", "is_read", "created_at")
     list_filter = ("type", "is_read", "created_at")
-    search_fields = ("title", "message", "recipient__full_name")
+    search_fields = ("title", "message", "user__full_name")
     
     def message_preview(self, obj):
         return (obj.message[:50] + '...') if len(obj.message) > 50 else obj.message

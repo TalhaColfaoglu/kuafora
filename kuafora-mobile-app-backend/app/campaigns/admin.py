@@ -7,9 +7,9 @@ from .models import Campaign
 
 @admin.register(Campaign)
 class CampaignAdmin(ModelAdmin):
-    list_display = ("title", "barbershop", "discount_display", "date_range", "is_active_badge")
+    list_display = ("name", "barbershop", "discount_display", "date_range", "is_active_badge")
     list_filter = ("is_active", "barbershop", "start_date", "end_date")
-    search_fields = ("title", "description", "barbershop__name")
+    search_fields = ("name", "description", "barbershop__name")
     actions = ["activate_campaigns", "deactivate_campaigns"]
     
     def discount_display(self, obj):

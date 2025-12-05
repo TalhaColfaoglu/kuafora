@@ -101,7 +101,7 @@ class StaffAdmin(ModelAdmin):
 
 @admin.register(StaffCatalogImage)
 class StaffCatalogImageAdmin(ModelAdmin):
-    list_display = ("staff", "image_preview", "created_at")
+    list_display = ("staff", "image_preview")
     
     def image_preview(self, obj):
         if obj.image:
@@ -112,7 +112,7 @@ class StaffCatalogImageAdmin(ModelAdmin):
 
 @admin.register(WorkSchedule)
 class WorkScheduleAdmin(ModelAdmin):
-    list_display = ("staff", "day_display", "hours_display", "is_off")
+    list_display = ("staff", "day_display", "hours_display")
     list_filter = ("day_of_week",)
     
     def day_display(self, obj):

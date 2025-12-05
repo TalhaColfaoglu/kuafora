@@ -15,7 +15,7 @@ class AppointmentAdmin(ModelAdmin):
         "status_badge", 
         "price_display"
     )
-    list_filter = ("status", "start_time", "barbershop")
+    list_filter = ("status", "start_datetime", "shop")
     search_fields = (
         "customer__full_name", 
         "barbershop__name", 
