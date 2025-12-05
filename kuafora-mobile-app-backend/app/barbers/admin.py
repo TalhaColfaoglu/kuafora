@@ -124,8 +124,6 @@ class WorkScheduleAdmin(ModelAdmin):
     day_display.short_description = "Gün"
 
     def hours_display(self, obj):
-        if obj.is_off:
-            return "İzinli"
         return f"{obj.start_time} - {obj.end_time}"
     hours_display.short_description = "Saatler"
 
