@@ -22,7 +22,7 @@ class ChatMessageSerializer(serializers.ModelSerializer):
             # Check if sender is staff of that barbershop
             is_staff = obj.is_staff_reply
             if is_staff:
-            return obj.room.barbershop.name
+                return obj.room.barbershop.name
             
             # Mask user name: "Ahmet Yılmaz" -> "Ahmet Y."
             full_name = getattr(obj.sender, "full_name", "") or f"{getattr(obj.sender, 'first_name', '')} {getattr(obj.sender, 'last_name', '')}".strip()
