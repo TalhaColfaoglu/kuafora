@@ -3,6 +3,7 @@ from django.utils.html import format_html
 from unfold.admin import ModelAdmin
 from unfold.decorators import action
 from .models import Appointment
+from app.barbers.models import Service
 
 
 @admin.register(Appointment)
@@ -28,18 +29,30 @@ class AppointmentAdmin(ModelAdmin):
     customer_link.short_description = "Müşteri"
     
     def barbershop_link(self, obj):
-        return obj.barbershop.name
+        return obj.shop.name
     barbershop_link.short_description = "Salon"
     
     def service_names(self, obj):
-        services = obj.services.all()
-        if not services:
+        if not obj.service_items:
             return "-"
-        return ", ".join([s.name for s in services])
+        
+        service_ids = []
+        for item in obj.service_items:
+            if isinstance(item, dict):
+                # item can have 'service' or 'service_id'
+                sid = item.get("service") or item.get("service_id")
+                if sid:
+                    service_ids.append(sid)
+        
+        if not service_ids:
+             return "-"
+
+        names = Service.objects.filter(id__in=service_ids).values_list('name', flat=True)
+        return ", ".join(names)
     service_names.short_description = "Hizmetler"
     
     def date_display(self, obj):
-        return obj.start_time.strftime("%d.%m.%Y %H:%M")
+        return obj.start_datetime.strftime("%d.%m.%Y %H:%M")
     date_display.short_description = "Tarih"
     
     def status_badge(self, obj):
@@ -57,7 +70,7 @@ class AppointmentAdmin(ModelAdmin):
     status_badge.short_description = "Durum"
     
     def price_display(self, obj):
-        return f"{obj.total_price} ₺"
+        return f"{obj.price_total} ₺"
     price_display.short_description = "Tutar"
     
     @action(description="Seçilen randevuları iptal et")
