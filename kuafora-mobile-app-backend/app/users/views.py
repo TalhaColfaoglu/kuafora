@@ -181,12 +181,12 @@ class ProfilePhotoUploadView(generics.GenericAPIView):
             
             # Log success info
             print(f"User {user.id} profile photo updated successfully")
-            print(f"Image path: {user.image.path if user.image else 'None'}")
             print(f"Image URL: {user.image.url if user.image else 'None'}")
             
             return Response({
                 "detail": "Profile photo updated successfully",
-                "image_url": user.image.url if user.image else None
+                "image_url": user.image.url if user.image else None,
+                "image_thumb_url": user.image_thumb.url if user.image_thumb else None
             })
         except Exception as e:
             print(f"Profile photo upload error: {e}")

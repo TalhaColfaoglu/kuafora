@@ -28,8 +28,8 @@ from .views import (
     ToggleTodayApi,
     AnnouncementsPublicApi,
     PartnerHolidayOverrideViewSet,
-    ToggleTodayApi,
     ImpactPlusApi,
+    ShopCategoryViewSet,
 )
 from .home_views import HomeDashboardApi
 from .stats_views import BarbershopAdvancedStatsView
@@ -38,6 +38,7 @@ router = DefaultRouter()
 router.register(r"barbershops", BarbershopViewSet, basename="barbershop")
 router.register(r"last-viewed", LastViewedViewSet, basename="last-viewed")
 router.register(r"reviews", ReviewViewSet, basename="review")
+router.register(r"shop-categories", ShopCategoryViewSet, basename="shop-category")
 
 router.register(r"partner/barbershops", PartnerBarbershopViewSet, basename="partner-barbershop")
 # Kategori route'unu, service route'u ile çakışmayı önlemek için ayrı prefix ile tanımla
@@ -58,6 +59,9 @@ router.register(r"partner/holidayoverride", PartnerHolidayOverrideViewSet, basen
 router.register(r"calendar", CalendarStatusViewSet, basename="calendar-status")
 
 urlpatterns = [
+    # Router'ı önce include et ki ViewSet action'ları çalışsın
+    path("", include(router.urls)),
+    
     # Robust toggle endpoints (avoid router clashes)
     path("toggle-today/", ToggleTodayApi.as_view(), name="toggle-today"),
     path("calendar/toggle/", ToggleTodayApi.as_view(), name="calendar-toggle"),
@@ -67,15 +71,13 @@ urlpatterns = [
     # Koruma: hem ViewSet action hem de ayrı list api mevcut; upsert da ayrıca açık
     path("barbershops/<int:barber_id>/reviews/upsert/", ReviewUpsertApi.as_view(), name="barber-review-upsert"),
     path("barbershops/<int:barber_id>/reviews/highlights/", ReviewHighlightsApi.as_view(), name="barber-review-highlights"),
-    # ViewSet action için router zaten /barbershops/{id}/reviews/ sağlıyor; ekstra list api de mevcut
+    # ViewSet action için router zaten /barbershops/{id}/reviews/ sağlıyor; ekstra list api de mevcut (sadece GET için)
     path("barbershops/<int:barber_id>/reviews/", BarbershopReviewsListApi.as_view(), name="barber-review-list"),
     
     # Manual overrides for Partner Reviews to ensure 404 is resolved
     path("partner/reviews/", PartnerReviewViewSet.as_view({'get': 'list'}), name="partner-reviews-list-manual"),
     path("partner/reviews/<int:pk>/", PartnerReviewViewSet.as_view({'get': 'retrieve'}), name="partner-reviews-detail-manual"),
     path("partner/reviews/<int:pk>/reply/", PartnerReviewViewSet.as_view({'post': 'reply'}), name="partner-reviews-reply-manual"),
-
-    path("", include(router.urls)),
     path("favorites/", FavoriteListView.as_view(), name="favorites-list"),
     path("favorites/toggle/<int:barbershop_id>/", FavoriteToggleView.as_view(), name="favorites-toggle"),
     # Public announcements for mobile app

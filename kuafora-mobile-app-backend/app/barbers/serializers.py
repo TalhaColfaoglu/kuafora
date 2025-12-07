@@ -180,6 +180,8 @@ class StaffSerializer(serializers.ModelSerializer):
     rating_avg = serializers.FloatField(read_only=True)
     experience_years = serializers.SerializerMethodField()
     weekly_schedule = serializers.SerializerMethodField()
+    user_image_url = serializers.SerializerMethodField()
+    user_image_thumb_url = serializers.SerializerMethodField()
 
     class Meta:
         model = Staff
@@ -190,8 +192,23 @@ class StaffSerializer(serializers.ModelSerializer):
             "rating_avg", "staff_services", "weekly_schedule",
             "auto_approval", "commission_rate", "appointment_interval",
             "instagram", "facebook", "twitter", "whatsapp",
+            "user_image_url", "user_image_thumb_url"
         )
-        read_only_fields = ("total_reviews", "rating_avg", "experience_years", "photo_thumb")
+        read_only_fields = ("total_reviews", "rating_avg", "experience_years", "photo_thumb", "user_image_url", "user_image_thumb_url")
+
+    def get_user_image_url(self, obj):
+        u = getattr(obj, "user", None)
+        if u and u.image:
+            return u.image.url
+        return None
+
+    def get_user_image_thumb_url(self, obj):
+        u = getattr(obj, "user", None)
+        if u and u.image_thumb:
+            return u.image_thumb.url
+        elif u and u.image:
+            return u.image.url
+        return None
 
     def get_weekly_schedule(self, obj):
         schedule = {}
@@ -277,6 +294,8 @@ class ReviewSerializer(serializers.ModelSerializer):
     user_full_name = serializers.SerializerMethodField()
     barbershop_name = serializers.SerializerMethodField()
     staff_name = serializers.SerializerMethodField()
+    user_image_url = serializers.SerializerMethodField()
+    user_image_thumb_url = serializers.SerializerMethodField()
     replies = ReviewReplySerializer(many=True, read_only=True)
     replies_count = serializers.SerializerMethodField()
 
@@ -298,6 +317,8 @@ class ReviewSerializer(serializers.ModelSerializer):
             "user_full_name", 
             "barbershop_name", 
             "staff_name", 
+            "user_image_url",
+            "user_image_thumb_url",
             "replies", 
             "replies_count"
         )
@@ -312,9 +333,29 @@ class ReviewSerializer(serializers.ModelSerializer):
             "user_full_name", 
             "barbershop_name", 
             "staff_name", 
+            "user_image_url",
+            "user_image_thumb_url",
             "replies", 
             "replies_count"
         )
+
+    def get_user_image_url(self, obj):
+        if obj.is_anonymous:
+            return None
+        u = getattr(obj, "user", None)
+        if u and u.image:
+            return u.image.url
+        return None
+
+    def get_user_image_thumb_url(self, obj):
+        if obj.is_anonymous:
+            return None
+        u = getattr(obj, "user", None)
+        if u and u.image_thumb:
+            return u.image_thumb.url
+        elif u and u.image:
+            return u.image.url
+        return None
 
     def get_user_display_name(self, obj):
         if obj.is_anonymous:

@@ -38,6 +38,7 @@ from .models import (
     DailyOverride,
     BreakWindow,
     ScheduleChangeRequest,
+    ShopCategory,
 )
 from .services.schedule import check_and_cancel_conflicts
 from .serializers import (
@@ -68,6 +69,7 @@ from .serializers import (
     ShopHolidayOverrideSerializer,
     DailyOverrideSerializer,
     BreakWindowSerializer,
+    ShopCategorySerializer,
 )
 from .filters import BarbershopFilter
 from .permissions import IsShopAdmin
@@ -3913,6 +3915,13 @@ class StaffServiceCategoryViewSet(viewsets.ModelViewSet):
         staff = Staff.objects.filter(user=self.request.user).order_by('-is_admin', '-id').first()
         if staff:
             serializer.save(staff=staff)
+
+
+class ShopCategoryViewSet(viewsets.ReadOnlyModelViewSet):
+    """Public shop categories endpoint"""
+    serializer_class = ShopCategorySerializer
+    permission_classes = [permissions.AllowAny]
+    queryset = ShopCategory.objects.filter(is_active=True).order_by('name')
 
 
 class PartnerHolidayOverrideViewSet(viewsets.ModelViewSet):

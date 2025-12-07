@@ -289,6 +289,9 @@ TIME_ZONE = "Europe/Istanbul"
 USE_I18N = True
 USE_TZ = True
 
+# APPEND_SLASH=False to prevent POST redirect issues
+APPEND_SLASH = False
+
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 MEDIA_ROOT = BASE_DIR / "media"

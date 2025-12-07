@@ -63,13 +63,21 @@ from drf_spectacular.utils import extend_schema_field
 class UserSerializer(serializers.ModelSerializer):
     image = serializers.ImageField(read_only=True)
     image_thumb = serializers.ImageField(read_only=True)
+    image_url = serializers.SerializerMethodField()
+    image_thumb_url = serializers.SerializerMethodField()
     ban_status = serializers.SerializerMethodField()
 
     class Meta:
         model = User
-        fields = ("id", "email", "full_name", "phone", "gender", "image", "image_thumb", "ban_status")
-        read_only_fields = ("id", "image", "image_thumb") 
+        fields = ("id", "email", "full_name", "phone", "gender", "image", "image_thumb", "image_url", "image_thumb_url", "ban_status")
+        read_only_fields = ("id", "image", "image_thumb", "image_url", "image_thumb_url") 
     
+    def get_image_url(self, obj):
+        return obj.image.url if obj.image else None
+
+    def get_image_thumb_url(self, obj):
+        return obj.image_thumb.url if obj.image_thumb else None
+
     @extend_schema_field(serializers.DictField)
     def get_ban_status(self, obj):
         from app.appointments.models import CustomerBan

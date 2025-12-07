@@ -109,6 +109,56 @@ class SubscriptionViewSet(viewsets.ModelViewSet):
         except Subscription.DoesNotExist:
             return Response({'error': 'Abonelik bulunamadı'}, status=404)
     
+    @action(detail=False, methods=['post'], url_path='start-trial')
+    def start_trial(self, request):
+        """Trial başlat (ilk abonelik oluşturma)"""
+        barbershop_id = request.data.get('barbershop_id')
+        if not barbershop_id:
+            staff = request.user.staff_profiles.filter(is_admin=True).first()
+            if not staff:
+                return Response({'error': 'Salon bulunamadı'}, status=404)
+            barbershop_id = staff.barbershop_id
+        
+        # Yetki kontrolü
+        if not request.user.staff_profiles.filter(barbershop_id=barbershop_id, is_admin=True).exists():
+            return Response({'error': 'Bu salon için yetkiniz yok'}, status=403)
+        
+        # Zaten abonelik var mı?
+        if Subscription.objects.filter(barbershop_id=barbershop_id).exists():
+            return Response({
+                'error': 'Bu salon için zaten abonelik mevcut',
+                'subscription': SubscriptionSerializer(Subscription.objects.get(barbershop_id=barbershop_id)).data
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Trial abonelik oluştur
+        from app.barbers.models import Barbershop
+        barbershop = get_object_or_404(Barbershop, id=barbershop_id)
+        
+        # Otomatik plan seçimi
+        booking_type = getattr(barbershop, 'booking_system', 'info_system')
+        if booking_type == 'kuafora_booking':
+            plan = SubscriptionPlan.objects.filter(slug='randevu', is_active=True).first()
+        else:
+            plan = SubscriptionPlan.objects.filter(slug='bilgi', is_active=True).first()
+        
+        if not plan:
+            plan = SubscriptionPlan.objects.filter(is_active=True).first()
+            if not plan:
+                return Response({'error': 'Aktif plan bulunamadı'}, status=500)
+        
+        with transaction.atomic():
+            subscription = Subscription.objects.create(
+                barbershop=barbershop,
+                plan=plan,
+                status='trial',
+                trial_ends_at=timezone.now() + timedelta(days=90)
+            )
+        
+        return Response({
+            'success': True,
+            'subscription': SubscriptionSerializer(subscription).data
+        }, status=status.HTTP_201_CREATED)
+    
     @action(detail=False, methods=['post'])
     def apply_coupon(self, request):
         """Mevcut aboneliğe kupon uygula"""
