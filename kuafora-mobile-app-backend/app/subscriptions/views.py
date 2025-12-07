@@ -39,6 +39,10 @@ class SubscriptionPlanViewSet(viewsets.ReadOnlyModelViewSet):
         return qs.order_by('sort_order', 'price_monthly')
 
 
+from drf_spectacular.utils import extend_schema
+
+
+@extend_schema(exclude=True)
 class CouponValidateApi(APIView):
     """Kupon kodu doğrulama - Public API"""
     
@@ -237,6 +241,7 @@ class SubscriptionViewSet(viewsets.ModelViewSet):
         return 'Kupon uygulandı!'
 
 
+@extend_schema(exclude=True)
 class CreateSubscriptionApi(APIView):
     """Kuaför kaydında abonelik oluşturma"""
     
@@ -324,6 +329,7 @@ class CreateSubscriptionApi(APIView):
         }, status=status.HTTP_201_CREATED)
 
 
+@extend_schema(exclude=True)
 class SubscriptionStatusApi(APIView):
     """Abonelik durumu kontrolü - Public (sadece aktif mi değil mi)"""
     

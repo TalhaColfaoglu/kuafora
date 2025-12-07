@@ -3120,6 +3120,7 @@ class PartnerSpecialMessageViewSet(viewsets.ModelViewSet):
         return Response(SpecialMessageSerializer(instance).data)
 
 
+@extend_schema(exclude=True)
 class AnnouncementsPublicApi(generics.GenericAPIView):
     permission_classes = [permissions.AllowAny]
 

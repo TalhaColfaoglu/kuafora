@@ -32,8 +32,10 @@ from .services.idempotency import ensure_idempotent, store_idempotent_response
 from .services import events
 from .fsm import can_transition
 from app.campaigns.models import Campaign, CampaignType
+from drf_spectacular.utils import extend_schema
 
 
+@extend_schema(exclude=True)
 class AvailabilityApi(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
@@ -94,8 +96,8 @@ def check_customer_ban(user):
         remaining = (active_ban.end_date - timezone.now().date()).days
         return f"Randevu oluşturamazsınız. Ban sürenizin bitmesine {remaining} gün kaldı."
     return None
-
-
+ 
+@extend_schema(exclude=True)
 class HoldCreateApi(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
@@ -691,6 +693,7 @@ class SystemSwitchApi(APIView):
         return Response(resp)
 
 
+@extend_schema(exclude=True)
 class PartnerAppointmentsListApi(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
