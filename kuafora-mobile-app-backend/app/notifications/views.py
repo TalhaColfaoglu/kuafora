@@ -9,6 +9,8 @@ class NotificationViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = NotificationSerializer
 
     def get_queryset(self):
+        if getattr(self, "swagger_fake_view", False) or self.request.user.is_anonymous:
+            return Notification.objects.none()
         return Notification.objects.filter(user=self.request.user)
 
     @action(detail=True, methods=["post"])

@@ -299,7 +299,7 @@ AWS_SECRET_ACCESS_KEY = env("AWS_SECRET_ACCESS_KEY", default="")
 AWS_STORAGE_BUCKET_NAME = env("AWS_STORAGE_BUCKET_NAME", default="kuafora-media")
 AWS_S3_REGION_NAME = env("AWS_S3_REGION_NAME", default="eu-central-1")
 AWS_S3_CUSTOM_DOMAIN = "d1uiu5mb5i1uph.cloudfront.net"
-AWS_DEFAULT_ACL = "public-read"
+AWS_DEFAULT_ACL = None
 AWS_S3_OBJECT_PARAMETERS = {
     "CacheControl": "max-age=86400",
 }

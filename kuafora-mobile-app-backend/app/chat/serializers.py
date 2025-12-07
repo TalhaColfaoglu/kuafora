@@ -37,6 +37,8 @@ class ChatMessageSerializer(serializers.ModelSerializer):
         # Private room logic
         return getattr(obj.sender, "full_name", "Kullanıcı")
 
+from drf_spectacular.utils import extend_schema_field
+
 class ChatRoomSerializer(serializers.ModelSerializer):
     barbershop_name = serializers.CharField(source='barbershop.name', read_only=True)
     barbershop_image = serializers.SerializerMethodField()
@@ -47,11 +49,13 @@ class ChatRoomSerializer(serializers.ModelSerializer):
         fields = ("id", "customer", "barbershop", "barbershop_name", "barbershop_image", "room_type", "is_public", "is_active", "last_message", "updated_at")
         read_only_fields = ("customer", "is_active", "updated_at")
 
+    @extend_schema_field(serializers.CharField)
     def get_barbershop_image(self, obj):
         if obj.barbershop.main_image_thumb:
             return obj.barbershop.main_image_thumb.url
         return None
     
+    @extend_schema_field(serializers.DictField)
     def get_last_message(self, obj):
         last_msg = obj.messages.order_by("-created_at").first()
         if last_msg:

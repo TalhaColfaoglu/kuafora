@@ -43,6 +43,7 @@ class CouponValidateApi(APIView):
     """Kupon kodu doğrulama - Public API"""
     
     permission_classes = [AllowAny]
+    serializer_class = CouponValidateSerializer
     
     def post(self, request):
         serializer = CouponValidateSerializer(data=request.data)
@@ -191,6 +192,7 @@ class CreateSubscriptionApi(APIView):
     """Kuaför kaydında abonelik oluşturma"""
     
     permission_classes = [IsAuthenticated]
+    serializer_class = SubscriptionCreateSerializer
     
     def post(self, request, barbershop_id):
         """Yeni abonelik oluştur"""
@@ -278,6 +280,7 @@ class SubscriptionStatusApi(APIView):
     """Abonelik durumu kontrolü - Public (sadece aktif mi değil mi)"""
     
     permission_classes = [AllowAny]
+    serializer_class = None
     
     def get(self, request, barbershop_id):
         """Salonun abonelik durumunu kontrol et"""

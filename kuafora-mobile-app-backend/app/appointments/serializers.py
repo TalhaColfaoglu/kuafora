@@ -39,6 +39,8 @@ class AppointmentCreateSerializer(serializers.Serializer):
     source = serializers.ChoiceField(choices=[("partner", "partner"), ("mobile_customer", "mobile_customer")], required=False)
 
 
+from drf_spectacular.utils import extend_schema_field
+
 class AppointmentSerializer(serializers.ModelSerializer):
     staff_grid = serializers.IntegerField(source="staff.appointment_interval", read_only=True)
     staff_name = serializers.SerializerMethodField()
@@ -68,13 +70,16 @@ class AppointmentSerializer(serializers.ModelSerializer):
             "is_attended",
         )
 
+    @extend_schema_field(serializers.CharField)
     def get_staff_name(self, obj):
         u = getattr(obj.staff, "user", None)
         return getattr(u, "full_name", None) or getattr(u, "email", "")
 
+    @extend_schema_field(serializers.CharField)
     def get_shop_name(self, obj):
         return getattr(obj.shop, "name", "")
 
+    @extend_schema_field(serializers.CharField)
     def get_customer_name(self, obj):
         u = getattr(obj, "customer", None)
         if not u:

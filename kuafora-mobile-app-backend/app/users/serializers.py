@@ -58,6 +58,8 @@ class LoginSerializer(serializers.Serializer):
         return attrs
 
 
+from drf_spectacular.utils import extend_schema_field
+
 class UserSerializer(serializers.ModelSerializer):
     image = serializers.ImageField(read_only=True)
     image_thumb = serializers.ImageField(read_only=True)
@@ -67,7 +69,8 @@ class UserSerializer(serializers.ModelSerializer):
         model = User
         fields = ("id", "email", "full_name", "phone", "gender", "image", "image_thumb", "ban_status")
         read_only_fields = ("id", "image", "image_thumb") 
-
+    
+    @extend_schema_field(serializers.DictField)
     def get_ban_status(self, obj):
         from app.appointments.models import CustomerBan
         from django.utils import timezone

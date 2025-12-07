@@ -40,6 +40,7 @@ from .models import (
     ScheduleChangeRequest,
 )
 from .services.schedule import check_and_cancel_conflicts
+from .permissions import IsShopAdmin
 from .serializers import (
     BarbershopWithFavoriteSerializer,
     
@@ -1459,6 +1460,7 @@ class FavoriteListView(generics.ListAPIView):
 
 class FavoriteToggleView(generics.GenericAPIView):
     permission_classes = [permissions.IsAuthenticated]
+    serializer_class = FavoriteSerializer
     
     def post(self, request, barbershop_id):
         try:
@@ -1649,6 +1651,41 @@ class ReviewReplyViewSet(viewsets.ModelViewSet):
         
         reply = ReviewReply.objects.create(review=review, user=request.user, text=text)
         return Response(ReviewReplySerializer(reply).data, status=201)
+
+
+class PartnerReviewViewSet(viewsets.ReadOnlyModelViewSet):
+    serializer_class = ReviewSerializer
+    permission_classes = [permissions.IsAuthenticated, IsShopAdmin]
+
+    def get_queryset(self):
+        try:
+            # Find the barbershop where the current user is an admin
+            admin_staff = Staff.objects.filter(user=self.request.user, is_admin=True).order_by('-id').first()
+            if admin_staff:
+                return Review.objects.filter(barbershop=admin_staff.barbershop).select_related('user', 'barbershop').order_by('-created_at')
+        except:
+            pass
+        return Review.objects.none()
+
+    @action(detail=True, methods=['post'])
+    def reply(self, request, pk=None):
+        review = self.get_object()
+        text = request.data.get('reply')
+        if not text:
+            return Response({'detail': 'Yanıt metni gerekli'}, status=400)
+        
+        # Create or update reply
+        ReviewReply.objects.update_or_create(
+            review=review,
+            user=request.user,
+            defaults={'text': text}
+        )
+        # Also update review replied_at
+        review.replied_at = timezone.now()
+        review.save()
+        
+        # Refresh review to include reply
+        return Response(ReviewSerializer(review).data)
 
 
 # Takvim ve Mesaj Yönetimi ViewSet'leri
@@ -4250,3 +4287,37 @@ class PartnerHolidayOverrideViewSet(viewsets.ModelViewSet):
             'active_overrides': list(staff_overrides)
         }
 
+
+class PartnerReviewViewSet(viewsets.ReadOnlyModelViewSet):
+    serializer_class = ReviewSerializer
+    permission_classes = [permissions.IsAuthenticated, IsShopAdmin]
+
+    def get_queryset(self):
+        try:
+            # Find the barbershop where the current user is an admin
+            admin_staff = Staff.objects.filter(user=self.request.user, is_admin=True).order_by('-id').first()
+            if admin_staff:
+                return Review.objects.filter(barbershop=admin_staff.barbershop).select_related('user', 'barbershop').order_by('-created_at')
+        except:
+            pass
+        return Review.objects.none()
+
+    @action(detail=True, methods=['post'])
+    def reply(self, request, pk=None):
+        review = self.get_object()
+        text = request.data.get('reply')
+        if not text:
+            return Response({'detail': 'Yanıt metni gerekli'}, status=400)
+        
+        # Create or update reply
+        ReviewReply.objects.update_or_create(
+            review=review,
+            user=request.user,
+            defaults={'text': text}
+        )
+        # Also update review replied_at
+        review.replied_at = timezone.now()
+        review.save()
+        
+        # Refresh review to include reply
+        return Response(ReviewSerializer(review).data)

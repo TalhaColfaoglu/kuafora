@@ -16,6 +16,7 @@ from .views import (
     StaffServiceCategoryViewSet,
     PartnerWorkScheduleViewSet,
     ReviewReplyViewSet,
+    PartnerReviewViewSet,
     LastViewedViewSet,
     TrackViewApi,
     PartnerShopWorkingHoursViewSet,
@@ -47,6 +48,7 @@ router.register(r"partner/staff-services", StaffServiceViewSet, basename="partne
 router.register(r"partner/staff-categories", StaffServiceCategoryViewSet, basename="partner-staff-categories")
 router.register(r"partner/working-hours", PartnerWorkScheduleViewSet, basename="partner-work-schedule")
 router.register(r"partner/review-replies", ReviewReplyViewSet, basename="partner-review-reply")
+router.register(r"partner/reviews", PartnerReviewViewSet, basename="partner-reviews")
 router.register(r"partner/shop-working-hours", PartnerShopWorkingHoursViewSet, basename="partner-shop-working-hours")
 router.register(r"partner/staff-working-hours", PartnerStaffWorkingHoursViewSet, basename="partner-staff-working-hours")
 router.register(r"partner/break-windows", PartnerBreakWindowViewSet, basename="partner-break-window")

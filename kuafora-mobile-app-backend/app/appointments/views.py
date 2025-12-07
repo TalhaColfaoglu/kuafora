@@ -335,6 +335,7 @@ class HoldCreateApi(APIView):
 
 class AppointmentCreateApi(APIView):
     permission_classes = [permissions.IsAuthenticated]
+    serializer_class = AppointmentCreateSerializer
 
     @transaction.atomic
     def post(self, request):
@@ -452,6 +453,7 @@ class AppointmentCreateApi(APIView):
 
 class PartnerShiftApi(APIView):
     permission_classes = [permissions.IsAuthenticated]
+    serializer_class = ShiftSerializer
 
     @transaction.atomic
     def post(self, request, appointment_id: int):
@@ -502,6 +504,7 @@ class PartnerShiftApi(APIView):
 
 class PartnerRescheduleApi(APIView):
     permission_classes = [permissions.IsAuthenticated]
+    serializer_class = RescheduleSerializer
 
     @transaction.atomic
     def post(self, request, appointment_id: int):
@@ -542,6 +545,7 @@ class PartnerRescheduleApi(APIView):
 
 class PartnerAcceptApi(APIView):
     permission_classes = [permissions.IsAuthenticated]
+    serializer_class = None
 
     @transaction.atomic
     def post(self, request, appointment_id: int):
@@ -569,6 +573,7 @@ class PartnerAcceptApi(APIView):
 
 class PartnerCancelApi(APIView):
     permission_classes = [permissions.IsAuthenticated]
+    serializer_class = None
 
     @transaction.atomic
     def post(self, request, appointment_id: int):
@@ -606,6 +611,7 @@ class PartnerCancelApi(APIView):
 
 class PartnerStatusApi(APIView):
     permission_classes = [permissions.IsAuthenticated]
+    serializer_class = None
 
     @transaction.atomic
     def post(self, request, appointment_id: int):
@@ -746,6 +752,7 @@ class CustomerAppointmentsApi(APIView):
 
 class CustomerAppointmentCancelApi(APIView):
     permission_classes = [permissions.IsAuthenticated]
+    serializer_class = None
 
     @transaction.atomic
     @extend_schema(
@@ -799,6 +806,7 @@ class CustomerAppointmentCancelApi(APIView):
 
 class AppointmentAttendanceApi(APIView):
     permission_classes = [permissions.IsAuthenticated]
+    serializer_class = None
 
     @transaction.atomic
     def post(self, request, appointment_id: int):

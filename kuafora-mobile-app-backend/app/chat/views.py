@@ -12,6 +12,8 @@ class ChatRoomViewSet(viewsets.ModelViewSet):
     serializer_class = ChatRoomSerializer
 
     def get_queryset(self):
+        if getattr(self, "swagger_fake_view", False) or self.request.user.is_anonymous:
+            return ChatRoom.objects.none()
         user = self.request.user
         queryset = ChatRoom.objects.all()
         

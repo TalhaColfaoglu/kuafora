@@ -9,6 +9,7 @@ from app.campaigns.models import Campaign
 
 class HomeDashboardApi(APIView):
     permission_classes = [permissions.AllowAny]
+    serializer_class = None
 
     def get(self, request):
         city = request.query_params.get('city')
