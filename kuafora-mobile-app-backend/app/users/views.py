@@ -168,12 +168,6 @@ class ProfilePhotoUploadView(generics.GenericAPIView):
                     status=status.HTTP_500_INTERNAL_SERVER_ERROR
                 )
             
-            # Log directory info for debugging
-            print(f"Media root: {settings.MEDIA_ROOT}")
-            print(f"Users images dir: {media_root}")
-            print(f"Directory exists: {os.path.exists(media_root)}")
-            print(f"Directory writable: {os.access(media_root, os.W_OK)}")
-            
             # Update user's profile photo
             user = request.user
             user.image = image_file
@@ -181,7 +175,6 @@ class ProfilePhotoUploadView(generics.GenericAPIView):
             
             # Log success info
             print(f"User {user.id} profile photo updated successfully")
-            print(f"Image URL: {user.image.url if user.image else 'None'}")
             
             return Response({
                 "detail": "Profile photo updated successfully",

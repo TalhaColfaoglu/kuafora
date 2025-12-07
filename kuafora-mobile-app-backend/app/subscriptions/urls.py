@@ -14,13 +14,20 @@ router.register(r'subscriptions', SubscriptionViewSet, basename='subscriptions')
 
 urlpatterns = [
     path('', include(router.urls)),
-    
+
+    # Partner alias: /api/partner/subscriptions/my_subscription/ → SubscriptionViewSet.my_subscription
+    path(
+        'partner/subscriptions/my_subscription/',
+        SubscriptionViewSet.as_view({'get': 'my_subscription'}),
+        name='partner-subscriptions-my-subscription',
+    ),
+
     # Kupon doğrulama
     path('coupons/validate/', CouponValidateApi.as_view(), name='coupon-validate'),
-    
+
     # Abonelik oluşturma (kuaför kaydında)
     path('barbershops/<int:barbershop_id>/subscription/', CreateSubscriptionApi.as_view(), name='create-subscription'),
-    
+
     # Abonelik durumu kontrolü (public)
     path('barbershops/<int:barbershop_id>/subscription/status/', SubscriptionStatusApi.as_view(), name='subscription-status'),
 ]
