@@ -85,7 +85,6 @@ class BarbershopSerializer(serializers.ModelSerializer):
             'phone_number': {'required': False, 'allow_blank': True},
         }
 
-    @extend_schema_field(serializers.DictField)
     def get_weekly_schedule(self, obj):
         schedule = {}
         hours = obj.shop_working_hours.all()

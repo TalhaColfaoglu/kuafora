@@ -2,12 +2,15 @@ FROM python:3.12-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    PYTHONPATH=/app
+    PYTHONPATH=/app \
+    PIP_DEFAULT_TIMEOUT=100 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
 
 WORKDIR /app
 
 # Daha dayanıklı apt (retry + ca-certificates)
-RUN apt-get update -o Acquire::Retries=3 \
+RUN apt-get update -o Acquire::Retries=3 -o Acquire::http::Timeout=30 \
     && apt-get install -y --no-install-recommends \
         build-essential \
         libpq-dev \
@@ -16,11 +19,15 @@ RUN apt-get update -o Acquire::Retries=3 \
         cron \
     && rm -rf /var/lib/apt/lists/*
 
+# Önce requirements.txt'i kopyala (cache için)
 COPY requirements.txt /app/
-RUN pip install --upgrade pip \
-    && pip install --no-cache-dir -r requirements.txt \
-    && pip install gunicorn==22.0.0
 
+# pip install'i optimize et - timeout ve retry ekle
+RUN pip install --upgrade pip setuptools wheel \
+    && pip install --timeout=100 --retries=3 --no-cache-dir -r requirements.txt \
+    && pip install --timeout=100 --retries=3 --no-cache-dir gunicorn==22.0.0
+
+# Kod dosyalarını kopyala
 COPY . /app/
 
 RUN mkdir -p /app/staticfiles /app/media

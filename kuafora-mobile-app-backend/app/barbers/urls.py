@@ -69,6 +69,12 @@ urlpatterns = [
     path("barbershops/<int:barber_id>/reviews/highlights/", ReviewHighlightsApi.as_view(), name="barber-review-highlights"),
     # ViewSet action için router zaten /barbershops/{id}/reviews/ sağlıyor; ekstra list api de mevcut
     path("barbershops/<int:barber_id>/reviews/", BarbershopReviewsListApi.as_view(), name="barber-review-list"),
+    
+    # Manual overrides for Partner Reviews to ensure 404 is resolved
+    path("partner/reviews/", PartnerReviewViewSet.as_view({'get': 'list'}), name="partner-reviews-list-manual"),
+    path("partner/reviews/<int:pk>/", PartnerReviewViewSet.as_view({'get': 'retrieve'}), name="partner-reviews-detail-manual"),
+    path("partner/reviews/<int:pk>/reply/", PartnerReviewViewSet.as_view({'post': 'reply'}), name="partner-reviews-reply-manual"),
+
     path("", include(router.urls)),
     path("favorites/", FavoriteListView.as_view(), name="favorites-list"),
     path("favorites/toggle/<int:barbershop_id>/", FavoriteToggleView.as_view(), name="favorites-toggle"),
