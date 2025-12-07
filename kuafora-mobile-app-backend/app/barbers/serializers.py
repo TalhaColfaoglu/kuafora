@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from django.core.exceptions import ValidationError
 from rest_framework import serializers
+from drf_spectacular.utils import extend_schema_field
 from .models import (
     Favorite,
     Barbershop,
@@ -85,6 +86,7 @@ class BarbershopSerializer(serializers.ModelSerializer):
             'phone_number': {'required': False, 'allow_blank': True},
         }
 
+    @extend_schema_field(serializers.DictField)
     def get_weekly_schedule(self, obj):
         schedule = {}
         hours = obj.shop_working_hours.all()
@@ -196,12 +198,14 @@ class StaffSerializer(serializers.ModelSerializer):
         )
         read_only_fields = ("total_reviews", "rating_avg", "experience_years", "photo_thumb", "user_image_url", "user_image_thumb_url")
 
+    @extend_schema_field(serializers.CharField(allow_null=True))
     def get_user_image_url(self, obj):
         u = getattr(obj, "user", None)
         if u and u.image:
             return u.image.url
         return None
 
+    @extend_schema_field(serializers.CharField(allow_null=True))
     def get_user_image_thumb_url(self, obj):
         u = getattr(obj, "user", None)
         if u and u.image_thumb:
@@ -210,6 +214,7 @@ class StaffSerializer(serializers.ModelSerializer):
             return u.image.url
         return None
 
+    @extend_schema_field(serializers.DictField)
     def get_weekly_schedule(self, obj):
         schedule = {}
         # 1. Try StaffWorkingHours (new model)
@@ -462,6 +467,7 @@ class BarbershopWithFavoriteSerializer(serializers.ModelSerializer):
             "phone_number", 
         )
     
+    @extend_schema_field(serializers.BooleanField)
     def get_is_favorited(self, obj):
         request = self.context.get("request")
         if request and request.user.is_authenticated:
@@ -476,6 +482,7 @@ class BarbershopDetailSerializer(BarbershopSerializer):
     class Meta(BarbershopSerializer.Meta):
         fields = BarbershopSerializer.Meta.fields + ("is_favorited",)
 
+    @extend_schema_field(serializers.BooleanField)
     def get_is_favorited(self, obj):
         request = self.context.get("request")
         if request and request.user.is_authenticated:
