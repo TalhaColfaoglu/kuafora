@@ -6,6 +6,7 @@ from datetime import timedelta
 from .models import Barbershop, ShopCategory
 from .home_serializers import ShopCategorySerializer, BarbershopHomeSerializer
 from app.campaigns.models import Campaign
+from .views import BarbershopViewSet
 
 class HomeDashboardApi(APIView):
     permission_classes = [permissions.AllowAny]
@@ -25,12 +26,28 @@ class HomeDashboardApi(APIView):
 
         # 2. Newest (last 60 days)
         sixty_days_ago = timezone.now() - timedelta(days=60)
-        newest = shops_qs.filter(created_at__gte=sixty_days_ago).order_by('-created_at')[:10]
-        newest_data = BarbershopHomeSerializer(newest, many=True).data
+        newest = list(shops_qs.filter(created_at__gte=sixty_days_ago).order_by('-created_at')[:10])
 
         # 3. Top Rated
-        top_rated = shops_qs.filter(rating_avg__gte=4.5).order_by('-rating_avg')[:10]
-        top_rated_data = BarbershopHomeSerializer(top_rated, many=True).data
+        top_rated = list(shops_qs.filter(rating_avg__gte=4.5).order_by('-rating_avg')[:10])
+
+        # Entegre açık/kapalı ve cinsiyet bilgisi
+        serializer = BarbershopHomeSerializer()
+        status_helper = BarbershopViewSet()
+        today = timezone.now().date()
+
+        def serialize_shop(shop: Barbershop):
+          base = serializer.to_representation(shop)
+          try:
+              status = status_helper._calculate_shop_status(shop, today)  # type: ignore[attr-defined]
+              base["is_open"] = bool(status.get("is_open"))
+          except Exception:
+              base["is_open"] = True
+          base["gender"] = getattr(shop, "gender", "unisex")
+          return base
+
+        newest_data = [serialize_shop(s) for s in newest]
+        top_rated_data = [serialize_shop(s) for s in top_rated]
 
         # 4. Campaigns
         today = timezone.now().date()
