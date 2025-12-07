@@ -30,8 +30,18 @@ SECRET_KEY = os.getenv(
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv("DJANGO_DEBUG", "true").lower() == "true"
 
+# Host ayarları:
+# 1) Öncelik: DJANGO_ALLOWED_HOSTS env (production için önerilen)
+# 2) Yoksa: ALLOWED_HOSTS env (eski config'lerle uyumluluk için)
+# 3) Yoksa: varsayılan liste
 _default_hosts = "localhost,127.0.0.1,kuafora.com,www.kuafora.com,api.kuafora.com,website"
-ALLOWED_HOSTS = [h.strip() for h in os.getenv("DJANGO_ALLOWED_HOSTS", _default_hosts).split(",") if h.strip()]
+_raw_hosts = os.getenv("DJANGO_ALLOWED_HOSTS") or os.getenv("ALLOWED_HOSTS") or _default_hosts
+ALLOWED_HOSTS = [h.strip() for h in _raw_hosts.split(",") if h.strip()]
+
+# Healthcheck'ler ve internal istekler için localhost ve 127.0.0.1'i her zaman ekle
+for _h in ("localhost", "127.0.0.1"):
+    if _h not in ALLOWED_HOSTS:
+        ALLOWED_HOSTS.append(_h)
 
 # Application definition
 INSTALLED_APPS = [

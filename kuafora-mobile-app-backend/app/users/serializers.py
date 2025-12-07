@@ -72,9 +72,11 @@ class UserSerializer(serializers.ModelSerializer):
         fields = ("id", "email", "full_name", "phone", "gender", "image", "image_thumb", "image_url", "image_thumb_url", "ban_status")
         read_only_fields = ("id", "image", "image_thumb", "image_url", "image_thumb_url") 
     
+    @extend_schema_field(serializers.CharField(allow_null=True))
     def get_image_url(self, obj):
         return obj.image.url if obj.image else None
 
+    @extend_schema_field(serializers.CharField(allow_null=True))
     def get_image_thumb_url(self, obj):
         return obj.image_thumb.url if obj.image_thumb else None
 

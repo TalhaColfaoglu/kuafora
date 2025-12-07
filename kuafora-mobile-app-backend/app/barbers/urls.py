@@ -90,4 +90,8 @@ urlpatterns = [
     path("mobile/home/dashboard/", HomeDashboardApi.as_view(), name="mobile-home-dashboard"),
     # Advanced Stats
     path("partner/stats/advanced/", BarbershopAdvancedStatsView.as_view(), name="partner-stats-advanced"),
+    
+    # Calendar aliases for APPEND_SLASH=False compatibility
+    path("calendar/holidays", CalendarStatusViewSet.as_view({'get': 'holidays'}), name="calendar-holidays-alias"),
+    path("calendar/now", CalendarStatusViewSet.as_view({'get': 'now'}), name="calendar-now-alias"),
 ]

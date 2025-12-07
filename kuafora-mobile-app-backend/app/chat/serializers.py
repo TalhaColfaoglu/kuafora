@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from drf_spectacular.utils import extend_schema_field
 from .models import ChatRoom, ChatMessage
 
 class ChatMessageSerializer(serializers.ModelSerializer):
@@ -47,11 +48,13 @@ class ChatRoomSerializer(serializers.ModelSerializer):
         fields = ("id", "customer", "barbershop", "barbershop_name", "barbershop_image", "room_type", "is_public", "is_active", "last_message", "updated_at")
         read_only_fields = ("customer", "is_active", "updated_at")
 
+    @extend_schema_field(serializers.CharField(allow_null=True))
     def get_barbershop_image(self, obj):
         if obj.barbershop.main_image_thumb:
             return obj.barbershop.main_image_thumb.url
         return None
     
+    @extend_schema_field(serializers.DictField(allow_null=True))
     def get_last_message(self, obj):
         last_msg = obj.messages.order_by("-created_at").first()
         if last_msg:

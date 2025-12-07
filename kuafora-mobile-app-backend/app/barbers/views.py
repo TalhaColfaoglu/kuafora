@@ -892,6 +892,9 @@ class LastViewedViewSet(mixins.ListModelMixin, mixins.CreateModelMixin, viewsets
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
+        # Schema jenerasyonu veya anonim isteklerde güvenli boş queryset dön
+        if getattr(self, "swagger_fake_view", False) or not self.request or self.request.user.is_anonymous:
+            return LastViewed.objects.none()
         # return last 7 viewed for current user, most recent first
         return LastViewed.objects.filter(user=self.request.user).order_by('-viewed_at')[:7]
 
@@ -1015,6 +1018,9 @@ class PartnerBarbershopViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
+        # Schema jenerasyonu veya anonim isteklerde güvenli boş queryset dön
+        if getattr(self, "swagger_fake_view", False) or not self.request or self.request.user.is_anonymous:
+            return Barbershop.objects.none()
         # Partner can manage barbershops where they have admin staff
         user = self.request.user
         return Barbershop.objects.filter(staff__user=user, staff__is_admin=True).distinct()
@@ -1191,6 +1197,7 @@ class ReviewThrottle(UserRateThrottle):
 
 
 class ReviewUpsertApi(generics.GenericAPIView):
+    serializer_class = ReviewSerializer
     permission_classes = [permissions.IsAuthenticated]
     throttle_classes = [ReviewThrottle]
 
@@ -1246,6 +1253,7 @@ class ReviewUpsertApi(generics.GenericAPIView):
 
 
 class ReviewHighlightsApi(generics.GenericAPIView):
+    serializer_class = ReviewSerializer
     def get(self, request, barber_id):
         shop = Barbershop.objects.filter(id=barber_id).first()
         if not shop:
@@ -1268,6 +1276,7 @@ class ReviewHighlightsApi(generics.GenericAPIView):
 
 class BarbershopReviewsListApi(generics.GenericAPIView):
     """Public list endpoint for all reviews of a barbershop with pagination and filters."""
+    serializer_class = ReviewSerializer
     def get(self, request, barber_id):
         shop = Barbershop.objects.filter(id=barber_id).first()
         if not shop:
@@ -1454,13 +1463,18 @@ class FavoriteListView(generics.ListAPIView):
     permission_classes = [permissions.IsAuthenticated]
     
     def get_queryset(self):
-        return Barbershop.objects.filter(
-            favorited_by__user=self.request.user
-        ).order_by("-favorited_by__created_at")
+        # Schema jenerasyonu veya anonim isteklerde güvenli boş queryset dön
+        if getattr(self, "swagger_fake_view", False) or not self.request or self.request.user.is_anonymous:
+            return Barbershop.objects.none()
+        return (
+            Barbershop.objects.filter(favorited_by__user=self.request.user)
+            .order_by("-favorited_by__created_at")
+        )
 
 
 class FavoriteToggleView(generics.GenericAPIView):
     permission_classes = [permissions.IsAuthenticated]
+    serializer_class = FavoriteSerializer
     
     def post(self, request, barbershop_id):
         try:
@@ -1736,6 +1750,36 @@ class PartnerShopWorkingHoursViewSet(viewsets.ModelViewSet):
 
         if not schedule_data:
              return Response({"detail": "Schedule data required"}, status=400)
+
+        # Normalize schedule data to avoid 400 errors
+        normalized_schedule = []
+        for entry in schedule_data:
+            is_closed = entry.get('is_closed', False)
+            day = entry.get('day_of_week')
+            if not day: continue
+            
+            if is_closed:
+                normalized_schedule.append({
+                    'day_of_week': day,
+                    'is_closed': True,
+                    'start_time': '00:00:00', # Default dummy
+                    'end_time': '00:00:00'    # Default dummy
+                })
+            else:
+                start = entry.get('start_time')
+                end = entry.get('end_time')
+                if not start or not end:
+                    return Response({"detail": f"{day} için açılış/kapanış saati gerekli"}, status=400)
+                normalized_schedule.append({
+                    'day_of_week': day,
+                    'is_closed': False,
+                    'start_time': start,
+                    'end_time': end,
+                    'break_start_time': entry.get('break_start_time'),
+                    'break_end_time': entry.get('break_end_time')
+                })
+        
+        schedule_data = normalized_schedule
 
         effective_date = timezone.now().date()
         if effective_date_str:
@@ -2291,6 +2335,9 @@ class PartnerBreakWindowViewSet(viewsets.ModelViewSet):
     http_method_names = ["get", "post", "put", "patch", "delete"]
 
     def get_queryset(self):
+        # Schema jenerasyonu veya anonim kullanıcıda güvenli boş queryset
+        if getattr(self, "swagger_fake_view", False) or not self.request or self.request.user.is_anonymous:
+            return BreakWindow.objects.none()
         user = self.request.user
         admin_shop_ids = self._admin_shop_ids()
         base_qs = BreakWindow.objects.select_related("barbershop", "staff__user", "created_by")
@@ -3147,6 +3194,7 @@ class AnnouncementsPublicApi(generics.GenericAPIView):
 class CalendarStatusViewSet(viewsets.ReadOnlyModelViewSet):
     """Takvim durumu hesaplama ViewSet'i"""
     permission_classes = [permissions.AllowAny]  # Public endpoint
+    serializer_class = CalendarStatusSerializer
     
     @action(detail=False, methods=["get"], url_path="shop-status")
     def shop_status(self, request):
@@ -3181,6 +3229,134 @@ class CalendarStatusViewSet(viewsets.ReadOnlyModelViewSet):
             return Response(StaffCalendarStatusSerializer(status).data)
         except (Staff.DoesNotExist, ValueError):
             return Response({"detail": "Invalid staff or date"}, status=404)
+
+    @action(detail=False, methods=["get"], url_path="now")
+    def now(self, request):
+        """Get current live status for a barbershop with minutes until open info"""
+        from django.utils import timezone
+        barbershop_id = request.query_params.get('barbershop_id')
+        
+        if not barbershop_id:
+            return Response({"detail": "barbershop_id required"}, status=400)
+        
+        try:
+            barbershop = Barbershop.objects.get(id=barbershop_id)
+            now = timezone.now() # aware datetime
+            today = now.date()
+            current_time = now.time()
+            
+            # Defaults
+            is_open = True
+            is_break = False
+            status_message = ""
+            minutes_until_open = None
+            break_end_time = None
+            
+            # 1. Check Override
+            override = Override.objects.filter(
+                barbershop=barbershop,
+                override_type='shop_global',
+                start_date__lte=today,
+                end_date__gte=today,
+                is_active=True
+            ).first()
+            
+            if override:
+                if override.override_scope == 'full_day_closed':
+                    is_open = False
+                    status_message = override.reason or "Bugün Kapalı (Özel Durum)"
+                elif override.override_scope == 'late_opening':
+                    if override.start_time and current_time < override.start_time:
+                        is_open = False
+                        status_message = f"Geç Açılış ({override.start_time.strftime('%H:%M')})"
+                        # Calculate minutes until open
+                        open_dt = timezone.make_aware(datetime.combine(today, override.start_time))
+                        minutes_until_open = int((open_dt - now).total_seconds() / 60)
+                elif override.override_scope == 'early_closing':
+                    if override.end_time and current_time >= override.end_time:
+                        is_open = False
+                        status_message = "Erken Kapanış"
+                elif override.override_scope == 'time_range_closed':
+                    if override.start_time and override.end_time:
+                        if override.start_time <= current_time <= override.end_time:
+                            is_open = False
+                            is_break = True
+                            status_message = f"Mola ({override.end_time.strftime('%H:%M')} bitiş)"
+                            break_end_time = override.end_time.strftime('%H:%M')
+                            end_dt = timezone.make_aware(datetime.combine(today, override.end_time))
+                            minutes_until_open = int((end_dt - now).total_seconds() / 60)
+
+            # 2. Check Holiday Override & Official Holiday (if no specific override block found yet)
+            if is_open: # Only check if not already closed by override
+                decision = ShopHolidayOverride.objects.filter(barbershop=barbershop, date=today).first()
+                if decision:
+                    if decision.status == ShopHolidayOverride.Status.CLOSED:
+                        is_open = False
+                        status_message = f"Bugün Kapalı - {decision.title or 'Özel Gün'}"
+                    elif decision.status == ShopHolidayOverride.Status.CUSTOM:
+                        # Check custom hours
+                        if decision.open_time and current_time < decision.open_time:
+                            is_open = False
+                            status_message = f"Açılış: {decision.open_time.strftime('%H:%M')}"
+                            open_dt = timezone.make_aware(datetime.combine(today, decision.open_time))
+                            minutes_until_open = int((open_dt - now).total_seconds() / 60)
+                        elif decision.close_time and current_time >= decision.close_time:
+                            is_open = False
+                            status_message = "Kapalı"
+                else:
+                    if OfficialHoliday.objects.filter(country_code='TR', date=today).exists():
+                        is_open = False
+                        status_message = "Bugün Kapalı (Resmi Tatil)"
+
+            # 3. Check Regular Hours (if still open)
+            if is_open:
+                weekday_code_map = {0: "MON", 1: "TUE", 2: "WED", 3: "THU", 4: "FRI", 5: "SAT", 6: "SUN"}
+                day_code = weekday_code_map.get(today.weekday())
+                shop_hours = ShopWorkingHours.objects.filter(barbershop=barbershop, day_of_week=day_code).first()
+                
+                if not shop_hours or shop_hours.is_closed:
+                    is_open = False
+                    status_message = "Bugün Kapalı"
+                else:
+                    # Check open/close times
+                    if current_time < shop_hours.start_time:
+                        is_open = False
+                        status_message = f"Açılış: {shop_hours.start_time.strftime('%H:%M')}"
+                        open_dt = timezone.make_aware(datetime.combine(today, shop_hours.start_time))
+                        minutes_until_open = int((open_dt - now).total_seconds() / 60)
+                    elif current_time >= shop_hours.end_time:
+                        is_open = False
+                        status_message = "Kapalı"
+                    else:
+                        # Within working hours, check BreakWindow
+                        shop_break = BreakWindow.objects.filter(
+                            barbershop=barbershop,
+                            scope=BreakWindow.Scope.SHOP,
+                            date=today,
+                            start_time__lte=current_time,
+                            end_time__gte=current_time,
+                        ).order_by("start_time").first()
+                        
+                        if shop_break:
+                            is_open = False
+                            is_break = True
+                            status_message = f"Mola ({shop_break.end_time.strftime('%H:%M')} bitiş)"
+                            break_end_time = shop_break.end_time.strftime('%H:%M')
+                            end_dt = timezone.make_aware(datetime.combine(today, shop_break.end_time))
+                            minutes_until_open = int((end_dt - now).total_seconds() / 60)
+                        else:
+                            status_message = "Açık"
+
+            return Response({
+                'is_open': is_open,
+                'is_break': is_break,
+                'status_message': status_message,
+                'minutes_until_open': minutes_until_open,
+                'break_end_time': break_end_time
+            })
+            
+        except Barbershop.DoesNotExist:
+            return Response({"detail": "Barbershop not found"}, status=404)
 
     @action(detail=False, methods=["get"], url_path="today-status")
     def today_status(self, request):
@@ -3623,6 +3799,7 @@ class CalendarStatusViewSet(viewsets.ReadOnlyModelViewSet):
 
 class ToggleTodayApi(generics.GenericAPIView):
     permission_classes = [permissions.IsAuthenticated]
+    serializer_class = DailyOverrideSerializer
 
     def _handle(self, request, **kwargs):
         try:
