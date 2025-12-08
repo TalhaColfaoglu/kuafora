@@ -1479,11 +1479,9 @@ class FavoriteListView(generics.ListAPIView):
 
 
 @extend_schema(exclude=True)
-@extend_schema(exclude=True)
 class FavoriteToggleView(generics.GenericAPIView):
     permission_classes = [permissions.IsAuthenticated]
-    serializer_class = FavoriteSerializer
-    schema = None  # şemadan tamamen hariç
+    schema = None  # Şemadan tamamen hariç; serializer'a ihtiyaç yok
     
     def post(self, request, barbershop_id):
         try:
