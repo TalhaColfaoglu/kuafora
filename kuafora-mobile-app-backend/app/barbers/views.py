@@ -4118,8 +4118,8 @@ class ShopCategoryViewSet(viewsets.ReadOnlyModelViewSet):
         if getattr(self, "swagger_fake_view", False):
             return ShopCategory.objects.none()
 
-        # If no categories are defined yet, seed a sensible default set once.
-        if not ShopCategory.objects.exists():
+        # Eğer hiç aktif kategori yoksa, varsayılan seti seed et / aktif hale getir.
+        if ShopCategory.objects.filter(is_active=True).count() == 0:
             default_categories = [
                 {"name": "Saç Hizmetleri", "slug": "sac-hizmetleri"},
                 {"name": "Güzellik & Estetik", "slug": "guzellik-estetik"},
@@ -4128,7 +4128,8 @@ class ShopCategoryViewSet(viewsets.ReadOnlyModelViewSet):
                 {"name": "Profesyonel Bakım", "slug": "profesyonel-bakim"},
             ]
             for item in default_categories:
-                ShopCategory.objects.get_or_create(
+                # Zaten varsa güncelle, yoksa oluştur (hepsini aktif yap)
+                ShopCategory.objects.update_or_create(
                     slug=item["slug"],
                     defaults={"name": item["name"], "is_active": True},
                 )

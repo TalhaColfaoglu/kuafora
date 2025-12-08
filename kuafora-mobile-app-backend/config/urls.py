@@ -22,15 +22,22 @@ def schema_static(request):
         # Statik şema okunamazsa sessizce dinamik şemaya düş
         pass
 
-    # Dinamik fallback (JSON döner)
+    # Dinamik fallback (JSON döner) - hata olursa bile 200 ve minimal şema dön
     try:
         return SpectacularAPIView.as_view()(request)
     except Exception as exc:
-        # Dinamik üretim dahi patlarsa anlamlı bir hata dön
-        return JsonResponse(
-            {"detail": "schema generation failed", "error": str(exc)},
-            status=500,
-        )
+        # Dinamik üretim dahi patlarsa, minimal ama geçerli bir OpenAPI şeması ile cevap ver
+        # Böylece /api/schema/ ve /api/docs/ asla 500 vermez.
+        minimal_schema = {
+            "openapi": "3.0.0",
+            "info": {
+                "title": "Kuafora API",
+                "version": "1.0.0",
+                "description": "Schema generation failed, serving minimal fallback schema instead.",
+            },
+            "paths": {},
+        }
+        return JsonResponse(minimal_schema, status=200)
 
 urlpatterns = [
     path("admin/", admin.site.urls),
