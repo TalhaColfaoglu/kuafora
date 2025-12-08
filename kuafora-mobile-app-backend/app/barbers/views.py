@@ -1201,6 +1201,7 @@ class ReviewUpsertApi(generics.GenericAPIView):
     serializer_class = ReviewSerializer
     permission_classes = [permissions.IsAuthenticated]
     throttle_classes = [ReviewThrottle]
+    schema = None  # drf-spectacular: bu view'i şemadan tamamen hariç tut
 
     def post(self, request, barber_id):
         shop = Barbershop.objects.filter(id=barber_id).first()
@@ -1256,6 +1257,7 @@ class ReviewUpsertApi(generics.GenericAPIView):
 @extend_schema(exclude=True)
 class ReviewHighlightsApi(generics.GenericAPIView):
     serializer_class = ReviewSerializer
+    schema = None  # şemadan tamamen hariç
     def get(self, request, barber_id):
         shop = Barbershop.objects.filter(id=barber_id).first()
         if not shop:
@@ -1280,6 +1282,7 @@ class ReviewHighlightsApi(generics.GenericAPIView):
 class BarbershopReviewsListApi(generics.GenericAPIView):
     """Public list endpoint for all reviews of a barbershop with pagination and filters."""
     serializer_class = ReviewSerializer
+    schema = None  # şemadan tamamen hariç
     def get(self, request, barber_id):
         shop = Barbershop.objects.filter(id=barber_id).first()
         if not shop:
@@ -1480,6 +1483,7 @@ class FavoriteListView(generics.ListAPIView):
 class FavoriteToggleView(generics.GenericAPIView):
     permission_classes = [permissions.IsAuthenticated]
     serializer_class = FavoriteSerializer
+    schema = None  # şemadan tamamen hariç
     
     def post(self, request, barbershop_id):
         try:
@@ -3201,6 +3205,7 @@ class CalendarStatusViewSet(viewsets.ReadOnlyModelViewSet):
     """Takvim durumu hesaplama ViewSet'i"""
     permission_classes = [permissions.AllowAny]  # Public endpoint
     serializer_class = CalendarStatusSerializer
+    schema = None  # şemadan tamamen hariç
     
     @action(detail=False, methods=["get"], url_path="shop-status")
     def shop_status(self, request):
@@ -3807,6 +3812,7 @@ class CalendarStatusViewSet(viewsets.ReadOnlyModelViewSet):
 class ToggleTodayApi(generics.GenericAPIView):
     permission_classes = [permissions.IsAuthenticated]
     serializer_class = DailyOverrideSerializer
+    schema = None  # şemadan tamamen hariç
 
     def _handle(self, request, **kwargs):
         try:
