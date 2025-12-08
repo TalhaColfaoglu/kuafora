@@ -96,7 +96,7 @@ def check_customer_ban(user):
         remaining = (active_ban.end_date - timezone.now().date()).days
         return f"Randevu oluşturamazsınız. Ban sürenizin bitmesine {remaining} gün kaldı."
     return None
- 
+
 @extend_schema(exclude=True)
 class HoldCreateApi(APIView):
     permission_classes = [permissions.IsAuthenticated]

@@ -2,6 +2,7 @@ from rest_framework import generics, permissions
 from rest_framework.response import Response
 from django.utils import timezone
 from django.db.models import Sum, Count, F, Q
+from django.db.models.functions import TruncDate
 from datetime import timedelta, datetime
 from app.barbers.models import Barbershop, Staff, ViewEvent, Favorite, Review
 from app.appointments.models import Appointment, AppointmentStatus
@@ -92,6 +93,19 @@ class BarbershopAdvancedStatsView(generics.GenericAPIView):
             "reviews": {"total": curr_reviews, "trend": calc_trend(curr_reviews, prev_reviews)},
         }
 
+        # Stock-style daily views chart for vitrin app
+        views_chart_qs = (
+            ViewEvent.objects.filter(barbershop=shop, viewed_at__range=(range_start, range_end))
+            .annotate(date=TruncDate("viewed_at"))
+            .values("date")
+            .annotate(views=Count("id"))
+            .order_by("date")
+        )
+        views_chart = [
+            {"date": row["date"], "views": row["views"] or 0}
+            for row in views_chart_qs
+        ]
+
         # --- B. REVIEWS LIST (For ALL Shops) ---
         reviews_qs = Review.objects.filter(
             barbershop=shop, 
@@ -123,7 +137,7 @@ class BarbershopAdvancedStatsView(generics.GenericAPIView):
         staff_performance = []
         top_services = []
         daily_chart = []
-        campaign_stats = None # New
+        campaign_stats = None  # New
         
         if shop.system_type == 'booking':
             appts = Appointment.objects.filter(shop=shop, start_datetime__range=(range_start, range_end))
@@ -264,6 +278,7 @@ class BarbershopAdvancedStatsView(generics.GenericAPIView):
             "booking_stats": booking_stats,
             "staff_performance": staff_performance,
             "top_services": top_services,
+            "views_chart": views_chart,
             "daily_chart": daily_chart,
             "campaign_stats": campaign_stats
         })

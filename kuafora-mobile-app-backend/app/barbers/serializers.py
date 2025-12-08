@@ -303,6 +303,8 @@ class ReviewSerializer(serializers.ModelSerializer):
     user_image_thumb_url = serializers.SerializerMethodField()
     replies = ReviewReplySerializer(many=True, read_only=True)
     replies_count = serializers.SerializerMethodField()
+    likes_count = serializers.SerializerMethodField()
+    user_has_liked = serializers.SerializerMethodField()
 
     class Meta:
         model = Review
@@ -325,7 +327,9 @@ class ReviewSerializer(serializers.ModelSerializer):
             "user_image_url",
             "user_image_thumb_url",
             "replies", 
-            "replies_count"
+            "replies_count",
+            "likes_count",
+            "user_has_liked",
         )
         read_only_fields = (
             "created_at", 
@@ -341,7 +345,9 @@ class ReviewSerializer(serializers.ModelSerializer):
             "user_image_url",
             "user_image_thumb_url",
             "replies", 
-            "replies_count"
+            "replies_count",
+            "likes_count",
+            "user_has_liked",
         )
 
     def get_user_image_url(self, obj):
@@ -394,6 +400,16 @@ class ReviewSerializer(serializers.ModelSerializer):
     
     def get_replies_count(self, obj):
         return obj.replies.count()
+
+    def get_likes_count(self, obj):
+        return obj.likes.count()
+
+    def get_user_has_liked(self, obj):
+        request = self.context.get("request")
+        user = getattr(request, "user", None)
+        if not user or not user.is_authenticated:
+            return False
+        return obj.likes.filter(id=user.id).exists()
 
 class ServiceCategorySerializer(serializers.ModelSerializer):
     class Meta:
