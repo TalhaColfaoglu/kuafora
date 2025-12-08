@@ -1196,6 +1196,7 @@ class ReviewThrottle(UserRateThrottle):
     rate = "10/min"
 
 
+@extend_schema(exclude=True)
 class ReviewUpsertApi(generics.GenericAPIView):
     serializer_class = ReviewSerializer
     permission_classes = [permissions.IsAuthenticated]
@@ -1252,6 +1253,7 @@ class ReviewUpsertApi(generics.GenericAPIView):
         return Response({"review": data, "meta": meta}, status=201 if created else 200)
 
 
+@extend_schema(exclude=True)
 class ReviewHighlightsApi(generics.GenericAPIView):
     serializer_class = ReviewSerializer
     def get(self, request, barber_id):
@@ -1274,6 +1276,7 @@ class ReviewHighlightsApi(generics.GenericAPIView):
         return Response({"items": data, "meta": meta})
 
 
+@extend_schema(exclude=True)
 class BarbershopReviewsListApi(generics.GenericAPIView):
     """Public list endpoint for all reviews of a barbershop with pagination and filters."""
     serializer_class = ReviewSerializer
@@ -1472,6 +1475,7 @@ class FavoriteListView(generics.ListAPIView):
         )
 
 
+@extend_schema(exclude=True)
 class FavoriteToggleView(generics.GenericAPIView):
     permission_classes = [permissions.IsAuthenticated]
     serializer_class = FavoriteSerializer
@@ -3191,6 +3195,7 @@ class AnnouncementsPublicApi(generics.GenericAPIView):
         return Response(data)
 
 
+@extend_schema(exclude=True)
 class CalendarStatusViewSet(viewsets.ReadOnlyModelViewSet):
     """Takvim durumu hesaplama ViewSet'i"""
     permission_classes = [permissions.AllowAny]  # Public endpoint
@@ -4096,10 +4101,31 @@ class StaffServiceCategoryViewSet(viewsets.ModelViewSet):
 
 
 class ShopCategoryViewSet(viewsets.ReadOnlyModelViewSet):
-    """Public shop categories endpoint"""
+    """Public shop categories endpoint (used on mobile home screens)."""
     serializer_class = ShopCategorySerializer
     permission_classes = [permissions.AllowAny]
-    queryset = ShopCategory.objects.filter(is_active=True).order_by('name')
+
+    def get_queryset(self):
+        # Schema generation safety
+        if getattr(self, "swagger_fake_view", False):
+            return ShopCategory.objects.none()
+
+        # If no categories are defined yet, seed a sensible default set once.
+        if not ShopCategory.objects.exists():
+            default_categories = [
+                {"name": "Saç Hizmetleri", "slug": "sac-hizmetleri"},
+                {"name": "Güzellik & Estetik", "slug": "guzellik-estetik"},
+                {"name": "Nail & El Bakımı", "slug": "nail-el-bakimi"},
+                {"name": "Cilt & Yüz Bakımı", "slug": "cilt-yuz-bakimi"},
+                {"name": "Profesyonel Bakım", "slug": "profesyonel-bakim"},
+            ]
+            for item in default_categories:
+                ShopCategory.objects.get_or_create(
+                    slug=item["slug"],
+                    defaults={"name": item["name"], "is_active": True},
+                )
+
+        return ShopCategory.objects.filter(is_active=True).order_by("name")
 
 
 class PartnerHolidayOverrideViewSet(viewsets.ModelViewSet):

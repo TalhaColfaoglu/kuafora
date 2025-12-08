@@ -35,7 +35,15 @@ INSTALLED_APPS = DJANGO_APPS + LOCAL_APPS + THIRD_PARTY_APPS
 # Security
 DEBUG = False
 SECRET_KEY = os.getenv('SECRET_KEY')
-ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '').split(',')
+
+# Host konfigürasyonu:
+# ALLOWED_HOSTS env'den gelir; ek olarak healthcheck ve internal istekler için
+# localhost ve 127.0.0.1'i her zaman ekleriz.
+_raw_hosts = os.getenv('ALLOWED_HOSTS', '')
+ALLOWED_HOSTS = [h.strip() for h in _raw_hosts.split(',') if h.strip()]
+for _h in ('localhost', '127.0.0.1'):
+    if _h not in ALLOWED_HOSTS:
+        ALLOWED_HOSTS.append(_h)
 
 # Database
 # Prefer DATABASE_URL if provided and looks like a URL; otherwise fall back to discrete POSTGRES_* vars

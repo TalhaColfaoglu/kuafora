@@ -74,8 +74,9 @@ USER django
 EXPOSE 8001
 
 # Health check
+# Host header'ını kuafora.com olarak gönderiyoruz ki ALLOWED_HOSTS ile uyumlu olsun.
 HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:8001/health/ || exit 1
+    CMD curl -f -H "Host: kuafora.com" http://localhost:8001/health/ || exit 1
 
 # Entrypoint: collectstatic at container startup then run gunicorn
 ENTRYPOINT ["/app/entrypoint.sh"]
