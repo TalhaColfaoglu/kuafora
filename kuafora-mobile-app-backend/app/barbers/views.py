@@ -43,7 +43,7 @@ from .models import (
 from .services.schedule import check_and_cancel_conflicts
 from .serializers import (
     BarbershopWithFavoriteSerializer,
-    
+    FavoriteSerializer,
     BarbershopSerializer,
     ReviewSerializer,
     ReviewReplySerializer,
