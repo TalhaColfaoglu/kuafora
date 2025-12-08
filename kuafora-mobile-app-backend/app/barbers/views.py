@@ -1476,6 +1476,7 @@ class FavoriteListView(generics.ListAPIView):
 
 
 @extend_schema(exclude=True)
+@extend_schema(exclude=True)
 class FavoriteToggleView(generics.GenericAPIView):
     permission_classes = [permissions.IsAuthenticated]
     serializer_class = FavoriteSerializer
@@ -3802,6 +3803,7 @@ class CalendarStatusViewSet(viewsets.ReadOnlyModelViewSet):
             return Response({'ok': False, 'error': {'code': 'unknown', 'message': 'İşlem tamamlanamadı'}})
 
 
+@extend_schema(exclude=True)
 class ToggleTodayApi(generics.GenericAPIView):
     permission_classes = [permissions.IsAuthenticated]
     serializer_class = DailyOverrideSerializer
