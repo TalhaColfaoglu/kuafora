@@ -31,6 +31,7 @@ from .views import (
     ImpactPlusApi,
     ShopCategoryViewSet,
 )
+from app.subscriptions.views import SubscriptionViewSet
 from .home_views import HomeDashboardApi
 from .stats_views import BarbershopAdvancedStatsView
 
@@ -90,6 +91,12 @@ urlpatterns = [
     path("mobile/home/dashboard/", HomeDashboardApi.as_view(), name="mobile-home-dashboard"),
     # Advanced Stats
     path("partner/stats/advanced/", BarbershopAdvancedStatsView.as_view(), name="partner-stats-advanced"),
+    # Subscription alias (because config has first api/ include → barbers)
+    path(
+        "partner/subscriptions/my_subscription/",
+        SubscriptionViewSet.as_view({"get": "my_subscription"}),
+        name="partner-subscriptions-my-subscription",
+    ),
     
     # Calendar aliases for APPEND_SLASH=False compatibility
     path("calendar/holidays", CalendarStatusViewSet.as_view({'get': 'holidays'}), name="calendar-holidays-alias"),
