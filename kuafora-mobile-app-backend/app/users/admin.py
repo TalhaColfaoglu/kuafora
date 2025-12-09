@@ -1,7 +1,10 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.utils.html import format_html
+
 from unfold.admin import ModelAdmin
+from unfold.decorators import action
+
 from .models import User
 
 
@@ -26,6 +29,7 @@ class UserAdmin(BaseUserAdmin, ModelAdmin):
     readonly_fields = ("created_at", "updated_at")
     filter_horizontal = ("groups", "user_permissions")
     list_filter = ("is_staff", "is_superuser", "is_active", "gender")
+    actions = ["ban_users", "unban_users"]
     
     def full_name_display(self, obj):
         return obj.full_name
@@ -47,6 +51,18 @@ class UserAdmin(BaseUserAdmin, ModelAdmin):
 
     def is_superuser_badge(self, obj):
         if obj.is_superuser:
-            return format_html('<span style="background-color: #8B5CF6; color: white; padding: 2px 6px; border-radius: 4px; font-size: 11px;">Süper Admin</span>')
+            return format_html(
+                '<span style="background-color: #8B5CF6; color: white; padding: 2px 6px; border-radius: 4px; font-size: 11px;">Süper Admin</span>'
+            )
         return ""
     is_superuser_badge.short_description = "Süper Admin"
+
+    @action(description="Seçilen kullanıcıları banla (girişe kapat)")
+    def ban_users(self, request, queryset):
+        updated = queryset.update(is_active=False)
+        self.message_user(request, f"{updated} kullanıcı banlandı (is_active=False).")
+
+    @action(description="Seçilen kullanıcıların banını kaldır (yeniden aktif et)")
+    def unban_users(self, request, queryset):
+        updated = queryset.update(is_active=True)
+        self.message_user(request, f"{updated} kullanıcının banı kaldırıldı.")

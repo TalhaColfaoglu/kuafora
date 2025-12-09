@@ -19,8 +19,11 @@ class HomeDashboardApi(APIView):
         categories = ShopCategory.objects.filter(is_active=True)
         cat_data = ShopCategorySerializer(categories, many=True).data
 
-        # Base query for shops
-        shops_qs = Barbershop.objects.all()
+        # Base query for shops - Sadece aktif subscription'ı olanlar
+        from app.subscriptions.models import Subscription
+        shops_qs = Barbershop.objects.filter(
+            subscription__status__in=['trial', 'active', 'lifetime', 'grace_period']
+        )
         if city:
             shops_qs = shops_qs.filter(city__icontains=city)
 

@@ -36,11 +36,11 @@ class Migration(migrations.Migration):
                 ),
             ],
             state_operations=[
-                migrations.AddField(
-                    model_name='review',
-                    name='replied_at',
-                    field=models.DateTimeField(blank=True, null=True),
-                ),
+        migrations.AddField(
+            model_name='review',
+            name='replied_at',
+            field=models.DateTimeField(blank=True, null=True),
+        ),
             ],
         ),
         migrations.SeparateDatabaseAndState(
@@ -57,10 +57,10 @@ class Migration(migrations.Migration):
                 ),
             ],
             state_operations=[
-                migrations.AddField(
-                    model_name='review',
-                    name='reply',
-                    field=models.TextField(blank=True, null=True),
+        migrations.AddField(
+            model_name='review',
+            name='reply',
+            field=models.TextField(blank=True, null=True),
                 ),
             ],
         ),

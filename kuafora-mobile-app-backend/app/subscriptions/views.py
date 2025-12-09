@@ -127,36 +127,105 @@ class SubscriptionViewSet(viewsets.ModelViewSet):
         if not request.user.staff_profiles.filter(barbershop_id=barbershop_id, is_admin=True).exists():
             return Response({'error': 'Bu salon için yetkiniz yok'}, status=403)
         
-        # Zaten abonelik var mı?
-        if Subscription.objects.filter(barbershop_id=barbershop_id).exists():
+        # Zaten abonelik var mı? Varsa plan ve kupon güncellemesi yap
+        existing_subscription = Subscription.objects.filter(barbershop_id=barbershop_id).first()
+        if existing_subscription:
+            # Plan güncellemesi
+            plan_id = request.data.get('plan_id')
+            if plan_id:
+                plan = SubscriptionPlan.objects.filter(id=plan_id, is_active=True).first()
+                if plan:
+                    existing_subscription.plan = plan
+                    existing_subscription.save()
+            
+            # Kupon güncellemesi (eğer daha önce uygulanmamışsa)
+            coupon_code = request.data.get('coupon_code')
+            if coupon_code and not existing_subscription.coupon:
+                try:
+                    coupon = Coupon.objects.get(code=coupon_code, is_active=True)
+                    if coupon.is_valid:
+                        existing_subscription.coupon = coupon
+                        existing_subscription.coupon_applied_at = timezone.now()
+                        
+                        if coupon.discount_type == 'lifetime':
+                            existing_subscription.status = 'lifetime'
+                        elif coupon.discount_type == 'free_months':
+                            existing_subscription.trial_ends_at = existing_subscription.trial_ends_at + timedelta(days=30 * coupon.discount_value)
+                        
+                        existing_subscription.save()
+                        
+                        coupon.current_uses += 1
+                        coupon.save()
+                        
+                        CouponUsage.objects.get_or_create(coupon=coupon, subscription=existing_subscription)
+                except Coupon.DoesNotExist:
+                    pass  # Kupon bulunamadı, sessizce geç
+            
             return Response({
-                'error': 'Bu salon için zaten abonelik mevcut',
-                'subscription': SubscriptionSerializer(Subscription.objects.get(barbershop_id=barbershop_id)).data
-            }, status=status.HTTP_400_BAD_REQUEST)
+                'success': True,
+                'subscription': SubscriptionSerializer(existing_subscription).data,
+                'message': 'Abonelik güncellendi'
+            }, status=status.HTTP_200_OK)
         
         # Trial abonelik oluştur
         from app.barbers.models import Barbershop
         barbershop = get_object_or_404(Barbershop, id=barbershop_id)
         
-        # Otomatik plan seçimi
-        booking_type = getattr(barbershop, 'booking_system', 'info_system')
-        if booking_type == 'kuafora_booking':
-            plan = SubscriptionPlan.objects.filter(slug='randevu', is_active=True).first()
-        else:
-            plan = SubscriptionPlan.objects.filter(slug='bilgi', is_active=True).first()
-        
-        if not plan:
-            plan = SubscriptionPlan.objects.filter(is_active=True).first()
+        # Plan seçimi: plan_id varsa onu kullan, yoksa otomatik seç
+        plan_id = request.data.get('plan_id')
+        if plan_id:
+            plan = SubscriptionPlan.objects.filter(id=plan_id, is_active=True).first()
             if not plan:
-                return Response({'error': 'Aktif plan bulunamadı'}, status=500)
+                return Response({'error': 'Belirtilen plan bulunamadı veya aktif değil'}, status=400)
+        else:
+            # Otomatik plan seçimi
+            booking_type = getattr(barbershop, 'booking_system', 'info_system')
+            if booking_type == 'kuafora_booking':
+                plan = SubscriptionPlan.objects.filter(slug='randevu', is_active=True).first()
+            else:
+                plan = SubscriptionPlan.objects.filter(slug='bilgi', is_active=True).first()
+            
+            if not plan:
+                plan = SubscriptionPlan.objects.filter(is_active=True).first()
+                if not plan:
+                    return Response({'error': 'Aktif plan bulunamadı'}, status=500)
+        
+        # Kupon kodu kontrolü
+        coupon_code = request.data.get('coupon_code')
+        coupon = None
+        if coupon_code:
+            try:
+                coupon = Coupon.objects.get(code=coupon_code, is_active=True)
+                if not coupon.is_valid:
+                    return Response({'error': 'Kupon geçersiz veya süresi dolmuş'}, status=400)
+            except Coupon.DoesNotExist:
+                return Response({'error': 'Kupon bulunamadı'}, status=400)
         
         with transaction.atomic():
+            # Trial abonelik oluştur (90 gün)
             subscription = Subscription.objects.create(
                 barbershop=barbershop,
                 plan=plan,
                 status='trial',
                 trial_ends_at=timezone.now() + timedelta(days=90)
             )
+            
+            # Kupon varsa uygula
+            if coupon:
+                subscription.coupon = coupon
+                subscription.coupon_applied_at = timezone.now()
+                
+                if coupon.discount_type == 'lifetime':
+                    subscription.status = 'lifetime'
+                elif coupon.discount_type == 'free_months':
+                    subscription.trial_ends_at = subscription.trial_ends_at + timedelta(days=30 * coupon.discount_value)
+                
+                subscription.save()
+                
+                coupon.current_uses += 1
+                coupon.save()
+                
+                CouponUsage.objects.create(coupon=coupon, subscription=subscription)
         
         return Response({
             'success': True,

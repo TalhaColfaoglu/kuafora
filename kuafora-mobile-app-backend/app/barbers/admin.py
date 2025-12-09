@@ -63,15 +63,15 @@ class BarbershopAdmin(ModelAdmin):
         return format_html('<span class="text-gray-400">Yok</span>')
     subscription_status.short_description = "Abonelik"
 
-    @action(description="Seçilen kuaförleri onayla")
+    @action(description="Seçilen kuaförleri YAYINA AL (onayla)")
     def verify_barbershops(self, request, queryset):
         updated = queryset.update(is_verified=True)
-        self.message_user(request, f"{updated} kuaför onaylandı.")
+        self.message_user(request, f"{updated} kuaför yayına alındı (onaylandı).")
 
-    @action(description="Seçilen kuaförlerin onayını kaldır")
+    @action(description="Seçilen kuaförleri YAYINDAN KALDIR / BANLA")
     def unverify_barbershops(self, request, queryset):
         updated = queryset.update(is_verified=False)
-        self.message_user(request, f"{updated} kuaförün onayı kaldırıldı.")
+        self.message_user(request, f"{updated} kuaför yayından kaldırıldı (banlandı).")
 
 
 @admin.register(Staff)
