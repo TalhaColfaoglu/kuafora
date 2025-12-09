@@ -42,7 +42,31 @@ class MySubscriptionApi(APIView):
             )
             return Response(SubscriptionSerializer(subscription).data)
         except Subscription.DoesNotExist:
-            return Response({'error': 'Abonelik bulunamadı'}, status=404)
+            # Abonelik yoksa otomatik oluştur (Trial)
+            barbershop = Barbershop.objects.filter(id=barbershop_id).first()
+            if not barbershop:
+                return Response({'error': 'Salon bulunamadı'}, status=404)
+                
+            # Otomatik plan seçimi
+            booking_type = getattr(barbershop, 'booking_system', 'info_system')
+            if booking_type == 'kuafora_booking':
+                plan = SubscriptionPlan.objects.filter(slug='randevu', is_active=True).first()
+            else:
+                plan = SubscriptionPlan.objects.filter(slug='bilgi', is_active=True).first()
+            
+            if not plan:
+                plan = SubscriptionPlan.objects.filter(is_active=True).first()
+            
+            if plan:
+                subscription = Subscription.objects.create(
+                    barbershop=barbershop,
+                    plan=plan,
+                    status='trial',
+                    trial_ends_at=timezone.now() + timedelta(days=90)
+                )
+                return Response(SubscriptionSerializer(subscription).data)
+            
+            return Response({'error': 'Abonelik bulunamadı ve plan oluşturulamadı'}, status=404)
 
 
 class StartTrialApi(APIView):
@@ -149,7 +173,31 @@ class SubscriptionViewSet(viewsets.ModelViewSet):
             )
             return Response(SubscriptionSerializer(subscription).data)
         except Subscription.DoesNotExist:
-            return Response({'error': 'Abonelik bulunamadı'}, status=404)
+            # Abonelik yoksa otomatik oluştur (Trial)
+            barbershop = Barbershop.objects.filter(id=barbershop_id).first()
+            if not barbershop:
+                return Response({'error': 'Salon bulunamadı'}, status=404)
+                
+            # Otomatik plan seçimi
+            booking_type = getattr(barbershop, 'booking_system', 'info_system')
+            if booking_type == 'kuafora_booking':
+                plan = SubscriptionPlan.objects.filter(slug='randevu', is_active=True).first()
+            else:
+                plan = SubscriptionPlan.objects.filter(slug='bilgi', is_active=True).first()
+            
+            if not plan:
+                plan = SubscriptionPlan.objects.filter(is_active=True).first()
+            
+            if plan:
+                subscription = Subscription.objects.create(
+                    barbershop=barbershop,
+                    plan=plan,
+                    status='trial',
+                    trial_ends_at=timezone.now() + timedelta(days=90)
+                )
+                return Response(SubscriptionSerializer(subscription).data)
+            
+            return Response({'error': 'Abonelik bulunamadı ve plan oluşturulamadı'}, status=404)
     
     @action(detail=False, methods=['post'], url_path='start-trial')
     def start_trial(self, request):
