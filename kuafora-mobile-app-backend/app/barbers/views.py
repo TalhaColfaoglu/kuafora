@@ -181,6 +181,21 @@ class BarbershopViewSet(viewsets.ReadOnlyModelViewSet):
                 qs = qs.filter(Q(gender="female") | Q(gender="unisex"))
         return qs
 
+    def get_object(self):
+        """Override to check subscription status for detail view"""
+        obj = super().get_object()
+        
+        # Ana uygulama için subscription kontrolü (detail view)
+        include_inactive = self.request.query_params.get("include_inactive", "").lower() == "true"
+        
+        if not include_inactive:
+            # Aktif subscription kontrolü
+            if not hasattr(obj, 'subscription') or obj.subscription.status not in ['trial', 'active', 'lifetime', 'grace_period']:
+                from rest_framework.exceptions import NotFound
+                raise NotFound("Barbershop not found or subscription inactive")
+        
+        return obj
+
     def get_serializer_class(self):
         # Use detail serializer for retrieve to include is_favorited
         if getattr(self, "action", None) == "retrieve":

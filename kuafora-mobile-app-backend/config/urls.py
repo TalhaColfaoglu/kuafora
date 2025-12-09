@@ -54,7 +54,7 @@ urlpatterns = [
     path("api/toggle-today/", ToggleTodayApi.as_view(), name="api-toggle-today"),
     path("api/calendar/toggle/", ToggleTodayApi.as_view(), name="api-calendar-toggle"),
     path("api/barbershops/today-toggle/", ToggleTodayApi.as_view(), name="api-barbershops-today-toggle"),
-    # Explicit subscription aliases for vitrin app
+    # Explicit subscription aliases for vitrin app (before subscriptions router to avoid conflicts)
     path(
         "api/partner/subscriptions/my_subscription/",
         SubscriptionViewSet.as_view({"get": "my_subscription"}),
@@ -64,6 +64,12 @@ urlpatterns = [
         "api/partner/subscriptions/start-trial/",
         SubscriptionViewSet.as_view({"post": "start_trial"}),
         name="api-partner-subscriptions-start-trial",
+    ),
+    # Alias for /api/subscriptions/my_subscription/ (router action)
+    path(
+        "api/subscriptions/my_subscription/",
+        SubscriptionViewSet.as_view({"get": "my_subscription"}),
+        name="api-subscriptions-my-subscription",
     ),
     path("api/barbershops/<int:barbershop_id>/toggle/", ToggleTodayApi.as_view(), name="api-barbershops-toggle-by-id"),
     path("api/auth/", include("app.users.urls")),

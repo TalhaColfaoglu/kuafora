@@ -29,6 +29,7 @@ urlpatterns = [
     # APPEND_SLASH=False olduğu için hem /logout hem /logout/ çalışsın
     path('logout', LogoutView.as_view(), name='logout-no-slash'),
     path('me/', MeView.as_view(), name='me'),
+    path('me', MeView.as_view(), name='me-no-slash'),  # Alias without trailing slash
     path('users/me/', MeView.as_view(), name='me-legacy'),
     path('me/photo/', ProfilePhotoUploadView.as_view(), name='profile-photo-upload'),
     path('update/', UserUpdateView.as_view(), name='user-update'),

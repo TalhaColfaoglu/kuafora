@@ -52,12 +52,14 @@ class HomeDashboardApi(APIView):
         newest_data = [serialize_shop(s) for s in newest]
         top_rated_data = [serialize_shop(s) for s in top_rated]
 
-        # 4. Campaigns
+        # 4. Campaigns - Sadece aktif subscription'ı olan barbershop'ların kampanyaları
         today = timezone.now().date()
+        from app.subscriptions.models import Subscription
         active_campaigns = Campaign.objects.filter(
             is_active=True, 
             start_date__lte=today, 
-            end_date__gte=today
+            end_date__gte=today,
+            barbershop__subscription__status__in=['trial', 'active', 'lifetime', 'grace_period']
         ).select_related('barbershop')
         
         if city:

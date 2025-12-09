@@ -91,12 +91,7 @@ urlpatterns = [
     path("mobile/home/dashboard/", HomeDashboardApi.as_view(), name="mobile-home-dashboard"),
     # Advanced Stats
     path("partner/stats/advanced/", BarbershopAdvancedStatsView.as_view(), name="partner-stats-advanced"),
-    # Subscription alias (because config has first api/ include → barbers)
-    path(
-        "partner/subscriptions/my_subscription/",
-        SubscriptionViewSet.as_view({"get": "my_subscription"}),
-        name="partner-subscriptions-my-subscription",
-    ),
+    # Subscription aliases moved to config/urls.py to avoid conflicts
     
     # Calendar aliases for APPEND_SLASH=False compatibility
     path("calendar/holidays", CalendarStatusViewSet.as_view({'get': 'holidays'}), name="calendar-holidays-alias"),
