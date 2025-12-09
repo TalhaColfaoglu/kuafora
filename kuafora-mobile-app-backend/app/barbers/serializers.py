@@ -84,6 +84,9 @@ class BarbershopSerializer(serializers.ModelSerializer):
         extra_kwargs = {
             # Alias kullandığımız için phone_number'ı zorunlu yapma; 'phone' ile beslenecek
             'phone_number': {'required': False, 'allow_blank': True},
+            # Vitrin onboarding'de şehir/ilçe daha sonra doldurulabilsin diye zorunlu değil
+            'city': {'required': False, 'allow_blank': True},
+            'district': {'required': False, 'allow_blank': True},
         }
 
     @extend_schema_field(serializers.DictField)
