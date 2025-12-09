@@ -152,8 +152,10 @@ class BarbershopViewSet(viewsets.ReadOnlyModelViewSet):
             # Aktif abonelik durumları: trial, active, lifetime, grace_period
             # Aboneliği olmayan veya suspended/cancelled olanları hariç tut
             # Artık sadece aktif subscription'ı olanlar gösterilecek
+            # Banlı kuaförleri de filtrele (is_verified=False olanlar)
             qs = qs.filter(
-                subscription__status__in=['trial', 'active', 'lifetime', 'grace_period']
+                subscription__status__in=['trial', 'active', 'lifetime', 'grace_period'],
+                is_verified=True  # Banlı kuaförleri filtrele
             )
         
         # Viewport filtreleme (Harita optimizasyonu)

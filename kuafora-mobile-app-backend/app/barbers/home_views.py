@@ -19,11 +19,12 @@ class HomeDashboardApi(APIView):
         categories = ShopCategory.objects.filter(is_active=True)
         cat_data = ShopCategorySerializer(categories, many=True).data
 
-        # Base query for shops - Sadece aktif subscription'ı olanlar ve ismi olanlar
+        # Base query for shops - Sadece aktif subscription'ı olanlar, ismi olanlar ve banlı olmayanlar
         from app.subscriptions.models import Subscription
         shops_qs = Barbershop.objects.filter(
             subscription__status__in=['trial', 'active', 'lifetime', 'grace_period'],
-            name__isnull=False
+            name__isnull=False,
+            is_verified=True  # Banlı kuaförleri filtrele
         ).exclude(name='')
         if city:
             shops_qs = shops_qs.filter(city__icontains=city)
@@ -75,13 +76,14 @@ class HomeDashboardApi(APIView):
         newest_data = [serialize_shop(s) for s in newest]
         top_rated_data = [serialize_shop(s) for s in top_rated]
 
-        # 4. Campaigns - Sadece aktif subscription'ı olan barbershop'ların kampanyaları
+        # 4. Campaigns - Sadece aktif subscription'ı olan ve banlı olmayan barbershop'ların kampanyaları
         from app.subscriptions.models import Subscription
         active_campaigns = Campaign.objects.filter(
             is_active=True, 
             start_date__lte=today, 
             end_date__gte=today,
-            barbershop__subscription__status__in=['trial', 'active', 'lifetime', 'grace_period']
+            barbershop__subscription__status__in=['trial', 'active', 'lifetime', 'grace_period'],
+            barbershop__is_verified=True  # Banlı kuaförlerin kampanyalarını filtrele
         ).select_related('barbershop')
         
         if city:
