@@ -22,10 +22,26 @@ class Migration(migrations.Migration):
             name='likes',
             field=models.ManyToManyField(blank=True, related_name='liked_reviews', to=settings.AUTH_USER_MODEL),
         ),
-        migrations.AddField(
-            model_name='review',
-            name='replied_at',
-            field=models.DateTimeField(blank=True, null=True),
+        migrations.SeparateDatabaseAndState(
+            database_operations=[
+                migrations.RunSQL(
+                    sql=(
+                        'ALTER TABLE "barbers_review" '
+                        'ADD COLUMN IF NOT EXISTS "replied_at" timestamp with time zone NULL;'
+                    ),
+                    reverse_sql=(
+                        'ALTER TABLE "barbers_review" '
+                        'DROP COLUMN IF EXISTS "replied_at";'
+                    ),
+                ),
+            ],
+            state_operations=[
+                migrations.AddField(
+                    model_name='review',
+                    name='replied_at',
+                    field=models.DateTimeField(blank=True, null=True),
+                ),
+            ],
         ),
         migrations.AddField(
             model_name='review',
