@@ -3,6 +3,7 @@ from django.utils import timezone
 from app.barbers.models import Staff
 from .models import Campaign
 from .serializers import CampaignSerializer, CampaignCreateSerializer
+from app.notifications.utils import notify_favoriters_about_campaign
 
 class CampaignViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
@@ -25,7 +26,13 @@ class CampaignViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         staff = Staff.objects.filter(user=self.request.user).first()
         if staff:
-            serializer.save(barbershop=staff.barbershop)
+            campaign = serializer.save(barbershop=staff.barbershop)
+            # Favorilere ekleyen kullanıcılara kampanya bildirimi gönder
+            try:
+                notify_favoriters_about_campaign(staff.barbershop, campaign)
+            except Exception:
+                # Bildirim hatası kampanya kaydını bozmasın
+                pass
 
 class PublicCampaignViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = [permissions.AllowAny]

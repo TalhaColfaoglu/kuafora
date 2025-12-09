@@ -79,6 +79,22 @@ class BarbershopAdvancedStatsView(generics.GenericAPIView):
         prev_unique = prev_unique_users + prev_unique_devices
 
         # 3. Favorites Gained
+        # 3. Favorites Gained
+        # 3. Favorites Gained
+        # 3. Favorites Gained
+        # 3. Favorites Gained
+        # 3. Favorites Gained
+        # 3. Favorites Gained
+        # 3. Favorites Gained
+        # 3. Favorites Gained
+        # 3. Favorites Gained
+        # 3. Favorites Gained
+        # 3. Favorites Gained
+        # 3. Favorites Gained
+        # 3. Favorites Gained
+        # 3. Favorites Gained
+        # 3. Favorites Gained
+        # 3. Favorites Gained
         curr_favs = Favorite.objects.filter(barbershop=shop, created_at__range=(range_start, range_end)).count()
         prev_favs = Favorite.objects.filter(barbershop=shop, created_at__range=(prev_start, prev_end)).count()
 
@@ -226,9 +242,7 @@ class BarbershopAdvancedStatsView(generics.GenericAPIView):
             top_services = top_services[:5]
             
             # Daily Chart Data (Simple: Revenue & Count per day)
-            # Group by date (trunc)
-            # Django TruncDate is useful here
-            from django.db.models.functions import TruncDate
+            # Group by date (trunc) using module-level TruncDate import
             daily_qs = appts.annotate(date=TruncDate('start_datetime')).values('date').annotate(
                 count=Count('id'),
                 revenue=Sum('price_total', filter=Q(status__in=[AppointmentStatus.COMPLETED, AppointmentStatus.CONFIRMED]))

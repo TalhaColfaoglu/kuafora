@@ -30,6 +30,7 @@ from .serializers import (
 from .services.availability_engine import compute_staff_day_slots
 from .services.idempotency import ensure_idempotent, store_idempotent_response
 from .services import events
+from app.notifications.utils import create_user_notification
 from .fsm import can_transition
 from app.campaigns.models import Campaign, CampaignType
 from drf_spectacular.utils import extend_schema
@@ -448,6 +449,16 @@ class AppointmentCreateApi(APIView):
         events.emit(events.staff_topic(ap.staff_id), {"type": "appointment_created", "status": ap.status, "id": ap.id})
         events.emit(events.shop_topic(ap.shop_id), {"type": "appointment_created", "status": ap.status, "id": ap.id})
 
+        # In-app notification: müşteri için randevu oluşturma bildirimi
+        if ap.customer_id:
+            create_user_notification(
+                user=ap.customer,
+                type_="booking",
+                reference_id=str(ap.id),
+                title="Randevunuz oluşturuldu",
+                body=f"{ap.shop.name} için {ap.start_datetime:%d.%m %H:%M} randevunuz oluşturuldu.",
+            )
+
         resp = AppointmentSerializer(ap).data
         store_idempotent_response(key=idem_key, response_json=resp)
         return Response(resp, status=status.HTTP_200_OK)
@@ -568,6 +579,16 @@ class PartnerAcceptApi(APIView):
         ap.save(update_fields=["status"]) 
         events.emit(events.staff_topic(ap.staff_id), {"type": "appointment_accepted", "id": ap.id})
         events.emit(events.shop_topic(ap.shop_id), {"type": "appointment_accepted", "id": ap.id})
+
+        # In-app notification: müşteri için randevu onayı
+        if ap.customer_id:
+            create_user_notification(
+                user=ap.customer,
+                type_="booking",
+                reference_id=str(ap.id),
+                title="Randevunuz onaylandı",
+                body=f"{ap.shop.name} {ap.start_datetime:%d.%m %H:%M} randevunuz onaylandı.",
+            )
         resp = {"status": ap.status}
         store_idempotent_response(key=idem_key, response_json=resp)
         return Response(resp)
@@ -606,6 +627,19 @@ class PartnerCancelApi(APIView):
         ap.save(update_fields=["status", "cancelled_by", "rejection_reason"]) 
         events.emit(events.staff_topic(ap.staff_id), {"type": "appointment_cancelled", "id": ap.id})
         events.emit(events.shop_topic(ap.shop_id), {"type": "appointment_cancelled", "id": ap.id})
+
+        # In-app notification: müşteri için randevu iptali / reddi
+        if ap.customer_id:
+            msg = "Randevunuz kuaför tarafından iptal edildi."
+            if ap.rejection_reason:
+                msg += f" Sebep: {ap.rejection_reason}"
+            create_user_notification(
+                user=ap.customer,
+                type_="booking",
+                reference_id=str(ap.id),
+                title="Randevunuz iptal edildi",
+                body=msg,
+            )
         resp = {"status": ap.status}
         store_idempotent_response(key=idem_key, response_json=resp)
         return Response(resp)

@@ -4,6 +4,7 @@ from typing import List
 
 from django.db.models import Prefetch, Q, Count
 from drf_spectacular.utils import extend_schema
+from app.notifications.utils import notify_shop_about_new_review, notify_customer_about_reply
 from rest_framework import viewsets, mixins, permissions, generics, status, serializers as drf_serializers
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -1240,6 +1241,14 @@ class ReviewUpsertApi(generics.GenericAPIView):
             },
         )
 
+        # Kuaför adminlerine yeni yorum bildirimi
+        if created:
+            try:
+                notify_shop_about_new_review(obj)
+            except Exception:
+                # Bildirim hatası ana akışı etkilemesin
+                pass
+
         data = ReviewSerializer(obj).data
         # snapshot meta
         shop.refresh_from_db(fields=[
@@ -1705,6 +1714,13 @@ class PartnerReviewViewSet(viewsets.ReadOnlyModelViewSet):
         # Also update review replied_at
         review.replied_at = timezone.now()
         review.save()
+
+        # Müşteriye bildirim: yoruma cevap verildi
+        try:
+            notify_customer_about_reply(review)
+        except Exception:
+            # Bildirim hatası ana akışı bozmasın
+            pass
         
         # Refresh review to include reply
         return Response(ReviewSerializer(review).data)
