@@ -73,6 +73,7 @@ from .serializers import (
 )
 from .filters import BarbershopFilter
 from .permissions import IsShopAdmin
+from .permissions_replies import IsReplyOwnerOrShopAdmin
 from django.conf import settings
 from .services.breaks import break_windows_by_date, serialize_break_window
 
@@ -1635,7 +1636,7 @@ class PartnerServiceViewSet(viewsets.ModelViewSet):
 
 class ReviewReplyViewSet(viewsets.ModelViewSet):
     serializer_class = ReviewReplySerializer
-    permission_classes = [permissions.IsAuthenticated, IsShopAdmin]
+    permission_classes = [permissions.IsAuthenticated, IsReplyOwnerOrShopAdmin]
 
     def get_queryset(self):
         user = self.request.user
