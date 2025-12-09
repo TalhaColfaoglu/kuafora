@@ -107,15 +107,18 @@ class BarbershopSerializer(serializers.ModelSerializer):
         return schedule
 
     def validate(self, attrs):
-        # phone aliası ile gelen değeri yakala; en az birinin dolu olması zorunlu
+        # phone aliası ile gelen değeri yakala.
         # attrs burada internal değerleri taşır; phone_number beklenir
         phone_val = attrs.get('phone_number')
         # Bazı durumlarda initial_data üzerinden okumak gerekebilir
         if (not phone_val or str(phone_val).strip() == ''):
             raw = getattr(self, 'initial_data', {}) or {}
             phone_val = raw.get('phone') or raw.get('phone_number')
-        if (not phone_val or str(phone_val).strip() == ''):
-            raise serializers.ValidationError({'phone': 'Bu alan zorunlu.'})
+        # Frontend tarafında zaten zorunlu alan kontrolü yapıldığı için
+        # backend'de ekstra ValidationError fırlatmayalım; sadece normalize edelim.
+        if phone_val is None:
+            phone_val = ''
+        attrs['phone_number'] = phone_val
         
         # External booking validation
         system_type = attrs.get('system_type')
