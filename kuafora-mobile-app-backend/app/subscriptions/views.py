@@ -20,6 +20,33 @@ from .serializers import (
 from app.barbers.models import Barbershop
 
 
+# Wrapper views for explicit URL paths (for /api/partner/subscriptions/...)
+class MySubscriptionApi(APIView):
+    """Wrapper for SubscriptionViewSet.my_subscription action"""
+    permission_classes = [IsAuthenticated]
+    
+    def get(self, request):
+        # Create viewset instance and call the action directly
+        viewset = SubscriptionViewSet()
+        viewset.request = request
+        viewset.format_kwarg = getattr(request, 'format', None)
+        # Call the action method directly
+        return viewset.my_subscription(request)
+
+
+class StartTrialApi(APIView):
+    """Wrapper for SubscriptionViewSet.start_trial action"""
+    permission_classes = [IsAuthenticated]
+    
+    def post(self, request):
+        # Create viewset instance and call the action directly
+        viewset = SubscriptionViewSet()
+        viewset.request = request
+        viewset.format_kwarg = getattr(request, 'format', None)
+        # Call the action method directly
+        return viewset.start_trial(request)
+
+
 class SubscriptionPlanViewSet(viewsets.ReadOnlyModelViewSet):
     """Abonelik planlarını listele"""
     

@@ -5,7 +5,7 @@ from django.conf.urls.static import static
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 from app.barbers.views import ToggleTodayApi
 from app.users.views import ResolveUserView
-from app.subscriptions.views import SubscriptionViewSet
+from app.subscriptions.views import MySubscriptionApi, StartTrialApi
 from django.http import JsonResponse, FileResponse
 from pathlib import Path
 
@@ -55,14 +55,15 @@ urlpatterns = [
     path("api/calendar/toggle/", ToggleTodayApi.as_view(), name="api-calendar-toggle"),
     path("api/barbershops/today-toggle/", ToggleTodayApi.as_view(), name="api-barbershops-today-toggle"),
     # Explicit subscription aliases for vitrin app (before subscriptions router to avoid conflicts)
+    # Note: These must be defined before the subscriptions router include to take precedence
     path(
         "api/partner/subscriptions/my_subscription/",
-        SubscriptionViewSet.as_view({"get": "my_subscription"}),
+        MySubscriptionApi.as_view(),
         name="api-partner-subscriptions-my-subscription",
     ),
     path(
         "api/partner/subscriptions/start-trial/",
-        SubscriptionViewSet.as_view({"post": "start_trial"}),
+        StartTrialApi.as_view(),
         name="api-partner-subscriptions-start-trial",
     ),
     # Alias for /api/subscriptions/my_subscription/ (router action)

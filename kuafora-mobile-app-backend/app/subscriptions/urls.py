@@ -15,13 +15,6 @@ router.register(r'subscriptions', SubscriptionViewSet, basename='subscriptions')
 urlpatterns = [
     path('', include(router.urls)),
 
-    # Partner alias: /api/partner/subscriptions/my_subscription/ → SubscriptionViewSet.my_subscription
-    path(
-        'partner/subscriptions/my_subscription/',
-        SubscriptionViewSet.as_view({'get': 'my_subscription'}),
-        name='partner-subscriptions-my-subscription',
-    ),
-
     # Kupon doğrulama
     path('coupons/validate/', CouponValidateApi.as_view(), name='coupon-validate'),
 
