@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+
+{% block title %}Kuafora Çerez Politikası{% endblock %}
+
+{% block content %}
+<section class="py-16 px-4 sm:px-6 lg:px-8 bg-white">
+  <div class="max-w-3xl mx-auto">
+    <h1 class="text-3xl font-semibold tracking-tight mb-6">Kuafora Çerez Politikası</h1>
+    <p class="text-sm text-gray-500 mb-10">Son güncelleme: {{ now|date:"d.m.Y" }}</p>
+
+    <div class="prose prose-sm sm:prose-base max-w-none prose-headings:font-semibold prose-a:text-ayder">
+      <h2>1. Çerez Nedir?</h2>
+      <p>
+        Çerezler (cookies), ziyaret ettiğiniz internet siteleri ve mobil uygulamalar tarafından cihazınıza kaydedilen
+        küçük metin dosyalarıdır. Kuafora olarak, web sitemiz ve mobil uygulamalarımızda çerezler ve benzeri
+        teknolojiler kullanmaktayız.
+      </p>
+
+      <h2>2. Hangi Tür Çerezleri Kullanıyoruz?</h2>
+      <ul>
+        <li><strong>Zorunlu Çerezler:</strong> Oturum açma, güvenlik kontrolleri ve temel site işlevlerinin çalışması için
+          gereklidir.</li>
+        <li><strong>Performans/Analitik Çerezler:</strong> Hangi sayfaların daha çok ziyaret edildiğini, hata alan
+          sayfaları ve performansı anlamamıza yardımcı olur.</li>
+      </ul>
+      <p>Şu aşamada üçüncü taraf reklam çerezleri kullanılmamaktadır.</p>
+
+      <h2>3. Çerezlerin Kullanım Amaçları</h2>
+      <ul>
+        <li>Site ve uygulama performansını ölçmek ve iyileştirmek,</li>
+        <li>Güvenlik ve hata tespiti yapmak,</li>
+        <li>Tercihlerinizi (ör. dil ayarı) hatırlamak.</li>
+      </ul>
+
+      <h2>4. Çerezleri Nasıl Yönetebilirsiniz?</h2>
+      <p>
+        Tarayıcınızın ayarları üzerinden çerezleri silebilir veya engelleyebilirsiniz. Ancak zorunlu çerezleri
+        devre dışı bırakmanız, Kuafora’nın bazı fonksiyonlarından tam olarak faydalanamamanıza neden olabilir.
+      </p>
+
+      <h2>5. Kişisel Veriler ve KVKK</h2>
+      <p>
+        Çerezler aracılığıyla elde edilen veriler, KVKK’ya uygun olarak “Kuafora KVKK Aydınlatma Metni” kapsamında
+        işlenmektedir. Detaylar için ilgili aydınlatma metnini inceleyebilirsiniz.
+      </p>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+

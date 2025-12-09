@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+
+{% block title %}Kuafora Partner KVKK Aydınlatma Metni{% endblock %}
+
+{% block content %}
+<section class="py-16 px-4 sm:px-6 lg:px-8 bg-white">
+  <div class="max-w-3xl mx-auto">
+    <h1 class="text-3xl font-semibold tracking-tight mb-6">Kuafora Partner KVKK Aydınlatma Metni</h1>
+    <p class="text-sm text-gray-500 mb-10">Son güncelleme: {{ now|date:"d.m.Y" }}</p>
+
+    <div class="prose prose-sm sm:prose-base max-w-none prose-headings:font-semibold prose-a:text-ayder">
+      <p>
+        Bu metin, Kuafora Partner uygulamasını kullanan kuaför/işletme yetkililerinin kişisel verilerinin işlenmesine
+        ilişkin aydınlatma amaçlıdır. Veri sorumlusu Talha Colfaoğlu’dur.
+      </p>
+
+      <h2>1. İşlenen Veriler</h2>
+      <ul>
+        <li>İşletme Yetkilisi Bilgileri: Ad, soyad, e‑posta, telefon.</li>
+        <li>Hesap Bilgileri: Giriş bilgileri, yetkilendirme verileri.</li>
+        <li>İşlem Bilgileri: Panel kullanım hareketleri, salon profili güncellemeleri.</li>
+      </ul>
+
+      <h2>2. Amaçlar</h2>
+      <ul>
+        <li>Kuafora Partner hesabının oluşturulması ve yönetimi,</li>
+        <li>İşletme profilinin Kuafora kullanıcılarına gösterilmesi,</li>
+        <li>İletişim ve destek süreçlerinin yürütülmesi,</li>
+        <li>Güvenlik ve kötüye kullanım tespitleri.</li>
+      </ul>
+
+      <p>Diğer tüm esaslar için ana “Kuafora KVKK Aydınlatma Metni” geçerlidir.</p>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+

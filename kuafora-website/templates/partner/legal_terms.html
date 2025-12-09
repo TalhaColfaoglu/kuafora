@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+
+{% block title %}Kuafora Partner Kullanım Koşulları{% endblock %}
+
+{% block content %}
+<section class="py-16 px-4 sm:px-6 lg:px-8 bg-white">
+  <div class="max-w-3xl mx-auto">
+    <h1 class="text-3xl font-semibold tracking-tight mb-6">Kuafora Partner Kullanım Koşulları</h1>
+    <p class="text-sm text-gray-500 mb-10">Son güncelleme: {{ now|date:"d.m.Y" }}</p>
+
+    <div class="prose prose-sm sm:prose-base max-w-none prose-headings:font-semibold prose-a:text-ayder">
+      <p>
+        Bu metin, Kuafora Partner paneli ve mobil uygulamasını kullanan kuaför ve güzellik salonu işletmeleri için
+        geçerli kullanım koşullarını özetler. Tam ticari sözleşme ilişkisi ayrıca taraflar arasında kurulabilir.
+      </p>
+
+      <h2>1. Taraflar</h2>
+      <p>
+        Bir tarafta Kuafora platformunu geliştiren Talha Colfaoğlu (“Platform”), diğer tarafta Kuafora Partner’e kayıt
+        olan kuaför/işletme (“İşletme”) bulunmaktadır.
+      </p>
+
+      <h2>2. Hizmetin Konusu</h2>
+      <p>
+        Kuafora Partner; İşletme’nin dijital vitrin oluşturmasını, Kuafora kullanıcılarına görünür olmasını ve
+        randevularını/yorumlarını takip etmesini sağlayan bir yönetim arayüzüdür.
+      </p>
+
+      <h2>3. İşletme Yükümlülükleri</h2>
+      <ul>
+        <li>İşletme, sisteme girdiği tüm bilgilerin (isim, adres, fiyat, kampanya vb.) doğru ve güncel olduğunu taahhüt
+          eder.</li>
+        <li>Müşterilere sunduğu hizmetin kalitesinden, zamanlamasından ve mevzuata uygunluğundan bizzat sorumludur.</li>
+        <li>Müşteri verilerini yalnızca randevu/hizmet sunumu amacıyla kullanır; üçüncü kişilerle izinsiz paylaşmaz.</li>
+      </ul>
+
+      <h2>4. Platform’un Rolü</h2>
+      <p>
+        Platform, İşletme ile son kullanıcılar arasında aracı dijital hizmet sunar. Hizmetin fiilen ifası, bedel, iade,
+        memnuniyetsizlik gibi konularda birincil sorumluluk İşletme’dedir.
+      </p>
+
+      <h2>5. Ücretlendirme</h2>
+      <p>
+        Kuafora Partner şu an için ücretsizdir. İleride ücretli paketler veya komisyon modelleri sunulması halinde İşletme
+        önceden bilgilendirilecek ve onayı olmadan ücretlendirme yapılmayacaktır.
+      </p>
+
+      <h2>6. Kişisel Veriler</h2>
+      <p>
+        İşletme yetkilisine ait kişisel veriler, “Kuafora KVKK Aydınlatma Metni” kapsamında işlenir. İşletme, müşteriler
+        hakkında edindiği kişisel verileri KVKK’ya uygun biçimde korumak ve sadece ilgili hizmet kapsamında kullanmakla
+        yükümlüdür.
+      </p>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+

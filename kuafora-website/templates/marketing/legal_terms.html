@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+
+{% block title %}Kuafora Kullanıcı Sözleşmesi{% endblock %}
+
+{% block content %}
+<section class="py-16 px-4 sm:px-6 lg:px-8 bg-white">
+  <div class="max-w-3xl mx-auto">
+    <h1 class="text-3xl font-semibold tracking-tight mb-6">Kuafora Kullanıcı Sözleşmesi</h1>
+    <p class="text-sm text-gray-500 mb-10">Son güncelleme: {{ now|date:"d.m.Y" }}</p>
+
+    <div class="prose prose-sm sm:prose-base max-w-none prose-headings:font-semibold prose-a:text-ayder">
+      <h2>1. Taraflar ve Konu</h2>
+      <p>
+        Bu sözleşme, “Kuafora” isimli mobil uygulama ve <code>kuafora.com</code> alan adı üzerinden sunulan hizmetleri
+        geliştiren gerçek kişi Talha Colfaoğlu (“Platform”) ile uygulamayı kullanan gerçek kişi kullanıcı (“Kullanıcı”)
+        arasında akdedilmiştir.
+      </p>
+      <p>
+        Kullanıcı, uygulamayı indirerek, hesabını oluşturarak ve/veya kullanmaya devam ederek işbu Kullanıcı Sözleşmesi’nde
+        yer alan tüm hüküm ve koşulları okuduğunu, anladığını ve kabul ettiğini beyan eder.
+      </p>
+
+      <h2>2. Hizmetin Tanımı</h2>
+      <p>
+        Kuafora; Türkiye’deki kuaför ve benzeri işletmeleri listeleyen, kullanıcıların bu işletmeleri keşfetmesine ve
+        randevu alma süreçlerini kolaylaştırmasına yardımcı olan bir dijital platformdur. Platform, kural olarak kullanıcı
+        ile kuaför/işletme arasındaki hukukî ilişkinin tarafı olmayıp, aracı hizmet sağlayıcı konumundadır.
+      </p>
+
+      <h2>3. Üyelik ve Hesap Güvenliği</h2>
+      <ul>
+        <li>Kullanıcı, kayıt olurken doğru ve güncel bilgi vermekle yükümlüdür.</li>
+        <li>Hesap bilgileri (e‑posta, şifre vb.) üçüncü kişilerle paylaşılmamalı; hesap güvenliği Kullanıcı’ya aittir.</li>
+        <li>Platform, sahte hesap, kötüye kullanım veya mevzuata aykırılık tespit ettiğinde hesabı askıya alma veya
+          kapatma hakkına sahiptir.</li>
+      </ul>
+
+      <h2>4. Uygulama Kullanım Kuralları</h2>
+      <p>Kullanıcı aşağıdaki yükümlülükleri kabul eder:</p>
+      <ul>
+        <li>Uygulamayı yürürlükteki mevzuata, genel ahlak ve dürüstlük kurallarına uygun kullanmak,</li>
+        <li>Hakaret, tehdit, taciz, spam, sahte içerik gibi uygunsuz davranışlarda bulunmamak,</li>
+        <li>Uygulama kodlarına, veri tabanına veya sunucularına yetkisiz erişim sağlamaya çalışmamak,</li>
+        <li>Başka kullanıcıların veya işletmelerin haklarını ihlal edici içerik paylaşmamak.</li>
+      </ul>
+
+      <h2>5. Kuaförler ve Hizmet Kalitesine İlişkin Sorumluluk</h2>
+      <p>
+        Uygulamada yer alan salon bilgileri ve görsellerin önemli bir kısmı ilgili işletmeler tarafından sağlanmaktadır.
+        Bu içeriklerin doğruluğu ve güncelliği öncelikle işletmelerin sorumluluğundadır. Kuafora, kullanıcı ve işletme
+        arasındaki hizmet ilişkisinin tarafı olmayıp; hizmet kalitesi, zamanlama, fiyatlandırma, memnuniyetsizlik,
+        iptal/iade gibi konularda ortaya çıkabilecek uyuşmazlıklardan doğrudan sorumlu değildir.
+      </p>
+
+      <h2>6. Ücretlendirme ve Ödemeler</h2>
+      <p>
+        Kuafora uygulaması şu an itibarıyla tamamen ücretsiz olarak sunulmaktadır ve uygulama içinde herhangi bir ödeme
+        altyapısı aktif değildir. İleride çevrimiçi ödeme özelliği eklenmesi halinde, ödeme koşulları ve komisyon yapısı
+        ayrıca duyurulacak ve sözleşme güncellenecektir.
+      </p>
+
+      <h2>7. Fikri Mülkiyet Hakları</h2>
+      <ul>
+        <li>Kuafora markası, logosu, arayüz tasarımları, yazılım kodları ve veri tabanı üzerindeki tüm haklar Talha
+          Colfaoğlu’na aittir.</li>
+        <li>Kullanıcı, uygulamayı yalnızca kişisel kullanım amacıyla, devredilemez sınırlı bir lisans kapsamında
+          kullanmaktadır.</li>
+        <li>Uygulamanın veya içeriğinin kopyalanması, çoğaltılması, dağıtılması, ticari amaçla kullanılması ve tersine
+          mühendislik yapılması yasaktır.</li>
+      </ul>
+
+      <h2>8. Kişisel Verilerin Korunması</h2>
+      <p>
+        Kullanıcı’nın kişisel verileri; 6698 sayılı Kişisel Verilerin Korunması Kanunu ve ilgili mevzuata uygun olarak
+        işlenmekte olup, detaylar “Kuafora KVKK Aydınlatma Metni” ve “Çerez Politikası” belgelerinde açıklanmıştır.
+      </p>
+
+      <h2>9. Sözleşmenin Değiştirilmesi</h2>
+      <p>
+        Platform, işbu Sözleşme hükümlerini tek taraflı olarak güncelleyebilir. Güncel metin
+        <code>kuafora.com</code> üzerinde yayımlandığı andan itibaren geçerli olur. Uygulamanın kullanılmaya devam edilmesi,
+        güncellenen koşulların kabul edildiği anlamına gelir.
+      </p>
+
+      <h2>10. Uyuşmazlıkların Çözümü</h2>
+      <p>
+        İşbu Sözleşme Türk Hukuku’na tabidir ve uyuşmazlıkların çözümünde Bursa Mahkemeleri ve İcra Daireleri yetkilidir.
+      </p>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+

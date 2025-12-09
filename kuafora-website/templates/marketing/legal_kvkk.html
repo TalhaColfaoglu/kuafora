@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+
+{% block title %}Kuafora KVKK Aydınlatma Metni{% endblock %}
+
+{% block content %}
+<section class="py-16 px-4 sm:px-6 lg:px-8 bg-white">
+  <div class="max-w-3xl mx-auto">
+    <h1 class="text-3xl font-semibold tracking-tight mb-6">Kuafora KVKK Aydınlatma Metni</h1>
+    <p class="text-sm text-gray-500 mb-10">Son güncelleme: {{ now|date:"d.m.Y" }}</p>
+
+    <div class="prose prose-sm sm:prose-base max-w-none prose-headings:font-semibold prose-a:text-ayder">
+      <h2>1. Veri Sorumlusunun Kimliği</h2>
+      <p>
+        6698 sayılı Kişisel Verilerin Korunması Kanunu (“KVKK”) kapsamında, kişisel verileriniz;
+        veri sorumlusu sıfatıyla gerçek kişi Talha Colfaoğlu tarafından işlenmektedir.
+      </p>
+      <p>
+        İletişim: Bursa, Türkiye — colfaoglutalha@example.com
+      </p>
+
+      <h2>2. İşlenen Kişisel Veriler</h2>
+      <p>Kuafora mobil uygulaması ve <code>kuafora.com</code> kapsamında aşağıdaki veri kategorileri işlenebilir:</p>
+      <ul>
+        <li>Kimlik: Ad, soyad</li>
+        <li>İletişim: E‑posta adresi, telefon numarası (talep edilirse)</li>
+        <li>Hesap Bilgileri: Kullanıcı ID, şifre (sadece hashlenmiş şekilde)</li>
+        <li>Konum: Cihazınızın yaklaşık/konum servisi verileri (sadece izin verdiğinizde)</li>
+        <li>İşlem Bilgileri: Uygulama içi arama ve gezinme geçmişi, favori kuaförler, son bakılanlar</li>
+        <li>Cihaz/Log: IP adresi, cihaz modeli, işletim sistemi, uygulama sürümü, hata kayıtları</li>
+      </ul>
+
+      <h2>3. Kişisel Verilerin Toplanma Yöntemi</h2>
+      <p>
+        Verileriniz; mobil uygulamaya kayıt olurken, profil ve ayar ekranlarından, uygulama içi kullanım hareketlerinden,
+        cihaz izinlerinden (konum vb.) ve otomatik log kayıtlarından elektronik ortamda toplanır.
+      </p>
+
+      <h2>4. İşleme Amaçları</h2>
+      <ul>
+        <li>Kuaför keşfetme ve randevu fonksiyonlarının sunulması,</li>
+        <li>Üyelik ve hesap yönetimi,</li>
+        <li>Uygulama güvenliğinin sağlanması, kötüye kullanımın önlenmesi,</li>
+        <li>Müşteri destek taleplerinin karşılanması,</li>
+        <li>Performans, kullanım ve deneyim analizi ile uygulamanın geliştirilmesi,</li>
+        <li>Açık rızanız bulunması halinde kampanya, duyuru ve tanıtım iletişimleri yapılması.</li>
+      </ul>
+
+      <h2>5. Hukuki Sebepler</h2>
+      <p>Kişisel verileriniz;</p>
+      <ul>
+        <li>Sözleşmenin kurulması / ifası (KVKK m.5/2‑c),</li>
+        <li>Hukuki yükümlülüklerin yerine getirilmesi (m.5/2‑ç),</li>
+        <li>Meşru menfaat (m.5/2‑f),</li>
+        <li>Gerektiği hallerde açık rızanız (m.5/1)</li>
+      </ul>
+      <p>hukuki sebeplerine dayanılarak işlenmektedir.</p>
+
+      <h2>6. Verilerin Aktarıldığı Taraflar</h2>
+      <p>
+        Kişisel verileriniz; hizmet sunduğumuz kuaför/işletmelere (yalnızca gerekli olduğu ölçüde),
+        bilişim altyapısı sağlayıcılarına ve yasal yükümlülükler çerçevesinde yetkili kamu kurumlarına aktarılabilir.
+      </p>
+      <p>Şu aşamada herhangi bir ödeme altyapısı veya üçüncü taraf reklam ağı ile veri paylaşımı yapılmamaktadır.</p>
+
+      <h2>7. Saklama Süreleri</h2>
+      <p>
+        Verileriniz, hesabınız aktif olduğu sürece ve ilgili mevzuattaki zamanaşımı süreleri boyunca saklanır; bu sürelerin
+        sonunda silinir, yok edilir veya anonim hale getirilir.
+      </p>
+
+      <h2>8. Haklarınız</h2>
+      <p>KVKK m.11 uyarınca Talha Colfaoğlu’na başvurarak:</p>
+      <ul>
+        <li>Verilerinizin işlenip işlenmediğini öğrenme,</li>
+        <li>İşlenmişse bilgi talep etme,</li>
+        <li>İşlenme amacını ve amacına uygun kullanılıp kullanılmadığını öğrenme,</li>
+        <li>Yurt içinde veya yurt dışında aktarıldığı üçüncü kişileri bilme,</li>
+        <li>Eksik veya yanlış işlenmişse düzeltilmesini isteme,</li>
+        <li>İşlenmesini gerektiren sebeplerin ortadan kalkması hâlinde silinmesini veya yok edilmesini isteme,</li>
+        <li>Bu işlemlerin aktarıldığı üçüncü kişilere bildirilmesini isteme,</li>
+        <li>Otomatik sistemlerce analiz sonucu aleyhinize bir sonucun ortaya çıkmasına itiraz etme,</li>
+        <li>Kanuna aykırı işleme sebebiyle zarara uğramanız hâlinde zararın giderilmesini talep etme</li>
+      </ul>
+      <p>haklarına sahipsiniz.</p>
+
+      <p>
+        Taleplerinizi colfaoglutalha@example.com adresine e‑posta göndererek iletebilirsiniz. Başvurularınız, KVKK’da
+        öngörülen süreler içinde yanıtlanacaktır.
+      </p>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+
