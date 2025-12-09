@@ -43,10 +43,26 @@ class Migration(migrations.Migration):
                 ),
             ],
         ),
-        migrations.AddField(
-            model_name='review',
-            name='reply',
-            field=models.TextField(blank=True, null=True),
+        migrations.SeparateDatabaseAndState(
+            database_operations=[
+                migrations.RunSQL(
+                    sql=(
+                        'ALTER TABLE "barbers_review" '
+                        'ADD COLUMN IF NOT EXISTS "reply" text NULL;'
+                    ),
+                    reverse_sql=(
+                        'ALTER TABLE "barbers_review" '
+                        'DROP COLUMN IF EXISTS "reply";'
+                    ),
+                ),
+            ],
+            state_operations=[
+                migrations.AddField(
+                    model_name='review',
+                    name='reply',
+                    field=models.TextField(blank=True, null=True),
+                ),
+            ],
         ),
     ]
 
