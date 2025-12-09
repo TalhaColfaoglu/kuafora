@@ -76,15 +76,16 @@ class HomeDashboardApi(APIView):
         newest_data = [serialize_shop(s) for s in newest]
         top_rated_data = [serialize_shop(s) for s in top_rated]
 
-        # 4. Campaigns - Sadece aktif subscription'ı olan ve banlı olmayan barbershop'ların kampanyaları
+        # 4. Campaigns - Sadece aktif subscription'ı olan, banlı olmayan ve ismi olan barbershop'ların kampanyaları
         from app.subscriptions.models import Subscription
         active_campaigns = Campaign.objects.filter(
             is_active=True, 
             start_date__lte=today, 
             end_date__gte=today,
             barbershop__subscription__status__in=['trial', 'active', 'lifetime', 'grace_period'],
-            barbershop__is_verified=True  # Banlı kuaförlerin kampanyalarını filtrele
-        ).select_related('barbershop')
+            barbershop__is_verified=True,  # Banlı kuaförlerin kampanyalarını filtrele
+            barbershop__name__isnull=False  # İsimsiz kuaförlerin kampanyalarını filtrele
+        ).exclude(barbershop__name='').select_related('barbershop')
         
         if city:
             active_campaigns = active_campaigns.filter(barbershop__city__icontains=city)

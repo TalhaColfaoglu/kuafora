@@ -153,10 +153,12 @@ class BarbershopViewSet(viewsets.ReadOnlyModelViewSet):
             # Aboneliği olmayan veya suspended/cancelled olanları hariç tut
             # Artık sadece aktif subscription'ı olanlar gösterilecek
             # Banlı kuaförleri de filtrele (is_verified=False olanlar)
+            # İsimsiz kuaförleri de filtrele
             qs = qs.filter(
                 subscription__status__in=['trial', 'active', 'lifetime', 'grace_period'],
-                is_verified=True  # Banlı kuaförleri filtrele
-            )
+                is_verified=True,  # Banlı kuaförleri filtrele
+                name__isnull=False  # İsimsiz kuaförleri filtrele
+            ).exclude(name='')  # Boş string isimleri de filtrele
         
         # Viewport filtreleme (Harita optimizasyonu)
         try:
@@ -191,6 +193,16 @@ class BarbershopViewSet(viewsets.ReadOnlyModelViewSet):
         include_inactive = self.request.query_params.get("include_inactive", "").lower() == "true"
         
         if not include_inactive:
+            # İsim kontrolü - İsimsiz kuaförleri engelle
+            if not obj.name or obj.name.strip() == '':
+                from rest_framework.exceptions import NotFound
+                raise NotFound("Barbershop not found")
+            
+            # Ban kontrolü - Banlı kuaförleri engelle
+            if not obj.is_verified:
+                from rest_framework.exceptions import NotFound
+                raise NotFound("Barbershop not found")
+            
             # Aktif subscription kontrolü
             if not hasattr(obj, 'subscription') or obj.subscription.status not in ['trial', 'active', 'lifetime', 'grace_period']:
                 from rest_framework.exceptions import NotFound
@@ -1526,7 +1538,13 @@ class FavoriteListView(generics.ListAPIView):
         if getattr(self, "swagger_fake_view", False) or not self.request or self.request.user.is_anonymous:
             return Barbershop.objects.none()
         return (
-            Barbershop.objects.filter(favorited_by__user=self.request.user)
+            Barbershop.objects.filter(
+                favorited_by__user=self.request.user,
+                name__isnull=False,  # İsimsiz kuaförleri filtrele
+                is_verified=True,  # Banlı kuaförleri filtrele
+                subscription__status__in=['trial', 'active', 'lifetime', 'grace_period']  # Aktif aboneliği olanları göster
+            )
+            .exclude(name='')  # Boş string isimleri de filtrele
             .order_by("-favorited_by__created_at")
         )
 
