@@ -2091,7 +2091,7 @@ class PartnerStaffWorkingHoursViewSet(viewsets.ModelViewSet):
             qs = Appointment.objects.filter(
                 staff=staff,
                 start_datetime__date__gte=eff_date,
-                status__in=[AppointmentStatus.PENDING, AppointmentStatus.CONFIRMED, AppointmentStatus.APPROVED]
+                status__in=[AppointmentStatus.PENDING, AppointmentStatus.CONFIRMED]
             )
             
             conflict_count = 0
@@ -2202,7 +2202,7 @@ class PartnerStaffWorkingHoursViewSet(viewsets.ModelViewSet):
             qs = Appointment.objects.filter(
                 staff=staff,
                 start_datetime__date__gte=effective_date,
-                status__in=[AppointmentStatus.PENDING, AppointmentStatus.CONFIRMED, AppointmentStatus.APPROVED]
+                status__in=[AppointmentStatus.PENDING, AppointmentStatus.CONFIRMED]
             )
             
             new_schedule_map = {item.get('day'): item for item in schedule_data}
