@@ -26,12 +26,23 @@ class MySubscriptionApi(APIView):
     permission_classes = [IsAuthenticated]
     
     def get(self, request):
-        # Create viewset instance and call the action directly
-        viewset = SubscriptionViewSet()
-        viewset.request = request
-        viewset.format_kwarg = getattr(request, 'format', None)
-        # Call the action method directly
-        return viewset.my_subscription(request)
+        # Directly call the action logic from SubscriptionViewSet
+        barbershop_id = request.query_params.get('barbershop_id')
+        
+        if not barbershop_id:
+            # İlk admin olduğu salonu al
+            staff = request.user.staff_profiles.filter(is_admin=True).first()
+            if not staff:
+                return Response({'error': 'Salon bulunamadı'}, status=404)
+            barbershop_id = staff.barbershop_id
+        
+        try:
+            subscription = Subscription.objects.select_related('plan', 'coupon').get(
+                barbershop_id=barbershop_id
+            )
+            return Response(SubscriptionSerializer(subscription).data)
+        except Subscription.DoesNotExist:
+            return Response({'error': 'Abonelik bulunamadı'}, status=404)
 
 
 class StartTrialApi(APIView):

@@ -5,7 +5,7 @@ from django.conf.urls.static import static
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 from app.barbers.views import ToggleTodayApi
 from app.users.views import ResolveUserView
-from app.subscriptions.views import MySubscriptionApi, StartTrialApi
+from app.subscriptions.views import MySubscriptionApi, StartTrialApi, SubscriptionViewSet
 from django.http import JsonResponse, FileResponse
 from pathlib import Path
 
