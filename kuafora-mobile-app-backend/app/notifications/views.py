@@ -1,6 +1,7 @@
 from rest_framework import viewsets, permissions
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from django.db import ProgrammingError
 from .models import Notification
 from .serializers import NotificationSerializer
 
@@ -11,7 +12,11 @@ class NotificationViewSet(viewsets.ReadOnlyModelViewSet):
     def get_queryset(self):
         if getattr(self, "swagger_fake_view", False) or self.request.user.is_anonymous:
             return Notification.objects.none()
-        return Notification.objects.filter(user=self.request.user)
+        try:
+            return Notification.objects.filter(user=self.request.user)
+        except ProgrammingError:
+            # Tablo yoksa (migration uygulanmadıysa) boş dönerek 500'ü engelle
+            return Notification.objects.none()
 
     @action(detail=True, methods=["post"])
     def read(self, request, pk=None):

@@ -1,6 +1,7 @@
 from rest_framework import generics, permissions
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from django.db import ProgrammingError
 
 from .models import SearchHistory
 from .serializers import SearchHistorySerializer
@@ -19,7 +20,11 @@ class SearchHistoryListCreateApi(generics.ListCreateAPIView):
         if getattr(self, "swagger_fake_view", False) or user.is_anonymous:
             return SearchHistory.objects.none()
         # Son 10 kaydı, en yeniler en üstte olacak şekilde döndür
-        return SearchHistory.objects.filter(user=user).order_by("-created_at")[:10]
+        try:
+            return SearchHistory.objects.filter(user=user).order_by("-created_at")[:10]
+        except ProgrammingError:
+            # Tablo henüz yoksa (migration uygulanmadı) boş dön, 500 atma
+            return SearchHistory.objects.none()
 
     def perform_create(self, serializer):
         # Kullanıcının yaptığı her yeni aramayı kaydet
