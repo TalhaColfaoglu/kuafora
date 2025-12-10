@@ -139,6 +139,18 @@ class BarbershopSerializer(serializers.ModelSerializer):
         
         return attrs
 
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        # Banlı veya pasif abonelikli kuaförler için favorites_count'u sıfırla
+        try:
+            status = getattr(instance, "subscription", None)
+            is_active_sub = status and getattr(status, "status", None) in ['trial', 'active', 'lifetime', 'grace_period']
+            if (not getattr(instance, "is_verified", True)) or (not is_active_sub):
+                data["favorites_count"] = 0
+        except Exception:
+            data["favorites_count"] = 0
+        return data
+
     def validate_main_image(self, value):
         if value and value.size > 5 * 1024 * 1024:
             raise serializers.ValidationError("Görsel boyutu 5MB'dan büyük olamaz.")
@@ -496,6 +508,17 @@ class BarbershopWithFavoriteSerializer(serializers.ModelSerializer):
             from .models import Favorite
             return Favorite.objects.filter(user=request.user, barbershop=obj).exists()
         return False
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        try:
+            status = getattr(instance, "subscription", None)
+            is_active_sub = status and getattr(status, "status", None) in ['trial', 'active', 'lifetime', 'grace_period']
+            if (not getattr(instance, "is_verified", True)) or (not is_active_sub):
+                data["favorites_count"] = 0
+        except Exception:
+            data["favorites_count"] = 0
+        return data
 
 
 class BarbershopDetailSerializer(BarbershopSerializer):

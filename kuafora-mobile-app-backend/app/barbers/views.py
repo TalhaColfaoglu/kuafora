@@ -927,7 +927,19 @@ class LastViewedViewSet(mixins.ListModelMixin, mixins.CreateModelMixin, viewsets
         if getattr(self, "swagger_fake_view", False) or not self.request or self.request.user.is_anonymous:
             return LastViewed.objects.none()
         # return last 7 viewed for current user, most recent first
-        return LastViewed.objects.filter(user=self.request.user).order_by('-viewed_at')[:7]
+        active_status = ['trial', 'active', 'lifetime', 'grace_period']
+        return (
+            LastViewed.objects
+            .select_related("barbershop", "barbershop__subscription")
+            .filter(
+                user=self.request.user,
+                barbershop__is_verified=True,
+                barbershop__name__isnull=False,
+                barbershop__subscription__status__in=active_status,
+            )
+            .exclude(barbershop__name='')
+            .order_by('-viewed_at')[:7]
+        )
 
     def perform_create(self, serializer):
         # upsert behavior: update-or-create LastViewed and trim to last 7
@@ -985,8 +997,17 @@ class TrackViewApi(generics.GenericAPIView):
         if not device_id:
             return Response({'error': 'device_id is required'}, status=400)
         
-        # Barbershop var mı kontrol et
-        if not Barbershop.objects.filter(id=barbershop_id).exists():
+        # Barbershop var mı ve aktif mi kontrol et
+        barbershop = (
+            Barbershop.objects
+            .select_related("subscription")
+            .filter(id=barbershop_id, is_verified=True, name__isnull=False)
+            .exclude(name='')
+            .first()
+        )
+        sub_status = getattr(getattr(barbershop, "subscription", None), "status", None)
+        is_active_sub = sub_status in ['trial', 'active', 'lifetime', 'grace_period']
+        if not barbershop or not is_active_sub:
             return Response({'error': 'barbershop not found'}, status=404)
         
         # Kullanıcı giriş yapmışsa user'ı da kaydet
@@ -1559,6 +1580,12 @@ class FavoriteToggleView(generics.GenericAPIView):
             barbershop = Barbershop.objects.get(id=barbershop_id)
         except Barbershop.DoesNotExist:
             return Response({"error": "Barbershop not found"}, status=404)
+        
+        # Banlı veya pasif abonelikli kuaförler için favori işlemini engelle
+        sub_status = getattr(getattr(barbershop, "subscription", None), "status", None)
+        is_active_sub = sub_status in ['trial', 'active', 'lifetime', 'grace_period']
+        if not barbershop.is_verified or not is_active_sub:
+            return Response({"error": "Barbershop not available"}, status=404)
         
         favorite, created = Favorite.objects.get_or_create(
             user=request.user,
@@ -2457,6 +2484,15 @@ class PartnerBreakWindowViewSet(viewsets.ModelViewSet):
         return qs.order_by("date", "start_time")
 
     def perform_create(self, serializer):
+        # Tarih sınırlaması: bugün ve 7 gün sonrası dahil
+        from django.utils import timezone
+        today = timezone.now().date()
+        date_val = serializer.validated_data.get("date")
+        if date_val:
+            max_day = today + timezone.timedelta(days=7)
+            if date_val < today or date_val > max_day:
+                raise drf_serializers.ValidationError({"date": "Mola tarihi sadece bugünden itibaren 7 gün içinde olabilir"})
+
         scope = serializer.validated_data.get("scope")
         target_barbershop = (
             serializer.validated_data.get("barbershop")
@@ -2486,6 +2522,13 @@ class PartnerBreakWindowViewSet(viewsets.ModelViewSet):
         serializer.save(staff=staff, barbershop=staff.barbershop, created_by=self.request.user)
 
     def perform_update(self, serializer):
+        from django.utils import timezone
+        date_val = serializer.validated_data.get("date", serializer.instance.date)
+        today = timezone.now().date()
+        max_day = today + timezone.timedelta(days=7)
+        if date_val < today or date_val > max_day:
+            raise drf_serializers.ValidationError({"date": "Mola tarihi sadece bugünden itibaren 7 gün içinde olabilir"})
+
         instance = serializer.instance
         if not self._can_manage(instance):
             raise drf_serializers.ValidationError({"detail": "Bu molayı güncelleme yetkiniz yok"})

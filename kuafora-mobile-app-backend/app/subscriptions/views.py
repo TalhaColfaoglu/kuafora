@@ -229,6 +229,8 @@ class SubscriptionViewSet(viewsets.ModelViewSet):
             if coupon_code and not existing_subscription.coupon:
                 try:
                     coupon = Coupon.objects.get(code=coupon_code, is_active=True)
+                    if CouponUsage.objects.filter(coupon=coupon).exists():
+                        return Response({'error': 'Bu kupon zaten kullanılmış'}, status=400)
                     if coupon.is_valid:
                         existing_subscription.coupon = coupon
                         existing_subscription.coupon_applied_at = timezone.now()
@@ -284,6 +286,8 @@ class SubscriptionViewSet(viewsets.ModelViewSet):
                 coupon = Coupon.objects.get(code=coupon_code, is_active=True)
                 if not coupon.is_valid:
                     return Response({'error': 'Kupon geçersiz veya süresi dolmuş'}, status=400)
+                if CouponUsage.objects.filter(coupon=coupon).exists():
+                    return Response({'error': 'Bu kupon zaten kullanılmış'}, status=400)
             except Coupon.DoesNotExist:
                 return Response({'error': 'Kupon bulunamadı'}, status=400)
         
@@ -356,6 +360,11 @@ class SubscriptionViewSet(viewsets.ModelViewSet):
         
         code = serializer.validated_data['code']
         coupon = Coupon.objects.get(code=code)
+        if CouponUsage.objects.filter(coupon=coupon).exists():
+            return Response({
+                'success': False,
+                'error': 'Bu kupon zaten kullanılmış'
+            }, status=status.HTTP_400_BAD_REQUEST)
         
         # Kuponu uygula
         with transaction.atomic():

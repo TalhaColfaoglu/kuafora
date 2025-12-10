@@ -3,6 +3,8 @@ from rest_framework.response import Response
 from rest_framework import permissions
 from django.utils import timezone
 from datetime import timedelta
+from django.db.models import Q
+import math
 from .models import Barbershop, ShopCategory
 from .home_serializers import ShopCategorySerializer, BarbershopHomeSerializer
 from app.campaigns.models import Campaign
@@ -14,6 +16,9 @@ class HomeDashboardApi(APIView):
 
     def get(self, request):
         city = request.query_params.get('city')
+        lat = request.query_params.get('lat')
+        lng = request.query_params.get('lng')
+        radius_km = float(request.query_params.get('radius_km', 10))
         
         # 1. Categories
         categories = ShopCategory.objects.filter(is_active=True)
@@ -26,8 +31,28 @@ class HomeDashboardApi(APIView):
             name__isnull=False,
             is_verified=True  # Banlı kuaförleri filtrele
         ).exclude(name='')
+
         if city:
             shops_qs = shops_qs.filter(city__icontains=city)
+
+        # Konuma göre öneriler: 10km yarıçap filtre (basit bounding box)
+        if lat and lng:
+            try:
+                lat_v = float(lat)
+                lng_v = float(lng)
+                lat_delta = radius_km / 110.0
+                # longitude delta: 111km * cos(lat)
+                lng_delta = radius_km / (111.0 * max(abs(math.cos(math.radians(lat_v))), 0.2))
+                shops_qs = shops_qs.filter(
+                    latitude__isnull=False,
+                    longitude__isnull=False,
+                    latitude__gte=lat_v - lat_delta,
+                    latitude__lte=lat_v + lat_delta,
+                    longitude__gte=lng_v - lng_delta,
+                    longitude__lte=lng_v + lng_delta,
+                )
+            except (ValueError, TypeError):
+                pass
 
         # 2. Newest (last 60 days) - İsimsiz kuaförleri filtrele
         sixty_days_ago = timezone.now() - timedelta(days=60)
