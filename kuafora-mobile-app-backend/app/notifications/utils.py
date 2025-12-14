@@ -151,8 +151,52 @@ def notify_customer_about_reply(review: Review) -> None:
         user=review.user,
         title=title,
         body=body,
-        type_="system",
+        type_="reply",
         reference_id=str(review.id),
+    )
+
+
+def notify_shop_about_favorites_milestone(barbershop: Barbershop, milestone: int) -> int:
+    """
+    Favori sayısı milestone'a ulaşınca kuaför adminlerine bildirim gönder.
+    Milestone'lar: 10, 25, 50, 100, 250, 500, 1000
+    """
+    admins = barbershop.staff.filter(is_admin=True).select_related("user").only("user__id")
+    users = [s.user for s in admins if getattr(s, "user_id", None)]
+    
+    if not users:
+        return 0
+    
+    title = f"🎉 {milestone} Favori Milestone!"
+    body = f"{barbershop.name} {milestone} favoriye ulaştı! Harika bir başarı!"
+    return bulk_notify_users(
+        users,
+        title=title,
+        body=body,
+        type_="system",
+        reference_id=f"fav_{milestone}",
+    )
+
+
+def notify_shop_about_views_milestone(barbershop: Barbershop, milestone: int) -> int:
+    """
+    Görüntülenme sayısı milestone'a ulaşınca kuaför adminlerine bildirim gönder.
+    Milestone'lar: 100, 250, 500, 1000, 2500, 5000, 10000
+    """
+    admins = barbershop.staff.filter(is_admin=True).select_related("user").only("user__id")
+    users = [s.user for s in admins if getattr(s, "user_id", None)]
+    
+    if not users:
+        return 0
+    
+    title = f"📊 {milestone} Görüntülenme Milestone!"
+    body = f"{barbershop.name} {milestone} kez görüntülendi! Profiliniz daha fazla müşteriye ulaşıyor!"
+    return bulk_notify_users(
+        users,
+        title=title,
+        body=body,
+        type_="system",
+        reference_id=f"view_{milestone}",
     )
 
 

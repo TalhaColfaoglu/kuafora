@@ -958,12 +958,23 @@ class LastViewedViewSet(mixins.ListModelMixin, mixins.CreateModelMixin, viewsets
         # Her giriş için ViewEvent ekleyerek toplam görüntülenmeyi arttır
         # device_id varsa onu da kaydet
         device_id = self.request.data.get('device_id')
+        barbershop_id = self.request.data.get('barbershop')
         try:
             ViewEvent.objects.create(
                 user=self.request.user, 
-                barbershop_id=self.request.data.get('barbershop'),
+                barbershop_id=barbershop_id,
                 device_id=device_id
             )
+            # Check for view milestone achievements
+            try:
+                from app.notifications.utils import notify_shop_about_views_milestone
+                views_count = ViewEvent.objects.filter(barbershop_id=barbershop_id).count()
+                milestones = [100, 250, 500, 1000, 2500, 5000, 10000, 25000, 50000]
+                if views_count in milestones:
+                    barbershop = Barbershop.objects.get(id=barbershop_id)
+                    notify_shop_about_views_milestone(barbershop, views_count)
+            except Exception:
+                pass
         except Exception:
             pass
         # ensure at most 7 entries
@@ -1019,6 +1030,15 @@ class TrackViewApi(generics.GenericAPIView):
                 barbershop_id=barbershop_id,
                 device_id=device_id
             )
+            # Check for view milestone achievements
+            try:
+                from app.notifications.utils import notify_shop_about_views_milestone
+                views_count = ViewEvent.objects.filter(barbershop_id=barbershop_id).count()
+                milestones = [100, 250, 500, 1000, 2500, 5000, 10000, 25000, 50000]
+                if views_count in milestones:
+                    notify_shop_about_views_milestone(barbershop, views_count)
+            except Exception:
+                pass
         except Exception as e:
             return Response({'error': str(e)}, status=500)
         
@@ -1602,6 +1622,18 @@ class FavoriteToggleView(generics.GenericAPIView):
         favorites_count = barbershop.favorited_by.count()
         barbershop.favorites_count = favorites_count
         barbershop.save(update_fields=["favorites_count"])
+        
+        # Check for milestone achievements (only when adding favorite)
+        if favorited:
+            from app.notifications.utils import notify_shop_about_favorites_milestone
+            milestones = [10, 25, 50, 100, 250, 500, 1000, 2500, 5000]
+            for milestone in milestones:
+                if favorites_count == milestone:
+                    try:
+                        notify_shop_about_favorites_milestone(barbershop, milestone)
+                    except Exception:
+                        pass
+                    break
         
         return Response({"favorited": favorited, "favorites_count": favorites_count})
 
