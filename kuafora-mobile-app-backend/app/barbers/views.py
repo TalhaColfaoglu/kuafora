@@ -1849,6 +1849,10 @@ class PartnerShopWorkingHoursViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=["post"], url_path="update-schedule")
     def update_schedule(self, request):
+        from datetime import datetime, time as _time
+        from django.db import transaction
+        from rest_framework import serializers as drf_serializers
+
         schedule_data = request.data.get("schedule", [])
         effective_date_str = request.data.get("effective_date")
         
@@ -1860,37 +1864,136 @@ class PartnerShopWorkingHoursViewSet(viewsets.ModelViewSet):
         except Staff.DoesNotExist:
              return Response({"detail": "Admin yetkisi gerekli"}, status=403)
 
-        if not schedule_data:
-             return Response({"detail": "Schedule data required"}, status=400)
+        if not isinstance(schedule_data, list) or not schedule_data:
+            return Response({"detail": "Schedule data required"}, status=400)
 
-        # Normalize schedule data to avoid 400 errors
+        valid_days = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"]
+        valid_set = set(valid_days)
+
+        def _parse_time(val):
+            if val is None:
+                return None
+            s = str(val).strip()
+            if not s:
+                return None
+            # Accept "HH:MM" or "HH:MM:SS" (and tolerate longer strings)
+            try:
+                return datetime.strptime(s[:5], "%H:%M").time()
+            except Exception:
+                try:
+                    return datetime.strptime(s[:8], "%H:%M:%S").time()
+                except Exception:
+                    return None
+
+        # Build a dict to de-dup days; also tolerate old keys ("day", "open", "close", etc.)
+        incoming_by_day = {}
+        for raw in schedule_data:
+            if not isinstance(raw, dict):
+                continue
+            day = (raw.get("day_of_week") or raw.get("day") or "").upper()
+            if day in valid_set:
+                incoming_by_day[day] = raw
+
+        # Normalize to a full 7-day schedule to avoid partial payload issues
         normalized_schedule = []
-        for entry in schedule_data:
-            is_closed = entry.get('is_closed', False)
-            day = entry.get('day_of_week')
-            if not day: continue
-            
+        normalized_objs = []
+
+        for day in valid_days:
+            raw = incoming_by_day.get(day)
+            if not raw:
+                # Missing day: treat as closed (safe default)
+                normalized_schedule.append(
+                    {
+                        "day_of_week": day,
+                        "is_closed": True,
+                        "start_time": "00:00:00",
+                        "end_time": "00:00:00",
+                        "break_start_time": None,
+                        "break_end_time": None,
+                    }
+                )
+                normalized_objs.append(
+                    ShopWorkingHours(
+                        barbershop=shop,
+                        day_of_week=day,
+                        is_closed=True,
+                        start_time=_time(0, 0),
+                        end_time=_time(0, 0),
+                        break_start_time=None,
+                        break_end_time=None,
+                    )
+                )
+                continue
+
+            is_closed = bool(raw.get("is_closed", False))
+
             if is_closed:
-                normalized_schedule.append({
-                    'day_of_week': day,
-                    'is_closed': True,
-                    'start_time': '00:00:00', # Default dummy
-                    'end_time': '00:00:00'    # Default dummy
-                })
-            else:
-                start = entry.get('start_time')
-                end = entry.get('end_time')
-                if not start or not end:
-                    return Response({"detail": f"{day} için açılış/kapanış saati gerekli"}, status=400)
-                normalized_schedule.append({
-                    'day_of_week': day,
-                    'is_closed': False,
-                    'start_time': start,
-                    'end_time': end,
-                    'break_start_time': entry.get('break_start_time'),
-                    'break_end_time': entry.get('break_end_time')
-                })
-        
+                normalized_schedule.append(
+                    {
+                        "day_of_week": day,
+                        "is_closed": True,
+                        "start_time": "00:00:00",
+                        "end_time": "00:00:00",
+                        "break_start_time": None,
+                        "break_end_time": None,
+                    }
+                )
+                normalized_objs.append(
+                    ShopWorkingHours(
+                        barbershop=shop,
+                        day_of_week=day,
+                        is_closed=True,
+                        start_time=_time(0, 0),
+                        end_time=_time(0, 0),
+                        break_start_time=None,
+                        break_end_time=None,
+                    )
+                )
+                continue
+
+            start_raw = raw.get("start_time") or raw.get("open")
+            end_raw = raw.get("end_time") or raw.get("close")
+            start_t = _parse_time(start_raw)
+            end_t = _parse_time(end_raw)
+            if not start_t or not end_t:
+                raise drf_serializers.ValidationError({"detail": f"{day} için açılış/kapanış saati gerekli"})
+            if end_t <= start_t:
+                raise drf_serializers.ValidationError({"detail": f"{day} için kapanış saati açılıştan sonra olmalı"})
+
+            b_start_raw = raw.get("break_start_time") or raw.get("break_start")
+            b_end_raw = raw.get("break_end_time") or raw.get("break_end")
+            b_start_t = _parse_time(b_start_raw)
+            b_end_t = _parse_time(b_end_raw)
+            if (b_start_t and not b_end_t) or (b_end_t and not b_start_t):
+                raise drf_serializers.ValidationError({"detail": f"{day} için mola başlangıç ve bitiş birlikte gönderilmeli"})
+            if b_start_t and b_end_t:
+                if b_end_t <= b_start_t:
+                    raise drf_serializers.ValidationError({"detail": f"{day} için mola bitişi başlangıçtan sonra olmalı"})
+                if b_start_t < start_t or b_end_t > end_t:
+                    raise drf_serializers.ValidationError({"detail": f"{day} için mola saatleri çalışma saatleri içinde olmalı"})
+
+            normalized_schedule.append(
+                {
+                    "day_of_week": day,
+                    "is_closed": False,
+                    "start_time": start_t.strftime("%H:%M:%S"),
+                    "end_time": end_t.strftime("%H:%M:%S"),
+                    "break_start_time": b_start_t.strftime("%H:%M:%S") if b_start_t else None,
+                    "break_end_time": b_end_t.strftime("%H:%M:%S") if b_end_t else None,
+                }
+            )
+            normalized_objs.append(
+                ShopWorkingHours(
+                    barbershop=shop,
+                    day_of_week=day,
+                    is_closed=False,
+                    start_time=start_t,
+                    end_time=end_t,
+                    break_start_time=b_start_t,
+                    break_end_time=b_end_t,
+                )
+            )
+
         schedule_data = normalized_schedule
 
         effective_date = timezone.now().date()
@@ -1915,12 +2018,10 @@ class PartnerShopWorkingHoursViewSet(viewsets.ModelViewSet):
             return Response({"detail": f"Değişiklikler {effective_date} tarihine planlandı. {count} çakışan randevu iptal edildi."})
         else:
             # Apply immediately
-            from django.db import transaction
             with transaction.atomic():
                 ShopWorkingHours.objects.filter(barbershop=shop).delete()
-                serializer = ShopWorkingHoursSerializer(data=schedule_data, many=True)
-                serializer.is_valid(raise_exception=True)
-                serializer.save(barbershop=shop)
+                # Bulk create is faster and avoids serializer time parsing edge-cases (400'leri bitirir)
+                ShopWorkingHours.objects.bulk_create(normalized_objs)
                 
                 count = check_and_cancel_conflicts(shop, schedule_data, today)
             
