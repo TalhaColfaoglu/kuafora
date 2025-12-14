@@ -13,7 +13,7 @@ class NotificationViewSet(viewsets.ReadOnlyModelViewSet):
         if getattr(self, "swagger_fake_view", False) or self.request.user.is_anonymous:
             return Notification.objects.none()
         try:
-        return Notification.objects.filter(user=self.request.user)
+            return Notification.objects.filter(user=self.request.user)
         except ProgrammingError:
             # Tablo yoksa (migration uygulanmadıysa) boş dönerek 500'ü engelle
             return Notification.objects.none()
