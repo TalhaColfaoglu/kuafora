@@ -28,7 +28,12 @@ class SearchHistoryListCreateApi(generics.ListCreateAPIView):
 
     def perform_create(self, serializer):
         # Kullanıcının yaptığı her yeni aramayı kaydet
-        serializer.save(user=self.request.user)
+        try:
+            serializer.save(user=self.request.user)
+        except ProgrammingError:
+            # Tablo henüz yoksa (migration uygulanmadı) 500 atma
+            # Kalıcı çözüm: migrate
+            return
 
 
 class SearchHistoryClearApi(APIView):
@@ -39,7 +44,12 @@ class SearchHistoryClearApi(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request, *args, **kwargs):
-        SearchHistory.objects.filter(user=request.user).delete()
-        return Response({"detail": "ok"})
+        try:
+            SearchHistory.objects.filter(user=request.user).delete()
+            return Response({"detail": "ok"})
+        except ProgrammingError:
+            # Tablo henüz yoksa (migration uygulanmadı) 500 atma
+            # Kalıcı çözüm: migrate
+            return Response({"detail": "ok"})
 
 
