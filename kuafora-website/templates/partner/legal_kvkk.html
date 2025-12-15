@@ -4,35 +4,87 @@
 
 {% block content %}
 <section class="py-16 px-4 sm:px-6 lg:px-8 bg-white">
-  <div class="max-w-3xl mx-auto">
-    <h1 class="text-3xl font-semibold tracking-tight mb-6">Kuafora Partner KVKK Aydınlatma Metni</h1>
-    <p class="text-sm text-gray-500 mb-10">Son güncelleme: {{ now|date:"d.m.Y" }}</p>
+  <div class="max-w-4xl mx-auto">
+    <h1 class="text-4xl font-bold tracking-tight mb-6 text-gray-900">Kuafora Partner KVKK Aydınlatma Metni</h1>
+    <p class="text-sm text-gray-500 mb-4">Son güncelleme: {{ now|date:"d.m.Y" }}</p>
+    <p class="text-sm text-gray-600 mb-10 bg-blue-50 p-4 rounded-lg border border-blue-100">
+      <strong>İşletme Sahipleri ve Yetkilileri İçin:</strong> Bu metin, Kuafora Partner platformunu kullanan işletme sahipleri, yetkililer ve çalışanların kişisel verilerinin nasıl işlendiğini açıklar.
+    </p>
 
-    <div class="prose prose-sm sm:prose-base max-w-none prose-headings:font-semibold prose-a:text-ayder">
-      <p>
-        Bu metin, Kuafora Partner uygulamasını kullanan kuaför/işletme yetkililerinin kişisel verilerinin işlenmesine
-        ilişkin aydınlatma amaçlıdır. Veri sorumlusu Talha Colfaoğlu’dur.
+    <div class="prose prose-base max-w-none prose-headings:font-bold prose-headings:text-gray-900 prose-p:text-gray-700 prose-p:leading-relaxed prose-li:text-gray-700 prose-strong:text-gray-900">
+      
+      <div class="bg-gray-50 p-6 rounded-lg border border-gray-200 my-8">
+        <h3 class="text-xl font-bold mb-4">Partner İçin Özel KVKK Bilgilendirmesi</h3>
+        
+        <h4 class="font-bold mt-6 mb-3">Partner Olarak İşlenen Kişisel Verileriniz:</h4>
+        <ul class="list-disc ml-6 space-y-2">
+          <li><strong>İşletme Yetkilisi Bilgileri:</strong> Ad, soyad, T.C. kimlik numarası, telefon, e-posta</li>
+          <li><strong>İşletme Bilgileri:</strong> Ticaret sicil bilgileri, vergi numarası, adres, ruhsat bilgileri</li>
+          <li><strong>Personel Bilgileri:</strong> İşletmenize kaydettiğiniz çalışanların ad, soyad, telefon, fotoğraf, çalışma saatleri</li>
+          <li><strong>Finansal Bilgiler:</strong> Banka hesap numarası, IBAN (gelecekte ödeme altyapısı için)</li>
+          <li><strong>İşlem Verileri:</strong> Randevu kayıtları, hizmet geçmişi, kampanya ve duyuru yayınlama</li>
+          <li><strong>İstatistik Verileri:</strong> Profil görüntülenme, randevu sayıları, yorum ve puanlama bilgileri</li>
+        </ul>
+
+        <h4 class="font-bold mt-6 mb-3">İşlenme Amaçları:</h4>
+        <ul class="list-disc ml-6 space-y-2">
+          <li>Partner hesabının oluşturulması ve yönetimi</li>
+          <li>Dijital vitrin oluşturma ve işletme bilgilerinin yayınlanması</li>
+          <li>Randevu yönetimi ve müşteri iletişimi</li>
+          <li>İşletme performans analizi ve raporlama</li>
+          <li>Ticari ve yasal yükümlülüklerin yerine getirilmesi (fatura, vergi, denetim)</li>
+          <li>Müşteri destek ve teknik destek sağlanması</li>
+        </ul>
+
+        <h4 class="font-bold mt-6 mb-3">Hukuki Sebepler:</h4>
+        <p class="mb-2">Partner verileriniz aşağıdaki hukuki sebeplere dayanılarak işlenir:</p>
+        <ul class="list-disc ml-6 space-y-2">
+          <li><strong>Sözleşmenin İfası (KVKK m.5/2-c):</strong> Partner sözleşmesinin kurulması ve yürütülmesi</li>
+          <li><strong>Hukuki Yükümlülük (KVKK m.5/2-ç):</strong> Ticaret, vergi, denetim mevzuatı gereği</li>
+          <li><strong>Meşru Menfaat (KVKK m.5/2-f):</strong> Platform güvenliği, dolandırıcılık önleme</li>
+          <li><strong>Açık Rıza (KVKK m.5/1):</strong> Pazarlama iletileri, özel özellikler için</li>
+        </ul>
+
+        <h4 class="font-bold mt-6 mb-3">Özel Sorumluluk: Müşteri Verilerinin Korunması</h4>
+        <p class="bg-red-50 p-4 rounded border border-red-200 my-4">
+          <strong>Önemli:</strong> Partner olarak, randevu ve hizmet sunumu kapsamında edindiğiniz <strong>müşteri kişisel verilerinin</strong> korunmasından <strong>birinci derecede siz sorumlusunuz</strong>. Bu bağlamda:
+        </p>
+        <ul class="list-disc ml-6 space-y-2">
+          <li>Müşteri verilerini yalnızca <strong>hizmet sunumu amacıyla</strong> kullanmalısınız</li>
+          <li>Müşteri verilerini <strong>üçüncü kişilerle izinsiz paylaşmamalısınız</strong></li>
+          <li>Müşteri verilerini <strong>güvenli şekilde saklamalı</strong> ve yetkisiz erişimlere karşı korumalısınız</li>
+          <li>Müşterilerin <strong>KVKK haklarını</strong> (bilgi talep etme, silme, düzeltme vb.) yerine getirmelisiniz</li>
+          <li>Veri ihlali durumunda derhal <strong>Kişisel Verileri Koruma Kurumu'na</strong> ve Platform'a bildirmelisiniz</li>
+        </ul>
+
+        <h4 class="font-bold mt-6 mb-3">Haklarınız:</h4>
+        <p class="mb-2">KVKK m.11 uyarınca aşağıdaki haklara sahipsiniz:</p>
+        <ul class="list-disc ml-6 space-y-1">
+          <li>Kişisel verilerinizin işlenip işlenmediğini öğrenme</li>
+          <li>İşlenmişse bilgi talep etme</li>
+          <li>İşlenme amacını öğrenme</li>
+          <li>Yurt içi/yurt dışı aktarılan üçüncü kişileri bilme</li>
+          <li>Eksik veya yanlış verilerin düzeltilmesini isteme</li>
+          <li>KVKK şartları çerçevesinde silinmesini veya yok edilmesini isteme</li>
+          <li>Otomatik sistemlerle analiz sonucu aleyhinize çıkan kararlara itiraz etme</li>
+        </ul>
+
+        <div class="bg-green-50 p-4 rounded border border-green-200 mt-6">
+          <p class="font-bold mb-2">Başvuru:</p>
+          <p class="text-sm">KVKK haklarınızı kullanmak için <a href="mailto:kvkk@kuafora.com" class="text-blue-600 hover:underline">kvkk@kuafora.com</a> adresine yazılı başvuru yapabilirsiniz.</p>
+        </div>
+      </div>
+
+      <p class="text-center my-8">
+        <strong>📖 Detaylı KVKK bilgilendirmesi için lütfen <a href="/legal/kvkk" class="text-blue-600 hover:underline">Ana KVKK Aydınlatma Metni</a> sayfasını inceleyiniz.</strong>
       </p>
 
-      <h2>1. İşlenen Veriler</h2>
-      <ul>
-        <li>İşletme Yetkilisi Bilgileri: Ad, soyad, e‑posta, telefon.</li>
-        <li>Hesap Bilgileri: Giriş bilgileri, yetkilendirme verileri.</li>
-        <li>İşlem Bilgileri: Panel kullanım hareketleri, salon profili güncellemeleri.</li>
-      </ul>
-
-      <h2>2. Amaçlar</h2>
-      <ul>
-        <li>Kuafora Partner hesabının oluşturulması ve yönetimi,</li>
-        <li>İşletme profilinin Kuafora kullanıcılarına gösterilmesi,</li>
-        <li>İletişim ve destek süreçlerinin yürütülmesi,</li>
-        <li>Güvenlik ve kötüye kullanım tespitleri.</li>
-      </ul>
-
-      <p>Diğer tüm esaslar için ana “Kuafora KVKK Aydınlatma Metni” geçerlidir.</p>
+      <div class="text-center text-sm text-gray-500 mt-12 pt-8 border-t border-gray-200">
+        <p>© {{ now|date:"Y" }} Kuafora - Talha Colfaoğlu. Tüm hakları saklıdır.</p>
+        <p class="mt-2">Son güncelleme: {{ now|date:"d.m.Y" }}</p>
+        <p class="mt-3">Sorularınız için: <a href="mailto:kvkk@kuafora.com" class="text-blue-600 hover:underline">kvkk@kuafora.com</a></p>
+      </div>
     </div>
   </div>
 </section>
 {% endblock %}
-
-

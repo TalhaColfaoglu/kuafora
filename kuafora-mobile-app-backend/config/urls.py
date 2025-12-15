@@ -41,6 +41,7 @@ def schema_static(request):
         return JsonResponse(minimal_schema, status=200)
 
 urlpatterns = [
+    path("admin/help/", admin.site.admin_view(__import__("config.admin_help", fromlist=["admin_help_view"]).admin_help_view), name="admin-help"),
     path("admin/", admin.site.urls),
     # Dinamik şema yerine statik dosyayı servis et (dinamik jeneratör hatalarından etkilenmesin)
     path("api/schema/", schema_static, name="schema"),

@@ -17,6 +17,17 @@ class AppointmentAdmin(ModelAdmin):
         "price_display"
     )
     list_filter = ("status", "start_datetime", "shop")
+    date_hierarchy = "start_datetime"
+    autocomplete_fields = ("shop", "staff", "customer")
+    readonly_fields = ("created_at", "updated_at")
+    fieldsets = (
+        ("Temel", {"fields": ("shop", "staff", "customer", "status", "source")}),
+        ("Zaman", {"fields": ("start_datetime", "end_datetime", "duration_minutes")}),
+        ("Hizmet & Tutar", {"fields": ("service_items", "price_total", "note"), "classes": ("collapse",)}),
+        ("Ödeme", {"fields": ("payment_status", "payment_intent_id", "refund_status"), "classes": ("collapse",)}),
+        ("İptal", {"fields": ("cancelled_by", "rejection_reason"), "classes": ("collapse",)}),
+        ("Sistem", {"fields": ("created_at", "updated_at"), "classes": ("collapse",)}),
+    )
     search_fields = (
         "customer__full_name", 
         "shop__name", 

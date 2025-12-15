@@ -134,6 +134,18 @@ UNFOLD = {
         "show_all_applications": True,
         "navigation": [
             {
+                "title": _("Rehber"),
+                "separator": True,
+                "collapsible": False,
+                "items": [
+                    {
+                        "title": _("Admin Rehberi (Nasıl kullanılır?)"),
+                        "icon": "help",
+                        "link": reverse_lazy("admin-help"),
+                    },
+                ],
+            },
+            {
                 "title": _("Yönetim"),
                 "separator": True,
                 "collapsible": True,

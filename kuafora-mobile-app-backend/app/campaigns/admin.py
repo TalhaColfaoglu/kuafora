@@ -8,9 +8,18 @@ from .models import Campaign
 @admin.register(Campaign)
 class CampaignAdmin(ModelAdmin):
     list_display = ("name", "barbershop", "discount_display", "date_range", "is_active_badge")
-    list_filter = ("is_active", "barbershop", "start_date", "end_date")
+    list_filter = ("is_active", "system_type", "discount_type", "barbershop", "start_date", "end_date")
     search_fields = ("name", "description", "barbershop__name")
     actions = ["activate_campaigns", "deactivate_campaigns"]
+    date_hierarchy = "start_date"
+    autocomplete_fields = ("barbershop",)
+
+    fieldsets = (
+        ("Temel", {"fields": ("barbershop", "name", "description", "type", "system_type")}),
+        ("İndirim", {"fields": ("discount_type", "discount_value")}),
+        ("Tarih", {"fields": ("start_date", "end_date", "is_active")}),
+        ("Kurallar", {"fields": ("rules",), "classes": ("collapse",)}),
+    )
     
     def discount_display(self, obj):
         if obj.discount_type == 'percent':

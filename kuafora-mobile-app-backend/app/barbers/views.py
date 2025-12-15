@@ -524,6 +524,7 @@ class BarbershopViewSet(viewsets.ReadOnlyModelViewSet):
         valid_days = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"]
         errors = {}
         normalized = []
+        zero_time = timezone.datetime(2000, 1, 1, 0, 0).time()
         for item in week:
             day = (item.get("day") or "").upper()
             is_closed = bool(item.get("is_closed", False))
@@ -533,7 +534,9 @@ class BarbershopViewSet(viewsets.ReadOnlyModelViewSet):
                 errors[day or "?"] = "invalid_day"
                 continue
             if is_closed:
-                normalized.append({"day": day, "is_closed": True, "open": None, "close": None})
+                # DB şemamızda start_time/end_time NOT NULL olduğu için kapalı günlerde
+                # 00:00 / 00:00 yazarız. is_closed=True olduğu için UI bu saatleri göstermeyecek.
+                normalized.append({"day": day, "is_closed": True, "open": zero_time, "close": zero_time})
                 continue
             st = parse_hhmm(open_s)
             et = parse_hhmm(close_s)

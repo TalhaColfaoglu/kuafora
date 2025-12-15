@@ -1,5 +1,6 @@
 from django.contrib import admin
 from django.utils.html import format_html
+from django.db.models import Count
 from unfold.admin import ModelAdmin, TabularInline
 from unfold.decorators import action
 from .models import (
@@ -10,6 +11,8 @@ from .models import (
     WorkSchedule,
     Review,
     Service,
+    StaffService,
+    StaffServiceCategory,
 )
 
 
@@ -21,11 +24,43 @@ class BarbershopImageInline(TabularInline):
 
 @admin.register(Barbershop)
 class BarbershopAdmin(ModelAdmin):
-    list_display = ("name", "gender_badge", "location_display", "verification_badge", "rating_display", "subscription_status")
-    list_filter = ("gender", "city", "district", "is_verified")
-    search_fields = ("name", "city", "district")
+    list_display = (
+        "id",
+        "name",
+        "gender_badge",
+        "location_display",
+        "verification_badge",
+        "rating_display",
+        "favorites_count",
+        "views_count",
+        "subscription_status",
+        "created_at",
+    )
+    list_display_links = ("id", "name")
+    list_filter = ("gender", "city", "district", "is_verified", "subscription__status")
+    search_fields = ("name", "city", "district", "address")
+    date_hierarchy = "created_at"
+    list_select_related = ("subscription",)
     inlines = [BarbershopImageInline]
     actions = ["verify_barbershops", "unverify_barbershops"]
+    readonly_fields = ("rating_avg", "total_reviews", "favorites_count", "created_at", "updated_at")
+
+    fieldsets = (
+        ("Temel", {"fields": ("name", "gender", "system_type", "is_verified")}),
+        ("Konum", {"fields": ("city", "district", "address", "latitude", "longitude")}),
+        ("İletişim", {"fields": ("phone", "instagram", "facebook", "twitter", "whatsapp"), "classes": ("collapse",)}),
+        ("Görseller", {"fields": ("main_image",), "classes": ("collapse",)}),
+        ("İstatistik", {"fields": ("rating_avg", "total_reviews", "favorites_count"), "classes": ("collapse",)}),
+        ("Sistem", {"fields": ("created_at", "updated_at"), "classes": ("collapse",)}),
+    )
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        return qs.annotate(_views_count=Count("view_events"))
+
+    def views_count(self, obj):
+        return getattr(obj, "_views_count", 0)
+    views_count.short_description = "Görüntülenme"
 
     def gender_badge(self, obj):
         colors = {
@@ -76,9 +111,44 @@ class BarbershopAdmin(ModelAdmin):
 
 @admin.register(Staff)
 class StaffAdmin(ModelAdmin):
-    list_display = ("user_email", "barbershop_link", "role_badge", "rating_display")
-    list_filter = ("barbershop", "is_admin", "certificate")
-    search_fields = ("user__email", "user__full_name", "barbershop__name")
+    list_display = ("id", "user_email", "barbershop_link", "role_badge", "experience_display", "rating_display")
+    list_display_links = ("id", "user_email")
+    list_filter = ("barbershop", "is_admin", "certificate", "gender_preference")
+    search_fields = ("user__email", "user__full_name", "email", "barbershop__name")
+    autocomplete_fields = ("barbershop", "user")
+    date_hierarchy = "id"
+
+    fieldsets = (
+        ("Temel", {"fields": ("barbershop", "user", "email", "is_admin", "certificate")}),
+        ("Profil", {"fields": ("bio", "gender_preference", "career_start_year", "tags")}),
+        ("Sosyal", {"fields": ("instagram", "facebook", "twitter", "whatsapp"), "classes": ("collapse",)}),
+        ("Randevu Ayarları", {"fields": ("auto_approval", "commission_rate", "appointment_interval"), "classes": ("collapse",)}),
+        ("Medya", {"fields": ("photo", "photo_thumb"), "classes": ("collapse",)}),
+    )
+
+    class WorkScheduleInline(TabularInline):
+        model = WorkSchedule
+        extra = 0
+        tab = True
+
+    class StaffCatalogInline(TabularInline):
+        model = StaffCatalogImage
+        extra = 0
+        tab = True
+
+    class StaffServiceInline(TabularInline):
+        model = StaffService
+        extra = 0
+        tab = True
+        autocomplete_fields = ("service",)
+
+    class StaffCategoryInline(TabularInline):
+        model = StaffServiceCategory
+        extra = 0
+        tab = True
+        autocomplete_fields = ("category",)
+
+    inlines = [WorkScheduleInline, StaffCategoryInline, StaffServiceInline, StaffCatalogInline]
 
     def user_email(self, obj):
         return obj.user.email if obj.user else obj.email
@@ -98,6 +168,12 @@ class StaffAdmin(ModelAdmin):
         return f"⭐ {obj.rating_avg:.1f}" if obj.rating_avg else "-"
     rating_display.short_description = "Puan"
 
+    def experience_display(self, obj):
+        if obj.career_start_year:
+            return f"{obj.career_start_year} → {max(0, (admin.utils.timezone.now().year - obj.career_start_year))} yıl"
+        return "-"
+    experience_display.short_description = "Deneyim"
+
 
 @admin.register(StaffCatalogImage)
 class StaffCatalogImageAdmin(ModelAdmin):
@@ -114,13 +190,19 @@ class StaffCatalogImageAdmin(ModelAdmin):
 class WorkScheduleAdmin(ModelAdmin):
     list_display = ("staff", "day_display", "hours_display")
     list_filter = ("day_of_week",)
+    search_fields = ("staff__user__full_name", "staff__user__email", "staff__barbershop__name")
     
     def day_display(self, obj):
         days = {
-            0: "Pazartesi", 1: "Salı", 2: "Çarşamba", 3: "Perşembe", 
-            4: "Cuma", 5: "Cumartesi", 6: "Pazar"
+            "Mon": "Pazartesi",
+            "Tue": "Salı",
+            "Wed": "Çarşamba",
+            "Thu": "Perşembe",
+            "Fri": "Cuma",
+            "Sat": "Cumartesi",
+            "Sun": "Pazar",
         }
-        return days.get(obj.day_of_week, "-")
+        return days.get(obj.day_of_week, obj.day_of_week or "-")
     day_display.short_description = "Gün"
 
     def hours_display(self, obj):
@@ -131,9 +213,16 @@ class WorkScheduleAdmin(ModelAdmin):
 @admin.register(Review)
 class ReviewAdmin(ModelAdmin):
     list_display = ("user", "barbershop", "rating_stars", "comment_snippet", "created_at")
-    list_filter = ("rating", "created_at")
+    list_filter = ("rating", "created_at", "is_anonymous", "barbershop")
     search_fields = ("comment", "user__full_name", "barbershop__name")
     actions = ["delete_reviews"]
+    readonly_fields = ("created_at", "updated_at")
+    fieldsets = (
+        ("Temel", {"fields": ("user", "barbershop", "staff", "rating", "is_anonymous")}),
+        ("Yorum", {"fields": ("comment",)}),
+        ("Yanıt", {"fields": ("reply", "replied_at"), "classes": ("collapse",)}),
+        ("Sistem", {"fields": ("created_at", "updated_at"), "classes": ("collapse",)}),
+    )
 
     def rating_stars(self, obj):
         return "⭐" * obj.rating

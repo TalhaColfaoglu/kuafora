@@ -1,60 +1,117 @@
 {% extends "base.html" %}
 
-{% block title %}Kuafora Partner Kullanım Koşulları{% endblock %}
+{% block title %}Kuafora Partner Kullanım Koşulları ve İş Ortaklığı Sözleşmesi{% endblock %}
 
 {% block content %}
 <section class="py-16 px-4 sm:px-6 lg:px-8 bg-white">
-  <div class="max-w-3xl mx-auto">
-    <h1 class="text-3xl font-semibold tracking-tight mb-6">Kuafora Partner Kullanım Koşulları</h1>
-    <p class="text-sm text-gray-500 mb-10">Son güncelleme: {{ now|date:"d.m.Y" }}</p>
+  <div class="max-w-4xl mx-auto">
+    <h1 class="text-4xl font-bold tracking-tight mb-6 text-gray-900">Kuafora Partner Kullanım Koşulları ve İş Ortaklığı Sözleşmesi</h1>
+    <p class="text-sm text-gray-500 mb-4">Son güncelleme: {{ now|date:"d.m.Y" }}</p>
+    <p class="text-sm text-gray-600 mb-10 bg-blue-50 p-4 rounded-lg border border-blue-100">
+      <strong>Önemli Bilgilendirme:</strong> Bu sözleşme, Kuafora Partner platformunu kullanan kuaför, berber ve güzellik salonu işletmeleri ile Kuafora arasındaki hak ve yükümlülükleri düzenler. Lütfen dikkatlice okuyunuz.
+    </p>
 
-    <div class="prose prose-sm sm:prose-base max-w-none prose-headings:font-semibold prose-a:text-ayder">
-      <p>
-        Bu metin, Kuafora Partner paneli ve mobil uygulamasını kullanan kuaför ve güzellik salonu işletmeleri için
-        geçerli kullanım koşullarını özetler. Tam ticari sözleşme ilişkisi ayrıca taraflar arasında kurulabilir.
-      </p>
-
-      <h2>1. Taraflar</h2>
-      <p>
-        Bir tarafta Kuafora platformunu geliştiren Talha Colfaoğlu (“Platform”), diğer tarafta Kuafora Partner’e kayıt
-        olan kuaför/işletme (“İşletme”) bulunmaktadır.
-      </p>
-
-      <h2>2. Hizmetin Konusu</h2>
-      <p>
-        Kuafora Partner; İşletme’nin dijital vitrin oluşturmasını, Kuafora kullanıcılarına görünür olmasını ve
-        randevularını/yorumlarını takip etmesini sağlayan bir yönetim arayüzüdür.
-      </p>
-
-      <h2>3. İşletme Yükümlülükleri</h2>
-      <ul>
-        <li>İşletme, sisteme girdiği tüm bilgilerin (isim, adres, fiyat, kampanya vb.) doğru ve güncel olduğunu taahhüt
-          eder.</li>
-        <li>Müşterilere sunduğu hizmetin kalitesinden, zamanlamasından ve mevzuata uygunluğundan bizzat sorumludur.</li>
-        <li>Müşteri verilerini yalnızca randevu/hizmet sunumu amacıyla kullanır; üçüncü kişilerle izinsiz paylaşmaz.</li>
+    <div class="prose prose-base max-w-none prose-headings:font-bold prose-headings:text-gray-900 prose-p:text-gray-700 prose-p:leading-relaxed prose-li:text-gray-700 prose-strong:text-gray-900">
+      
+      <h2 class="text-2xl mt-12 mb-6 pb-3 border-b-2 border-gray-200">1. Taraflar ve Konu</h2>
+      
+      <h3 class="text-xl mt-8 mb-4">1.1. Sözleşme Tarafları</h3>
+      <p>İşbu Partner Kullanım Koşulları ve İş Ortaklığı Sözleşmesi ("Sözleşme"), aşağıdaki taraflar arasında akdedilmiştir:</p>
+      <ul class="space-y-3 my-4">
+        <li>
+          <strong>Platform / Hizmet Sağlayıcı:</strong> "Kuafora" dijital platformunu geliştiren, işleten ve yöneten gerçek kişi <strong>Talha Colfaoğlu</strong> (Bursa, Türkiye) (Bundan sonra "Kuafora", "Platform" veya "Biz" olarak anılacaktır).
+        </li>
+        <li>
+          <strong>İşletme / Partner / İş Ortağı:</strong> Kuafora Partner paneli ve/veya mobil uygulamasına kayıt olan, dijital vitrin oluşturan ve hizmetlerini Kuafora platformu üzerinden sunan kuaför, berber, güzellik salonu ve benzeri işletmeler (Bundan sonra "İşletme", "Partner", "Siz" veya "Tarafınız" olarak anılacaktır).
+        </li>
       </ul>
 
-      <h2>4. Platform’un Rolü</h2>
+      <h3 class="text-xl mt-8 mb-4">1.2. Sözleşmenin Konusu</h3>
       <p>
-        Platform, İşletme ile son kullanıcılar arasında aracı dijital hizmet sunar. Hizmetin fiilen ifası, bedel, iade,
-        memnuniyetsizlik gibi konularda birincil sorumluluk İşletme’dedir.
+        İşbu Sözleşme'nin konusu; Kuafora Partner platformunun kullanım şartlarının, İşletme ile Platform arasındaki hak ve yükümlülüklerin, hizmet kalitesi standartlarının, ücretlendirme yapısının, sorumluluk ve garanti durumlarının, kişisel verilerin korunmasına ilişkin yükümlülüklerin, fikri mülkiyet haklarının, sözleşmenin feshi ve değişiklik prosedürlerinin ve diğer ticari/yasal hususların belirlenmesidir.
       </p>
 
-      <h2>5. Ücretlendirme</h2>
-      <p>
-        Kuafora Partner şu an için ücretsizdir. İleride ücretli paketler veya komisyon modelleri sunulması halinde İşletme
-        önceden bilgilendirilecek ve onayı olmadan ücretlendirme yapılmayacaktır.
+      <p class="text-center my-8">
+        <strong>📖 Tüm detayları içeren tam sözleşme metni için lütfen yukarıdaki <a href="/legal/terms" class="text-blue-600 hover:underline">Kullanıcı Sözleşmesi</a> sayfasını inceleyiniz.</strong>
       </p>
 
-      <h2>6. Kişisel Veriler</h2>
-      <p>
-        İşletme yetkilisine ait kişisel veriler, “Kuafora KVKK Aydınlatma Metni” kapsamında işlenir. İşletme, müşteriler
-        hakkında edindiği kişisel verileri KVKK’ya uygun biçimde korumak ve sadece ilgili hizmet kapsamında kullanmakla
-        yükümlüdür.
-      </p>
+      <div class="bg-gray-50 p-6 rounded-lg border border-gray-200 my-8">
+        <h3 class="text-xl font-bold mb-4">Partner İçin Ek Önemli Maddeler:</h3>
+        
+        <h4 class="font-bold mt-6 mb-3">İşletme Bilgileri ve Sorumluluklar</h4>
+        <p class="mb-3">İşletme olarak aşağıdaki hususları kabul edersiniz:</p>
+        <ul class="list-disc ml-6 space-y-2">
+          <li>Platform'a girdiğiniz tüm bilgiler (işletme adı, adres, telefon, çalışma saatleri, hizmet fiyatları, görseller, kampanyalar vb.) <strong>doğru, güncel ve yanıltıcı olmayan</strong> bilgilerdir.</li>
+          <li>Yürürlükteki tüm <strong>ticari, sağlık, hijyen ve güvenlik mevzuatına</strong> uygun olarak faaliyet gösterirsiniz.</li>
+          <li>Gerekli <strong>ruhsat, lisans, sertifika ve izinlere</strong> sahipsiniz ve bunları güncel tutarsınız.</li>
+          <li>Müşterilere sunduğunuz hizmetin <strong>kalitesi, zamanlaması, fiyatlandırması ve sonuçlarından</strong> tamamen siz sorumlusunuz.</li>
+          <li>Müşteri memnuniyetsizliği, şikayet, iade, iptal ve diğer uyuşmazlıklarda birincil sorumluluk sizde olup, Platform'u sorumlu tutamazsınız.</li>
+        </ul>
+
+        <h4 class="font-bold mt-6 mb-3">Randevu ve Hizmet Sunumu</h4>
+        <ul class="list-disc ml-6 space-y-2">
+          <li>Kuafora üzerinden gelen randevuları <strong>zamanında ve profesyonel şekilde</strong> karşılamayı taahhüt edersiniz.</li>
+          <li>Randevu iptali, değişiklik ve gecikmeler konusunda müşteriye önceden bilgi verirsiniz.</li>
+          <li>Hizmet kalitesi, hijyen standartları ve müşteri güvenliği sizin sorumluluğunuzdadır.</li>
+          <li>Platform, hizmet sonuçlarından (saç kesimi, boyama, makyaj vb. sonuçları) sorumlu tutulamaz.</li>
+        </ul>
+
+        <h4 class="font-bold mt-6 mb-3">Müşteri Verileri ve Gizlilik</h4>
+        <ul class="list-disc ml-6 space-y-2">
+          <li>Randevu ve hizmet sunumu kapsamında edindiğiniz müşteri kişisel verilerini <strong>KVKK'ya tam uyum</strong> sağlayarak işlersiniz.</li>
+          <li>Müşteri verilerini yalnızca <strong>hizmet sunumu amacıyla</strong> kullanır, üçüncü kişilerle izinsiz paylaşmaz, ticari amaçla kullanmazsınız.</li>
+          <li>Veri güvenliği tedbirlerini alır, veri ihlallerini derhal Platform'a ve yetkili mercilere bildirirsiniz.</li>
+          <li>Müşterilerin KVKK haklarını (bilgi talep etme, silme, düzeltme vb.) yerine getirirsiniz.</li>
+        </ul>
+
+        <h4 class="font-bold mt-6 mb-3">Ücretlendirme ve Ödemeler</h4>
+        <p class="mb-3">
+          <strong>Kuafora Partner şu an itibarıyla tamamen ücretsizdir.</strong> Gelecekte ücretli paketler, abonelik modelleri veya komisyon yapısı sunulması halinde:
+        </p>
+        <ul class="list-disc ml-6 space-y-2">
+          <li>İşletme önceden <strong>en az 30 gün önce</strong> bilgilendirilecektir.</li>
+          <li>Ücretlendirme yapısı şeffaf ve net şekilde açıklanacaktır.</li>
+          <li>İşletme'nin onayı olmadan ücretlendirme başlamayacaktır.</li>
+          <li>İşletme, ücretlendirmeyi kabul etmezse hesabını ücretsiz olarak kapatabilir.</li>
+        </ul>
+
+        <h4 class="font-bold mt-6 mb-3">Yasak Faaliyetler</h4>
+        <p class="mb-3 font-bold text-red-700">İşletme olarak aşağıdaki faaliyetleri yapmanız kesinlikle yasaktır:</p>
+        <ul class="list-disc ml-6 space-y-2">
+          <li>Sahte işletme profili oluşturmak, başka işletmenin kimliğini taklit etmek</li>
+          <li>Sahte yorum, değerlendirme veya rating manipülasyonu yapmak</li>
+          <li>Rakip işletmeleri karalamak veya haksız rekabet yapmak</li>
+          <li>Müşteri verilerini izinsiz paylaşmak, satmak veya kötüye kullanmak</li>
+          <li>Platform'u yasal olmayan faaliyetler için kullanmak</li>
+          <li>Yanıltıcı fiyat, kampanya veya hizmet bilgisi vermek</li>
+          <li>Telif hakkı ihlali yapan içerik (fotoğraf, video vb.) paylaşmak</li>
+        </ul>
+
+        <h4 class="font-bold mt-6 mb-3">Hesap Askıya Alma ve Kapatma</h4>
+        <p class="mb-3">Platform, aşağıdaki durumlarda İşletme hesabını askıya alabilir veya kalıcı olarak kapatabilir:</p>
+        <ul class="list-disc ml-6 space-y-2">
+          <li>Sözleşme hükümlerinin ciddi ihlali</li>
+          <li>Müşteri şikayetlerinin sürekli ve ciddi olması</li>
+          <li>Sahte bilgi, dolandırıcılık veya manipülasyon tespiti</li>
+          <li>Yasal mevzuata aykırılık (ruhsat olmadan faaliyet vb.)</li>
+          <li>Kişisel veri ihlali veya güvenlik tehdidi</li>
+          <li>6 ay süreyle hesabın aktif kullanılmaması</li>
+        </ul>
+      </div>
+
+      <div class="bg-blue-50 border-l-4 border-blue-500 p-6 my-10">
+        <p class="font-bold text-lg mb-2">Kabul Beyanı</p>
+        <p class="text-gray-700">
+          Kuafora Partner platformuna kayıt olarak ve/veya kullanmaya devam ederek, işbu Partner Kullanım Koşulları'nı ve <a href="/legal/terms" class="text-blue-600 hover:underline">Genel Kullanıcı Sözleşmesi</a>'ni okuduğunuzu, anladığınızı ve kabul ettiğinizi beyan edersiniz.
+        </p>
+      </div>
+
+      <div class="text-center text-sm text-gray-500 mt-12 pt-8 border-t border-gray-200">
+        <p>© {{ now|date:"Y" }} Kuafora - Talha Colfaoğlu. Tüm hakları saklıdır.</p>
+        <p class="mt-2">Son güncelleme: {{ now|date:"d.m.Y" }}</p>
+        <p class="mt-3">İletişim: <a href="mailto:partner@kuafora.com" class="text-blue-600 hover:underline">partner@kuafora.com</a></p>
+      </div>
     </div>
   </div>
 </section>
 {% endblock %}
-
-
