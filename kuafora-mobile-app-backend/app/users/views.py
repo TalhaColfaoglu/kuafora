@@ -173,8 +173,14 @@ class ProfilePhotoUploadView(generics.GenericAPIView):
             user.image = image_file
             user.save()
             
-            # Log success info
-            print(f"User {user.id} profile photo updated successfully")
+            # Log success info with thumbnail verification
+            print(f"✓ User {user.id} profile photo updated successfully")
+            print(f"  → Main image: {user.image.url if user.image else 'None'}")
+            print(f"  → Thumbnail: {user.image_thumb.url if user.image_thumb else 'NOT CREATED!'}")
+            
+            # Verify thumbnail was created
+            if user.image and not user.image_thumb:
+                print(f"⚠️ WARNING: Thumbnail was not created for user {user.id}")
             
             return Response({
                 "detail": "Profile photo updated successfully",

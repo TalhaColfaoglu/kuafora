@@ -116,6 +116,18 @@ class User(AbstractBaseUser, PermissionsMixin):
             try:
                 old_instance = User.objects.get(pk=self.pk)
                 if self.image != old_instance.image:
+                    # Delete old images if they exist
+                    if old_instance.image:
+                        try:
+                            old_instance.image.delete(save=False)
+                        except Exception as e:
+                            print(f"Error deleting old user image: {e}")
+                    if old_instance.image_thumb:
+                        try:
+                            old_instance.image_thumb.delete(save=False)
+                        except Exception as e:
+                            print(f"Error deleting old user thumbnail: {e}")
+                    # Process new image
                     process_image(self.image, self.image_thumb)
             except User.DoesNotExist:
                 process_image(self.image, self.image_thumb)
