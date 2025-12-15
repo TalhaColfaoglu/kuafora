@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import List
 
 from django.db.models import Prefetch, Q, Count
+from django.db.models.functions import Trim
 from drf_spectacular.utils import extend_schema
 from app.notifications.utils import notify_shop_about_new_review, notify_customer_about_reply
 from rest_framework import viewsets, mixins, permissions, generics, status, serializers as drf_serializers
@@ -216,6 +217,62 @@ class BarbershopViewSet(viewsets.ReadOnlyModelViewSet):
             from .serializers import BarbershopDetailSerializer
             return BarbershopDetailSerializer
         return super().get_serializer_class()
+
+    @action(detail=False, methods=["get"], url_path="available-locations")
+    def available_locations(self, request):
+        """
+        Ana uygulama arama filtresi için sadece sistemde gerçekten kayıtlı (listelenebilir) şehir/ilçe listesini döndürür.
+        - Şehirde hiç kuaför yoksa şehir dönmez.
+        - Şehir içinde ilçede hiç kuaför yoksa o ilçe dönmez.
+        Not: Bu endpoint, BarbershopViewSet'in ana listeleme mantığıyla aynı "listelenebilir" kriterlerini uygular
+        (aktif subscription + is_verified + isim dolu). Böylece UI'da sadece seçilebilir seçenekler görünür.
+        """
+        qs = Barbershop.objects.all()
+
+        include_inactive = request.query_params.get("include_inactive", "").lower() == "true"
+        if not include_inactive:
+            qs = (
+                qs.filter(
+                    subscription__status__in=["trial", "active", "lifetime", "grace_period"],
+                    is_verified=True,
+                    name__isnull=False,
+                )
+                .exclude(name="")
+            )
+
+        # Kullanıcı girişliyse, ana listede uygulanan cinsiyet kuralı ile uyumlu olsun
+        user = request.user
+        if getattr(user, "is_authenticated", False):
+            if getattr(user, "gender", None) == "male":
+                qs = qs.filter(Q(gender="male") | Q(gender="unisex"))
+            elif getattr(user, "gender", None) == "female":
+                qs = qs.filter(Q(gender="female") | Q(gender="unisex"))
+
+        # Trim ile baş/son boşluklardan arındırıp unique al
+        pairs = (
+            qs.annotate(city_t=Trim("city"), district_t=Trim("district"))
+            .exclude(city_t__isnull=True)
+            .exclude(district_t__isnull=True)
+            .exclude(city_t="")
+            .exclude(district_t="")
+            .values("city_t", "district_t")
+            .distinct()
+            .order_by("city_t", "district_t")
+        )
+
+        out: dict[str, list[str]] = {}
+        for it in pairs:
+            city = it.get("city_t") or ""
+            district = it.get("district_t") or ""
+            if not city or not district:
+                continue
+            out.setdefault(city, []).append(district)
+
+        # İlçeleri tekilleştirip deterministik sırala
+        for city in list(out.keys()):
+            out[city] = sorted(set(out[city]))
+
+        return Response(out)
 
     @action(detail=True, methods=["get"], url_path="services")
     def services(self, request, pk=None):
