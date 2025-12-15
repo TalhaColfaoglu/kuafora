@@ -127,32 +127,26 @@ class User(AbstractBaseUser, PermissionsMixin):
     objects = UserManager()
 
     def save(self, *args, **kwargs):
-        # Process image BEFORE saving to ensure thumbnail is created
+        # Check if image has changed
+        is_new_image = False
         if self.pk:
             try:
                 old_instance = User.objects.get(pk=self.pk)
-                if self.image and self.image != old_instance.image:
-                    # Delete old images if they exist
-                    if old_instance.image:
-                        try:
-                            old_instance.image.delete(save=False)
-                        except Exception as e:
-                            print(f"Error deleting old user image: {e}")
-                    if old_instance.image_thumb:
-                        try:
-                            old_instance.image_thumb.delete(save=False)
-                        except Exception as e:
-                            print(f"Error deleting old user thumbnail: {e}")
-                    # Process new image - pass the field itself, not the value
-                    process_image(self.image, self.image_thumb)
+                is_new_image = self.image and self.image != old_instance.image
             except User.DoesNotExist:
-                if self.image:
-                    process_image(self.image, self.image_thumb)
+                is_new_image = bool(self.image)
         else:
-            if self.image:
-                process_image(self.image, self.image_thumb)
+            is_new_image = bool(self.image)
         
+        # Save first to ensure file is on disk
         super().save(*args, **kwargs)
+        
+        # Process image AFTER saving to ensure file exists on disk
+        if is_new_image and self.image:
+            print(f"🔄 Processing new image for user {self.id}")
+            process_image(self.image, self.image_thumb)
+            # Save again to update the thumbnail field
+            super().save(update_fields=['image_thumb'])
 
     def __str__(self) -> str:  # pragma: no cover - trivial
         return self.email

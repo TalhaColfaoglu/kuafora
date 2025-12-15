@@ -170,8 +170,30 @@ class ProfilePhotoUploadView(generics.GenericAPIView):
             
             # Update user's profile photo
             user = request.user
+            
+            # Delete old images first
+            if user.image:
+                try:
+                    old_image_path = user.image.path
+                    user.image.delete(save=False)
+                    print(f"🗑️ Deleted old image: {old_image_path}")
+                except Exception as e:
+                    print(f"⚠️ Could not delete old image: {e}")
+            
+            if user.image_thumb:
+                try:
+                    old_thumb_path = user.image_thumb.path
+                    user.image_thumb.delete(save=False)
+                    print(f"🗑️ Deleted old thumbnail: {old_thumb_path}")
+                except Exception as e:
+                    print(f"⚠️ Could not delete old thumbnail: {e}")
+            
+            # Set new image
             user.image = image_file
             user.save()
+            
+            # Reload from DB to get the processed image
+            user.refresh_from_db()
             
             # Log success info with thumbnail verification
             print(f"✓ User {user.id} profile photo updated successfully")
@@ -180,7 +202,7 @@ class ProfilePhotoUploadView(generics.GenericAPIView):
             
             # Verify thumbnail was created
             if user.image and not user.image_thumb:
-                print(f"⚠️ WARNING: Thumbnail was not created for user {user.id}")
+                print(f"❌ ERROR: Thumbnail was not created for user {user.id}")
             
             return Response({
                 "detail": "Profile photo updated successfully",
