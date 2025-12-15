@@ -11,12 +11,17 @@ from django.core.files.base import ContentFile
 import os
 
 def process_image(image_field, thumb_field=None, max_size=(1080, 1080), thumb_size=(300, 300)):
+    """Process and optimize image, create thumbnail"""
     if not image_field:
+        print("⚠️ process_image: No image_field provided")
         return
 
     try:
+        print(f"🔄 Processing image: {image_field.name}")
+        
         # Open image
         img = Image.open(image_field)
+        print(f"  → Original size: {img.size}, mode: {img.mode}")
         
         # Handle EXIF orientation
         img = ImageOps.exif_transpose(img)
@@ -24,6 +29,7 @@ def process_image(image_field, thumb_field=None, max_size=(1080, 1080), thumb_si
         # Convert to RGB if necessary
         if img.mode in ('RGBA', 'P'):
             img = img.convert('RGB')
+            print(f"  → Converted to RGB")
             
         # 1. Optimize Main Image
         # Only resize if larger than max_size
@@ -40,9 +46,13 @@ def process_image(image_field, thumb_field=None, max_size=(1080, 1080), thumb_si
             
             # Save optimized main image
             image_field.save(filename, ContentFile(buffer.getvalue()), save=False)
+            print(f"  → Main image optimized: {img_copy.size}")
+        else:
+            print(f"  → Main image size OK, no resize needed")
         
         # 2. Generate Thumbnail if field provided
-        if thumb_field:
+        if thumb_field is not None:
+            print(f"  → Creating thumbnail...")
             thumb_copy = img.copy()
             thumb_copy.thumbnail(thumb_size, Image.Resampling.LANCZOS)
             
@@ -55,9 +65,14 @@ def process_image(image_field, thumb_field=None, max_size=(1080, 1080), thumb_si
             
             # Save thumbnail
             thumb_field.save(thumb_filename, ContentFile(thumb_buffer.getvalue()), save=False)
+            print(f"  ✓ Thumbnail created: {thumb_copy.size} -> {thumb_filename}")
+        else:
+            print(f"  ⚠️ No thumb_field provided, skipping thumbnail")
 
     except Exception as e:
-        print(f"Error processing image: {e}")
+        print(f"❌ Error processing image: {e}")
+        import traceback
+        traceback.print_exc()
 
 
 class UserManager(BaseUserManager):
@@ -112,10 +127,11 @@ class User(AbstractBaseUser, PermissionsMixin):
     objects = UserManager()
 
     def save(self, *args, **kwargs):
+        # Process image BEFORE saving to ensure thumbnail is created
         if self.pk:
             try:
                 old_instance = User.objects.get(pk=self.pk)
-                if self.image != old_instance.image:
+                if self.image and self.image != old_instance.image:
                     # Delete old images if they exist
                     if old_instance.image:
                         try:
@@ -127,12 +143,15 @@ class User(AbstractBaseUser, PermissionsMixin):
                             old_instance.image_thumb.delete(save=False)
                         except Exception as e:
                             print(f"Error deleting old user thumbnail: {e}")
-                    # Process new image
+                    # Process new image - pass the field itself, not the value
                     process_image(self.image, self.image_thumb)
             except User.DoesNotExist:
-                process_image(self.image, self.image_thumb)
+                if self.image:
+                    process_image(self.image, self.image_thumb)
         else:
-            process_image(self.image, self.image_thumb)
+            if self.image:
+                process_image(self.image, self.image_thumb)
+        
         super().save(*args, **kwargs)
 
     def __str__(self) -> str:  # pragma: no cover - trivial
