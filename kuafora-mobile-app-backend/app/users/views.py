@@ -140,6 +140,13 @@ class ProfilePhotoUploadView(generics.GenericAPIView):
                 )
             
             image_file = request.FILES['image']
+            # Force a unique filename to avoid collisions/caching issues (CloudFront/S3 key reuse)
+            import os
+            from uuid import uuid4
+            ext = os.path.splitext(getattr(image_file, "name", "") or "")[1].lower()
+            if ext not in [".jpg", ".jpeg", ".png", ".gif", ".webp"]:
+                ext = ".jpg"
+            image_file.name = f"profile_{uuid4().hex}{ext}"
             
             # Validate file type
             allowed_types = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif']
@@ -157,7 +164,6 @@ class ProfilePhotoUploadView(generics.GenericAPIView):
                 )
             
             # Ensure media directory exists
-            import os
             media_root = os.path.join(settings.MEDIA_ROOT, 'users', 'images')
             os.makedirs(media_root, exist_ok=True)
             

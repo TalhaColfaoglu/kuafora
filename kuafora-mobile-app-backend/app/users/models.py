@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import uuid
+from uuid import uuid4
 from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin, BaseUserManager
 from django.contrib.auth.models import AbstractUser
@@ -9,6 +10,15 @@ from PIL import Image, ImageOps
 from io import BytesIO
 from django.core.files.base import ContentFile
 import os
+
+
+def user_profile_image_upload_to(instance: "User", filename: str) -> str:
+    # Keep per-user folder to avoid collisions across users
+    return f"users/{instance.id}/images/{filename}"
+
+
+def user_profile_thumb_upload_to(instance: "User", filename: str) -> str:
+    return f"users/{instance.id}/images/thumbs/{filename}"
 
 def process_image(image_field, thumb_field=None, max_size=(1080, 1080), thumb_size=(300, 300)):
     """Process and optimize image, create thumbnail"""
@@ -109,8 +119,8 @@ class User(AbstractBaseUser, PermissionsMixin):
         FEMALE = "female", "Female"
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    image = models.ImageField(upload_to="users/images/", null=True, blank=True)
-    image_thumb = models.ImageField(upload_to="users/images/thumbs/", null=True, blank=True)
+    image = models.ImageField(upload_to=user_profile_image_upload_to, null=True, blank=True)
+    image_thumb = models.ImageField(upload_to=user_profile_thumb_upload_to, null=True, blank=True)
     full_name = models.CharField(max_length=150, blank=True)
     email = models.EmailField(unique=True)
     phone = models.CharField(max_length=20, blank=True)
