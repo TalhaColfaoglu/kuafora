@@ -172,7 +172,8 @@ services:
         set -e
         # Obtain/renew certificates for api.kuafora.com, api-dev.kuafora.com and kuafora.com (webroot)
         certbot certonly --webroot -w /var/www/certbot \
-          -d api.kuafora.com -d api-dev.kuafora.com -d kuafora.com -d www.kuafora.com \
+          --cert-name kuafora.com --expand \
+          -d kuafora.com -d www.kuafora.com -d api.kuafora.com -d api-dev.kuafora.com \
           --agree-tos --register-unsafely-without-email --non-interactive --keep-until-expiring
         # Keep container alive (optional); comment if you prefer one-shot
         sleep 3600

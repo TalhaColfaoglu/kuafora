@@ -1,4 +1,5 @@
 from django.contrib import admin
+from django.utils import timezone
 from django.utils.html import format_html
 from django.db.models import Count
 from unfold.admin import ModelAdmin, TabularInline
@@ -10,6 +11,7 @@ from .models import (
     StaffCatalogImage,
     WorkSchedule,
     Review,
+    ServiceCategory,
     Service,
     StaffService,
     StaffServiceCategory,
@@ -116,7 +118,6 @@ class StaffAdmin(ModelAdmin):
     list_filter = ("barbershop", "is_admin", "certificate", "gender_preference")
     search_fields = ("user__email", "user__full_name", "email", "barbershop__name")
     autocomplete_fields = ("barbershop", "user")
-    date_hierarchy = "id"
 
     fieldsets = (
         ("Temel", {"fields": ("barbershop", "user", "email", "is_admin", "certificate")}),
@@ -170,7 +171,7 @@ class StaffAdmin(ModelAdmin):
 
     def experience_display(self, obj):
         if obj.career_start_year:
-            return f"{obj.career_start_year} → {max(0, (admin.utils.timezone.now().year - obj.career_start_year))} yıl"
+            return f"{obj.career_start_year} → {max(0, (timezone.now().year - obj.career_start_year))} yıl"
         return "-"
     experience_display.short_description = "Deneyim"
 
@@ -256,3 +257,13 @@ class ServiceAdmin(ModelAdmin):
     def is_active_badge(self, obj):
         return format_html('<span class="text-green-600">✓</span>') if obj.is_active else format_html('<span class="text-red-600">✗</span>')
     is_active_badge.short_description = "Aktif"
+
+
+@admin.register(ServiceCategory)
+class ServiceCategoryAdmin(ModelAdmin):
+    list_display = ("id", "name", "barbershop", "created_at")
+    list_display_links = ("id", "name")
+    list_filter = ("barbershop",)
+    search_fields = ("name", "barbershop__name")
+    autocomplete_fields = ("barbershop",)
+    date_hierarchy = "created_at"
