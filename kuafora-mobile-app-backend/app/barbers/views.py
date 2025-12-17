@@ -538,6 +538,10 @@ class BarbershopViewSet(viewsets.ReadOnlyModelViewSet):
                 # 00:00 / 00:00 yazarız. is_closed=True olduğu için UI bu saatleri göstermeyecek.
                 normalized.append({"day": day, "is_closed": True, "open": zero_time, "close": zero_time})
                 continue
+            # is_closed=False ise mutlaka open ve close olmalı
+            if open_s is None or close_s is None:
+                errors[day] = "invalid_time"
+                continue
             st = parse_hhmm(open_s)
             et = parse_hhmm(close_s)
             if not st or not et:
@@ -1163,7 +1167,26 @@ class PartnerBarbershopViewSet(viewsets.ModelViewSet):
         partial = kwargs.pop('partial', True)
         instance = self.get_object()
         # Sadece belirli alanlar güncellenebilir
-        allowed = {"name", "address", "description", "phone", "phone_number", "latitude", "longitude", "city", "district", "gender"}
+        allowed = {
+            # Core profile
+            "name",
+            "address",
+            "description",
+            "phone",
+            "phone_number",
+            "latitude",
+            "longitude",
+            "city",
+            "district",
+            "gender",
+            # Social
+            "instagram",
+            "facebook",
+            "twitter",
+            "whatsapp",
+            # Badges / features (vitrin app uses this)
+            "features",
+        }
         data = {k: v for k, v in request.data.items() if k in allowed}
         # phone alias desteği
         if "phone" in data and "phone_number" not in data:

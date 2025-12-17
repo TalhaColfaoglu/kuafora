@@ -15,7 +15,8 @@ env_file_name = ".env.prod" if os.getenv("DJANGO_ENV") == "production" else ".en
 environ.Env.read_env(env_file=os.path.join(BASE_DIR, env_file_name))
 
 
-DEBUG = True  # Temporarily enable debug to see real errors
+# DEBUG must be controlled via env; never force-enable in prod
+DEBUG = env("DEBUG", default=False)
 SECRET_KEY = env("SECRET_KEY", default="change-me")
 # Extend ALLOWED_HOSTS with safe defaults to avoid DisallowedHost in EC2 and container
 _allowed = set(env.list("ALLOWED_HOSTS", default=[]))
@@ -31,6 +32,7 @@ CORS_ALLOWED_ORIGINS = [
     "http://ec2-3-79-28-13.eu-central-1.compute.amazonaws.com",
     "http://3.79.28.13",
     "https://api.kuafora.com",
+    "https://api-dev.kuafora.com",
     "https://ec2-3-79-28-13.eu-central-1.compute.amazonaws.com",
 ]
 CORS_ALLOW_CREDENTIALS = True
@@ -43,6 +45,7 @@ CSRF_TRUSTED_ORIGINS = [
     "http://3.79.28-13.eu-central-1.compute.amazonaws.com".replace("-13.eu", ".eu"),  # safety
     "http://3.79.28.13",
     "https://api.kuafora.com",
+    "https://api-dev.kuafora.com",
     "https://ec2-3-79-28-13.eu-central-1.compute.amazonaws.com",
 ]
 

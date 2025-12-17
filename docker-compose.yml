@@ -14,6 +14,24 @@ services:
       - postgres_data:/var/lib/postgresql/data
       - ./db/init:/docker-entrypoint-initdb.d:ro
     networks: [kuafora_net]
+
+  # DEV (staging) DB - prod'dan tamamen ayrı volume ve env ile çalışır
+  db_dev:
+    image: postgres:16-alpine
+    container_name: kuafora_db_dev
+    restart: unless-stopped
+    env_file:
+      - ./env/db.dev.env
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -h 127.0.0.1"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    volumes:
+      - postgres_data_dev:/var/lib/postgresql/data
+      - ./db/init:/docker-entrypoint-initdb.d:ro
+    networks: [kuafora_net]
+
   backend:
     build:
       context: ./kuafora-mobile-app-backend
@@ -33,6 +51,28 @@ services:
     networks: [kuafora_net]
     depends_on:
       - db
+
+  # DEV (staging) backend - api-dev.kuafora.com
+  backend_dev:
+    build:
+      context: ./kuafora-mobile-app-backend
+      dockerfile: Dockerfile.prod
+    container_name: kuafora_backend_dev
+    restart: unless-stopped
+    user: "root"
+    env_file:
+      - ./env/backend.dev.env
+    environment:
+      - ALLOWED_HOSTS=localhost,127.0.0.1,api-dev.kuafora.com
+    expose:
+      - "8000"
+    volumes:
+      # DEV backend için ayrı volume'lar (prod ile karışmasın)
+      - backend_static_dev:/app/staticfiles
+      - backend_media_dev:/app/media
+    networks: [kuafora_net]
+    depends_on:
+      - db_dev
 
   website:
     build:
@@ -100,6 +140,7 @@ services:
     restart: unless-stopped
     depends_on:
       - backend
+      - backend_dev
       - website
     ports:
       - "80:80"
@@ -108,6 +149,8 @@ services:
       - ./nginx/conf.d:/etc/nginx/conf.d:ro
       - backend_static:/var/www/backend/staticfiles:ro
       - backend_media:/var/www/backend/media:ro
+      - backend_static_dev:/var/www/backend_dev/staticfiles:ro
+      - backend_media_dev:/var/www/backend_dev/media:ro
       - website_static:/var/www/website/staticfiles:ro
       - website_media:/var/www/website/mediafiles:ro
       - ./nginx/certbot/conf:/etc/letsencrypt
@@ -127,9 +170,9 @@ services:
       - -c
       - |
         set -e
-        # Obtain/renew certificates for api.kuafora.com and kuafora.com (webroot)
+        # Obtain/renew certificates for api.kuafora.com, api-dev.kuafora.com and kuafora.com (webroot)
         certbot certonly --webroot -w /var/www/certbot \
-          -d api.kuafora.com -d kuafora.com -d www.kuafora.com \
+          -d api.kuafora.com -d api-dev.kuafora.com -d kuafora.com -d www.kuafora.com \
           --agree-tos --register-unsafely-without-email --non-interactive --keep-until-expiring
         # Keep container alive (optional); comment if you prefer one-shot
         sleep 3600
@@ -140,8 +183,11 @@ networks:
 
 volumes:
   postgres_data:
+  postgres_data_dev:
   backend_static:
   backend_media:
+  backend_static_dev:
+  backend_media_dev:
   website_static:
   website_media:
 
