@@ -573,9 +573,9 @@ class BreakWindowSerializer(serializers.ModelSerializer):
             "label",
             "created_by",
             "created_at",
-            "updated_at",
         )
-        read_only_fields = ("created_by", "created_at", "updated_at")
+        # BreakWindow model has created_at but no updated_at
+        read_only_fields = ("created_by", "created_at")
 
     def validate(self, attrs):
         from datetime import datetime as _dt
