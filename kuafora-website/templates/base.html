@@ -5,7 +5,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{% block title %}Kuafora — Kuaförünü Keşfet{% endblock %}</title>
-    <meta name="description" content="Kuafora, Türkiye'nin modern kuaför ve güzellik platformu. Yakınındaki kuaförleri keşfet, randevunu al." />
+    <meta name="description" content="Kuafora, kuaför keşif platformu. Yakınındaki salonları keşfet, karşılaştır ve favorine ekle. Uygulama yakında yayında." />
     
     <!-- Favicon - K logo as SVG data URI -->
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23000'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='central' text-anchor='middle' fill='white' font-family='system-ui' font-weight='700' font-size='18'%3EK%3C/text%3E%3C/svg%3E">
@@ -166,14 +166,13 @@
           <!-- Navigation Links -->
           <div class="hidden md:flex items-center">
             {% if request.resolver_match.url_name|slice:":7" == "partner" %}
-              <a href="/partner/kuafora-partner/" class="nav-pill px-4 py-2 rounded-full text-sm font-medium {% if request.resolver_match.url_name == 'partner_landing' %}active{% endif %}">Ana Sayfa</a>
+              <a href="/partner/kuafora-partner/" class="nav-pill px-4 py-2 rounded-full text-sm font-medium {% if request.resolver_match.url_name == 'partner_landing' %}active{% endif %}">Partner Uygulaması</a>
               <a href="/partner/kuafora-partner/ozellikler/" class="nav-pill px-4 py-2 rounded-full text-sm font-medium {% if request.resolver_match.url_name == 'partner_features' %}active{% endif %}">Özellikler</a>
               <a href="/partner/kuafora-partner/sss/" class="nav-pill px-4 py-2 rounded-full text-sm font-medium {% if request.resolver_match.url_name == 'partner_faq' %}active{% endif %}">SSS</a>
             {% else %}
-              <a href="/" class="nav-pill px-4 py-2 rounded-full text-sm font-medium">Ana Sayfa</a>
-              <a href="{% url 'customer_app' %}" class="nav-pill px-4 py-2 rounded-full text-sm font-medium">Uygulama</a>
-              <a href="/partner/kuafora-partner/" class="nav-pill px-4 py-2 rounded-full text-sm font-medium">İşletmeler</a>
-              <a href="/#pricing" class="nav-pill px-4 py-2 rounded-full text-sm font-medium">Fiyatlar</a>
+              <a href="/" class="nav-pill px-4 py-2 rounded-full text-sm font-medium">Keşfet</a>
+              <a href="{% url 'customer_app' %}" class="nav-pill px-4 py-2 rounded-full text-sm font-medium">Müşteri Uygulaması</a>
+              <a href="/partner/kuafora-partner/" class="nav-pill px-4 py-2 rounded-full text-sm font-medium">Partner Uygulaması</a>
             {% endif %}
           </div>
           
@@ -187,11 +186,11 @@
               Başvur
             </a>
           {% else %}
-            <a href="#download" class="hidden sm:flex items-center gap-2 bg-white text-black px-5 py-2 rounded-full text-sm font-semibold hover:bg-gray-100 transition-all">
+            <a href="{% if request.path == '/' %}#notify{% else %}/#notify{% endif %}" class="hidden sm:flex items-center gap-2 bg-white text-black px-5 py-2 rounded-full text-sm font-semibold hover:bg-gray-100 transition-all">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
               </svg>
-              İndir
+              Haberdar Ol
             </a>
           {% endif %}
           
@@ -207,23 +206,29 @@
       <!-- Mobile Menu -->
       <div id="mobile-menu" class="hidden pointer-events-auto mx-4 mt-2">
         <div class="dynamic-nav rounded-3xl p-4 space-y-2">
-          {% if request.resolver_match.url_name|slice:":7" == "partner" %}
-            <a href="/partner/kuafora-partner/" class="block text-white/80 hover:text-white py-3 px-4 rounded-xl hover:bg-white/10 transition-all font-medium">Ana Sayfa</a>
+            {% if request.resolver_match.url_name|slice:":7" == "partner" %}
+            <a href="/partner/kuafora-partner/" class="block text-white/80 hover:text-white py-3 px-4 rounded-xl hover:bg-white/10 transition-all font-medium">Partner Uygulaması</a>
             <a href="/partner/kuafora-partner/ozellikler/" class="block text-white/80 hover:text-white py-3 px-4 rounded-xl hover:bg-white/10 transition-all font-medium">Özellikler</a>
             <a href="/partner/kuafora-partner/sss/" class="block text-white/80 hover:text-white py-3 px-4 rounded-xl hover:bg-white/10 transition-all font-medium">SSS</a>
           {% else %}
-            <a href="/" class="block text-white/80 hover:text-white py-3 px-4 rounded-xl hover:bg-white/10 transition-all font-medium">Ana Sayfa</a>
-            <a href="{% url 'customer_app' %}" class="block text-white/80 hover:text-white py-3 px-4 rounded-xl hover:bg-white/10 transition-all font-medium">Uygulama</a>
-            <a href="/partner/kuafora-partner/" class="block text-white/80 hover:text-white py-3 px-4 rounded-xl hover:bg-white/10 transition-all font-medium">İşletmeler</a>
-            <a href="/#pricing" class="block text-white/80 hover:text-white py-3 px-4 rounded-xl hover:bg-white/10 transition-all font-medium">Fiyatlar</a>
+            <a href="/" class="block text-white/80 hover:text-white py-3 px-4 rounded-xl hover:bg-white/10 transition-all font-medium">Keşfet</a>
+            <a href="{% url 'customer_app' %}" class="block text-white/80 hover:text-white py-3 px-4 rounded-xl hover:bg-white/10 transition-all font-medium">Müşteri Uygulaması</a>
+            <a href="/partner/kuafora-partner/" class="block text-white/80 hover:text-white py-3 px-4 rounded-xl hover:bg-white/10 transition-all font-medium">Partner Uygulaması</a>
           {% endif %}
           <div class="pt-2">
-            <a href="#download" class="flex items-center justify-center gap-2 bg-white text-black py-3 px-4 rounded-xl font-semibold">
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
-              </svg>
-              Uygulamayı İndir
-            </a>
+            {% if request.resolver_match.url_name|slice:":7" == "partner" %}
+              <a href="/partner/kuafora-partner/#join" class="flex items-center justify-center gap-2 bg-white text-black py-3 px-4 rounded-xl font-semibold">
+                <span class="w-2 h-2 bg-accent-emerald rounded-full pulse-dot"></span>
+                Başvur
+              </a>
+            {% else %}
+              <a href="{% if request.path == '/' %}#notify{% else %}/#notify{% endif %}" class="flex items-center justify-center gap-2 bg-white text-black py-3 px-4 rounded-xl font-semibold">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 22a2 2 0 002-2H10a2 2 0 002 2zm6-6V11a6 6 0 10-12 0v5l-2 2h16l-2-2z"></path>
+                </svg>
+                Haberdar Ol
+              </a>
+            {% endif %}
           </div>
         </div>
       </div>
@@ -245,7 +250,7 @@
               <span class="font-display font-bold text-2xl tracking-tight">Kuafora</span>
             </div>
             <p class="text-white/60 max-w-sm leading-relaxed text-lg">
-              Türkiye'nin en modern kuaför ve güzellik platformu. Yakınındaki en iyi salonları keşfet, anında randevu al.
+              Kuafora, kuaför keşif platformu. Yakınındaki salonları keşfet, karşılaştır ve favorine ekle. Uygulama yakında yayında.
             </p>
             <div class="flex items-center gap-3 mt-8">
               <a href="#" class="w-11 h-11 rounded-full bg-white/10 flex items-center justify-center hover:bg-white hover:text-black transition-all duration-300" aria-label="Instagram">
@@ -264,10 +269,9 @@
           <div class="md:col-span-2">
             <h4 class="font-semibold text-sm uppercase tracking-wider text-white/40 mb-6">Platform</h4>
             <ul class="space-y-4">
-              <li><a href="/" class="text-white/70 hover:text-white transition-colors">Ana Sayfa</a></li>
-              <li><a href="{% url 'customer_app' %}" class="text-white/70 hover:text-white transition-colors">Uygulama</a></li>
-              <li><a href="/#pricing" class="text-white/70 hover:text-white transition-colors">Fiyatlar</a></li>
-              <li><a href="/partner/kuafora-partner/" class="text-white/70 hover:text-white transition-colors">İşletmeler</a></li>
+              <li><a href="/" class="text-white/70 hover:text-white transition-colors">Keşfet</a></li>
+              <li><a href="{% url 'customer_app' %}" class="text-white/70 hover:text-white transition-colors">Nasıl Çalışır</a></li>
+              <li><a href="/partner/kuafora-partner/" class="text-white/70 hover:text-white transition-colors">İşletmeler İçin</a></li>
             </ul>
           </div>
           
@@ -345,21 +349,43 @@
         window.scrollTo({ top, behavior: prefersReduced ? 'auto' : 'smooth' });
       });
       
-      // Reveal on scroll
-      const observer = new IntersectionObserver((entries)=>{
-        entries.forEach(entry=>{
-          if(entry.isIntersecting){ 
-            entry.target.classList.add('opacity-100','translate-y-0');
-            entry.target.classList.remove('opacity-0','translate-y-8');
-          }
-        })
-      },{threshold:0.1});
+      // Reveal on scroll - improved version
+      const revealElements = document.querySelectorAll('[data-reveal]');
       
-      if(!prefersReduced){
-        document.querySelectorAll('[data-reveal]').forEach(el=>{
-          el.classList.add('opacity-0','translate-y-8','transition-all','duration-700','ease-out');
+      if(!prefersReduced && revealElements.length > 0){
+        const observer = new IntersectionObserver((entries)=>{
+          entries.forEach(entry=>{
+            if(entry.isIntersecting){ 
+              // Add delay based on data attribute or index
+              const delay = entry.target.dataset.delay || 0;
+              setTimeout(() => {
+                entry.target.style.opacity = '1';
+                entry.target.style.transform = 'translateY(0)';
+              }, delay);
+              observer.unobserve(entry.target);
+            }
+          })
+        },{threshold:0.05, rootMargin: '50px'});
+        
+        revealElements.forEach((el, index) => {
+          // Set initial state with inline styles for reliability
+          el.style.opacity = '0';
+          el.style.transform = 'translateY(20px)';
+          el.style.transition = 'opacity 0.6s ease-out, transform 0.6s ease-out';
+          el.style.transitionDelay = (index * 0.1) + 's';
           observer.observe(el);
         });
+        
+        // Force check after a small delay for elements already in viewport
+        setTimeout(() => {
+          revealElements.forEach(el => {
+            const rect = el.getBoundingClientRect();
+            if(rect.top < window.innerHeight && rect.bottom > 0) {
+              el.style.opacity = '1';
+              el.style.transform = 'translateY(0)';
+            }
+          });
+        }, 100);
       }
     </script>
   </body>
