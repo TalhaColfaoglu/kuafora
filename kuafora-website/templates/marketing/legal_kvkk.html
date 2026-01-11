@@ -1,624 +1,153 @@
 {% extends "base.html" %}
 
-{% block title %}Kuafora KVKK Aydınlatma Metni ve Kişisel Verilerin Korunması Politikası{% endblock %}
+{% block title %}Kuafora KVKK Aydınlatma Metni{% endblock %}
 
 {% block content %}
-<section class="py-16 px-4 sm:px-6 lg:px-8 bg-white">
-  <div class="max-w-4xl mx-auto">
-    <h1 class="text-4xl font-bold tracking-tight mb-6 text-gray-900">Kuafora KVKK Aydınlatma Metni ve Kişisel Verilerin Korunması Politikası</h1>
-    <p class="text-sm text-gray-500 mb-4">Son güncelleme: {{ now|date:"d.m.Y" }}</p>
-    <p class="text-sm text-gray-600 mb-10 bg-blue-50 p-4 rounded-lg border border-blue-100">
-      <strong>Önemli Bilgilendirme:</strong> Bu metin, 6698 sayılı Kişisel Verilerin Korunması Kanunu ("KVKK") uyarınca kişisel verilerinizin işlenmesine ilişkin sizleri bilgilendirmek amacıyla hazırlanmıştır. Lütfen dikkatlice okuyunuz.
-    </p>
-
-    <div class="prose prose-base max-w-none prose-headings:font-bold prose-headings:text-gray-900 prose-p:text-gray-700 prose-p:leading-relaxed prose-li:text-gray-700 prose-strong:text-gray-900">
-      
-      <h2 class="text-2xl mt-12 mb-6 pb-3 border-b-2 border-gray-200">1. Veri Sorumlusunun Kimliği ve İletişim Bilgileri</h2>
-      
-      <h3 class="text-xl mt-8 mb-4">1.1. Veri Sorumlusu</h3>
-      <p>
-        6698 sayılı Kişisel Verilerin Korunması Kanunu ("KVKK") kapsamında, kişisel verileriniz; <strong>veri sorumlusu</strong> sıfatıyla gerçek kişi <strong>Talha Colfaoğlu</strong> tarafından aşağıda açıklanan amaçlar ve hukuki sebepler dahilinde işlenmektedir.
-      </p>
-      
-      <h3 class="text-xl mt-8 mb-4">1.2. İletişim Bilgileri</h3>
-      <div class="bg-gray-50 p-6 rounded-lg border border-gray-200 my-6">
-        <p class="font-bold text-lg mb-3">Veri Sorumlusu İletişim Bilgileri</p>
-        <p><strong>Ad Soyad:</strong> Talha Colfaoğlu</p>
-        <p><strong>Adres:</strong> Bursa, Türkiye</p>
-        <p><strong>E-posta:</strong> <a href="mailto:kvkk@kuafora.com" class="text-blue-600 hover:underline">kvkk@kuafora.com</a></p>
-        <p><strong>Web Sitesi:</strong> <a href="https://kuafora.com" class="text-blue-600 hover:underline">https://kuafora.com</a></p>
-      </div>
-      <p class="bg-yellow-50 border-l-4 border-yellow-400 p-4 my-6">
-        <strong>Not:</strong> Kişisel verilerinize ilişkin tüm taleplerinizi yukarıdaki e-posta adresine iletebilirsiniz. Başvurularınız KVKK'da öngörülen süreler içinde (en geç 30 gün) yanıtlanacaktır.
-      </p>
-
-      <h2 class="text-2xl mt-12 mb-6 pb-3 border-b-2 border-gray-200">2. Kişisel Veri Tanımı ve Kategorileri</h2>
-      
-      <h3 class="text-xl mt-8 mb-4">2.1. Kişisel Veri Nedir?</h3>
-      <p>
-        Kişisel veri; kimliği belirli veya belirlenebilir gerçek kişiye ilişkin her türlü bilgidir. Bu tanım kapsamında, bir kişiyi doğrudan veya dolaylı olarak tanımlamaya yarayan ad, soyad, T.C. kimlik numarası, telefon numarası, e-posta adresi, IP adresi, konum bilgisi, fotoğraf ve benzeri tüm veriler "kişisel veri" olarak kabul edilir.
-      </p>
-
-      <h3 class="text-xl mt-8 mb-4">2.2. İşlenen Kişisel Veri Kategorileri</h3>
-      <p>
-        Kuafora mobil uygulaması ve <code class="bg-gray-100 px-2 py-1 rounded">kuafora.com</code> web sitesi kapsamında aşağıdaki kişisel veri kategorileri işlenmektedir:
-      </p>
-
-      <div class="space-y-6 my-8">
-        <div class="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
-          <h4 class="font-bold text-lg mb-3 text-blue-900">a) Kimlik Verileri</h4>
-          <ul class="list-disc ml-6 space-y-1">
-            <li>Ad, soyad</li>
-            <li>Doğum tarihi (isteğe bağlı)</li>
-            <li>Cinsiyet (isteğe bağlı)</li>
-            <li>Profil fotoğrafı (isteğe bağlı)</li>
-            <li>Kullanıcı ID (sistem tarafından otomatik atanan benzersiz kimlik)</li>
-          </ul>
-        </div>
-
-        <div class="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
-          <h4 class="font-bold text-lg mb-3 text-green-900">b) İletişim Verileri</h4>
-          <ul class="list-disc ml-6 space-y-1">
-            <li>E-posta adresi (zorunlu)</li>
-            <li>Telefon numarası (isteğe bağlı veya randevu için gerekli olabilir)</li>
-            <li>Adres bilgisi (randevu veya hizmet teslimatı için gerekli olabilir)</li>
-          </ul>
-        </div>
-
-        <div class="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
-          <h4 class="font-bold text-lg mb-3 text-purple-900">c) Hesap ve Güvenlik Verileri</h4>
-          <ul class="list-disc ml-6 space-y-1">
-            <li>Kullanıcı adı / E-posta</li>
-            <li>Şifre (sadece şifrelenmiş / hashlenmiş şekilde saklanır, düz metin olarak asla saklanmaz)</li>
-            <li>Hesap oluşturma tarihi</li>
-            <li>Son giriş tarihi ve saati</li>
-            <li>Oturum token'ları (session tokens)</li>
-            <li>İki faktörlü kimlik doğrulama bilgileri (aktif ise)</li>
-          </ul>
-        </div>
-
-        <div class="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
-          <h4 class="font-bold text-lg mb-3 text-orange-900">d) Konum Verileri</h4>
-          <ul class="list-disc ml-6 space-y-1">
-            <li>GPS koordinatları (kullanıcı izni dahilinde)</li>
-            <li>Yaklaşık konum (IP adresi bazlı tahmin)</li>
-            <li>Şehir, ilçe bilgisi</li>
-            <li>Arama yapılan konumlar</li>
-          </ul>
-          <p class="text-sm text-gray-600 mt-3 italic">Not: Konum verileri, size en yakın kuaför önerileri sunmak, harita üzerinde işletmeleri göstermek ve yol tarifi vermek için kullanılır. Konum izni cihaz ayarlarından kontrol edilebilir.</p>
-        </div>
-
-        <div class="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
-          <h4 class="font-bold text-lg mb-3 text-red-900">e) İşlem ve Kullanım Verileri</h4>
-          <ul class="list-disc ml-6 space-y-1">
-            <li>Arama geçmişi (hangi kuaförleri aradığınız)</li>
-            <li>Gezinme geçmişi (hangi sayfaları ziyaret ettiğiniz)</li>
-            <li>Favori kuaförler listesi</li>
-            <li>En son bakılan işletmeler</li>
-            <li>Oluşturulan randevular (tarih, saat, işletme, hizmet detayları)</li>
-            <li>İptal edilen veya tamamlanan randevular</li>
-            <li>Yazdığınız yorumlar ve değerlendirmeler</li>
-            <li>Verdiğiniz yıldız puanları</li>
-            <li>Gönderdiğiniz mesajlar ve iletişim kayıtları</li>
-            <li>Uygulama içi tercihlerin (bildirim ayarları, dil seçimi vb.)</li>
-          </ul>
-        </div>
-
-        <div class="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
-          <h4 class="font-bold text-lg mb-3 text-indigo-900">f) Cihaz ve Teknik Veriler</h4>
-          <ul class="list-disc ml-6 space-y-1">
-            <li>IP adresi</li>
-            <li>Cihaz modeli ve markası</li>
-            <li>İşletim sistemi ve sürümü (iOS 16, Android 13 vb.)</li>
-            <li>Uygulama sürümü</li>
-            <li>Benzersiz cihaz kimliği (Device ID, Advertising ID)</li>
-            <li>Tarayıcı bilgileri (web sitesi kullanımı için)</li>
-            <li>Ekran çözünürlüğü</li>
-            <li>Dil ve saat dilimi ayarları</li>
-            <li>İnternet bağlantı türü (WiFi, 4G, 5G vb.)</li>
-          </ul>
-        </div>
-
-        <div class="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
-          <h4 class="font-bold text-lg mb-3 text-pink-900">g) Log ve Hata Kayıtları</h4>
-          <ul class="list-disc ml-6 space-y-1">
-            <li>Uygulama hata logları (crash reports)</li>
-            <li>Performans metrikleri</li>
-            <li>API çağrı logları</li>
-            <li>Güvenlik logları (başarısız giriş denemeleri vb.)</li>
-          </ul>
-        </div>
-
-        <div class="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
-          <h4 class="font-bold text-lg mb-3 text-yellow-900">h) Ödeme Bilgileri (Gelecek İçin)</h4>
-          <p class="text-sm text-gray-700 mb-2">Şu an aktif değil, ancak gelecekte eklenebilir:</p>
-          <ul class="list-disc ml-6 space-y-1">
-            <li>Kredi kartı bilgileri (sadece şifrelenmiş ve tokenize edilmiş şekilde, Kuafora sunucularında düz metin olarak asla saklanmaz)</li>
-            <li>Fatura bilgileri</li>
-            <li>Ödeme geçmişi</li>
-          </ul>
-          <p class="text-sm text-gray-600 mt-3 italic">Not: Ödeme işlemleri için üçüncü taraf güvenli ödeme sağlayıcıları (Iyzico, PayTR vb.) kullanılacaktır.</p>
-        </div>
-
-        <div class="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
-          <h4 class="font-bold text-lg mb-3 text-teal-900">i) Özel Nitelikli Kişisel Veriler</h4>
-          <p class="text-sm text-gray-700 mb-2">KVKK'nın 6. maddesinde sayılan özel nitelikli veriler:</p>
-          <ul class="list-disc ml-6 space-y-1">
-            <li>Sağlık verileri: <strong>İşlenmemektedir.</strong></li>
-            <li>Biyometrik veriler (parmak izi, yüz tanıma): <strong>İşlenmemektedir.</strong></li>
-            <li>Cinsel yaşam veya cinsel tercihler: <strong>İşlenmemektedir.</strong></li>
-          </ul>
-          <p class="text-sm text-gray-600 mt-3 italic">Kuafora, özel nitelikli kişisel veri işlemez; ancak gelecekte bu tür verilerin işlenmesi gerekirse açık rızanız alınacaktır.</p>
-        </div>
-      </div>
-
-      <h2 class="text-2xl mt-12 mb-6 pb-3 border-b-2 border-gray-200">3. Kişisel Verilerin Toplanma Yöntemleri</h2>
-      
-      <h3 class="text-xl mt-8 mb-4">3.1. Otomatik Yöntemler</h3>
-      <p>Kişisel verileriniz aşağıdaki otomatik yöntemlerle toplanabilir:</p>
-      <ul class="space-y-2 my-4">
-        <li><strong>Mobil Uygulama:</strong> Kuafora iOS ve Android uygulamalarını indirip kullandığınızda, cihazınızdan otomatik olarak teknik veriler, konum verileri ve kullanım verileri toplanır.</li>
-        <li><strong>Web Sitesi:</strong> <code class="bg-gray-100 px-2 py-1 rounded">kuafora.com</code> web sitesini ziyaret ettiğinizde, tarayıcınız üzerinden IP adresi, çerez verileri ve gezinme verileri toplanır.</li>
-        <li><strong>Çerezler (Cookies):</strong> Web sitesi ve uygulama, performans, güvenlik ve kullanıcı deneyimi amaçlı çerezler kullanır. Detaylı bilgi için "Çerez Politikası" bölümüne bakınız.</li>
-        <li><strong>Log Kayıtları:</strong> Sistem logları otomatik olarak kaydedilir ve güvenlik, hata tespiti ve performans iyileştirme amaçlı kullanılır.</li>
-      </ul>
-
-      <h3 class="text-xl mt-8 mb-4">3.2. Manuel Yöntemler (Kullanıcı Girişi)</h3>
-      <p>Kişisel verilerinizin bir kısmı, sizin tarafınızdan manuel olarak girilir:</p>
-      <ul class="space-y-2 my-4">
-        <li><strong>Kayıt (Sign-Up):</strong> Hesap oluştururken ad, soyad, e-posta, şifre girişi yaparsınız.</li>
-        <li><strong>Profil Güncelleme:</strong> Profil ekranından fotoğraf yükleme, telefon ekleme, doğum tarihi girme.</li>
-        <li><strong>Randevu Oluşturma:</strong> Randevu için ad, telefon, not gibi bilgiler girebilirsiniz.</li>
-        <li><strong>Yorum Yazma:</strong> İşletmeler hakkında yazılı yorum ve değerlendirme yaparsınız.</li>
-        <li><strong>Destek Talepleri:</strong> Müşteri destek ekibine e-posta veya form ile başvurduğunuzda iletişim bilgileriniz ve mesaj içeriğiniz toplanır.</li>
-      </ul>
-
-      <h3 class="text-xl mt-8 mb-4">3.3. Üçüncü Taraf Kaynaklardan</h3>
-      <p>Bazı veriler, üçüncü taraf platformlardan alınabilir:</p>
-      <ul class="space-y-2 my-4">
-        <li><strong>Sosyal Medya Girişi:</strong> Google, Apple veya Facebook ile giriş yapmanız halinde bu platformlardan adınız, e-postanız ve profil fotoğrafınız alınabilir (izniniz dahilinde).</li>
-        <li><strong>Harita Servisleri:</strong> Google Maps API üzerinden konum ve adres verileri alınır.</li>
-        <li><strong>Ödeme Sağlayıcıları:</strong> Gelecekte ödeme işlemleri için kullanılacak üçüncü taraf servislerden işlem bilgileri alınabilir.</li>
-      </ul>
-
-      <h2 class="text-2xl mt-12 mb-6 pb-3 border-b-2 border-gray-200">4. Kişisel Verilerin İşlenme Amaçları</h2>
-      
-      <p class="bg-blue-50 p-4 rounded-lg border border-blue-200 my-6">
-        Kişisel verileriniz, yalnızca belirli, açık ve meşru amaçlar doğrultusunda işlenmektedir. Bu amaçlar dışında verileriniz kullanılmaz.
-      </p>
-
-      <div class="space-y-6 my-8">
-        <div class="border-l-4 border-blue-500 pl-6">
-          <h4 class="font-bold text-lg mb-2">a) Hizmet Sunumu ve Sözleşme İfası</h4>
-          <p class="text-gray-700">Kuafora platformunun temel işlevlerinin sunulması:</p>
-          <ul class="list-disc ml-6 mt-2 space-y-1">
-            <li>Kuaför arama, keşfetme ve filtreleme</li>
-            <li>Randevu oluşturma, düzenleme ve iptal etme</li>
-            <li>İşletme profil sayfalarının gösterilmesi</li>
-            <li>Yorum ve değerlendirme sistemi</li>
-            <li>Favori ve geçmiş listeleri</li>
-            <li>Harita üzerinde konum gösterimi ve yol tarifi</li>
-          </ul>
-        </div>
-
-        <div class="border-l-4 border-green-500 pl-6">
-          <h4 class="font-bold text-lg mb-2">b) Üyelik ve Hesap Yönetimi</h4>
-          <p class="text-gray-700">Kullanıcı hesabının oluşturulması, yönetilmesi ve güvenliğinin sağlanması:</p>
-          <ul class="list-disc ml-6 mt-2 space-y-1">
-            <li>Hesap oluşturma ve kimlik doğrulama</li>
-            <li>Oturum açma (login) ve çıkma (logout) işlemleri</li>
-            <li>Şifre sıfırlama ve güvenlik kontrolleri</li>
-            <li>Profil bilgilerinin güncellenmesi</li>
-          </ul>
-        </div>
-
-        <div class="border-l-4 border-purple-500 pl-6">
-          <h4 class="font-bold text-lg mb-2">c) Güvenlik ve Kötüye Kullanımın Önlenmesi</h4>
-          <p class="text-gray-700">Platform güvenliğinin sağlanması ve yasadışı faaliyetlerin önlenmesi:</p>
-          <ul class="list-disc ml-6 mt-2 space-y-1">
-            <li>Sahte hesap, bot ve spam tespiti</li>
-            <li>Dolandırıcılık ve siber saldırıların engellenmesi</li>
-            <li>Hukuka aykırı içeriklerin tespit edilmesi</li>
-            <li>Güvenlik loglarının tutulması</li>
-            <li>DDoS, SQL injection ve diğer saldırılara karşı koruma</li>
-          </ul>
-        </div>
-
-        <div class="border-l-4 border-orange-500 pl-6">
-          <h4 class="font-bold text-lg mb-2">d) Müşteri Destek ve İletişim</h4>
-          <p class="text-gray-700">Kullanıcı taleplerine yanıt verilmesi ve destek sağlanması:</p>
-          <ul class="list-disc ml-6 mt-2 space-y-1">
-            <li>Şikayet, öneri ve soruların yanıtlanması</li>
-            <li>Teknik destek sağlanması</li>
-            <li>Randevu hatırlatıcıları gönderilmesi</li>
-            <li>Hesap ve işlem bilgilendirmeleri</li>
-          </ul>
-        </div>
-
-        <div class="border-l-4 border-red-500 pl-6">
-          <h4 class="font-bold text-lg mb-2">e) Performans ve Kullanım Analizi</h4>
-          <p class="text-gray-700">Uygulamanın iyileştirilmesi ve optimize edilmesi:</p>
-          <ul class="list-disc ml-6 mt-2 space-y-1">
-            <li>Hangi özelliklerin daha çok kullanıldığının analizi</li>
-            <li>Hata ve çökme raporlarının incelenmesi</li>
-            <li>Performans metriklerinin ölçülmesi (sayfa yükleme süreleri, yanıt süreleri)</li>
-            <li>Kullanıcı deneyiminin (UX) iyileştirilmesi</li>
-            <li>A/B testler ve yeni özellik denemeleri</li>
-          </ul>
-        </div>
-
-        <div class="border-l-4 border-indigo-500 pl-6">
-          <h4 class="font-bold text-lg mb-2">f) Kişiselleştirme ve Öneri Sistemleri</h4>
-          <p class="text-gray-700">Size özel içerik ve önerilerin sunulması:</p>
-          <ul class="list-disc ml-6 mt-2 space-y-1">
-            <li>Konumunuza yakın kuaförler önerme</li>
-            <li>Geçmiş tercihlerinize göre öneriler</li>
-            <li>Sizin için uygun kampanya ve fırsatlar</li>
-            <li>Kişiselleştirilmiş bildirimler</li>
-          </ul>
-        </div>
-
-        <div class="border-l-4 border-pink-500 pl-6">
-          <h4 class="font-bold text-lg mb-2">g) Pazarlama ve Reklam (Açık Rızanız ile)</h4>
-          <p class="text-gray-700">Ticari elektronik ileti gönderilmesi (sadece onay verdiğinizde):</p>
-          <ul class="list-disc ml-6 mt-2 space-y-1">
-            <li>Yeni özellik ve kampanya duyuruları</li>
-            <li>Özel indirim ve fırsatlar</li>
-            <li>Haber bülteni (newsletter)</li>
-            <li>SMS ve e-posta bildirimleri</li>
-          </ul>
-          <p class="text-sm text-gray-600 mt-3 italic">Not: Pazarlama iletilerinden istediğiniz zaman vazgeçebilirsiniz (opt-out).</p>
-        </div>
-
-        <div class="border-l-4 border-teal-500 pl-6">
-          <h4 class="font-bold text-lg mb-2">h) Yasal Yükümlülüklerin Yerine Getirilmesi</h4>
-          <p class="text-gray-700">Mevzuattan kaynaklanan yükümlülüklerin ifası:</p>
-          <ul class="list-disc ml-6 mt-2 space-y-1">
-            <li>Vergi ve finansal mevzuat gereği kayıt tutma</li>
-            <li>Mahkeme, savcılık ve kolluk kuvvetlerinin taleplerini yanıtlama</li>
-            <li>KVKK, Tüketici Kanunu ve diğer mevzuata uyum</li>
-            <li>Denetim ve raporlama yükümlülükleri</li>
-          </ul>
-        </div>
-
-        <div class="border-l-4 border-yellow-500 pl-6">
-          <h4 class="font-bold text-lg mb-2">ı) İstatistik ve Akademik Çalışmalar</h4>
-          <p class="text-gray-700">Anonim ve toplulaştırılmış veri analizleri:</p>
-          <ul class="list-disc ml-6 mt-2 space-y-1">
-            <li>Genel kullanım istatistikleri (aktif kullanıcı sayısı, en popüler saatler vb.)</li>
-            <li>Trend analizleri (hangi kuaför kategorileri daha çok aranıyor)</li>
-            <li>Sektörel raporlar ve benchmark çalışmaları</li>
-          </ul>
-          <p class="text-sm text-gray-600 mt-3 italic">Not: Bu amaçla veriler anonimleştirilir ve kişisel kimliğiniz ile ilişkilendirilemez hale getirilir.</p>
-        </div>
-      </div>
-
-      <h2 class="text-2xl mt-12 mb-6 pb-3 border-b-2 border-gray-200">5. Kişisel Verilerin İşlenme Hukuki Sebepleri</h2>
-      
-      <p class="my-6">
-        Kişisel verileriniz, KVKK'nın 5. ve 6. maddelerinde sayılan aşağıdaki hukuki sebeplere dayanılarak işlenmektedir:
-      </p>
-
-      <div class="space-y-6 my-8">
-        <div class="bg-white border-l-4 border-blue-600 p-6 shadow-sm">
-          <h4 class="font-bold text-lg mb-3">a) Sözleşmenin Kurulması veya İfası (KVKK m.5/2-c)</h4>
-          <p class="text-gray-700">
-            Kuafora Kullanıcı Sözleşmesi'nin kurulması ve ifa edilmesi için zorunlu olan verileriniz bu hukuki sebebe dayanılarak işlenir. Örneğin: hesap oluşturma, randevu alma, yorum yazma gibi temel hizmetler için veri işleme zorunludur.
-          </p>
-        </div>
-
-        <div class="bg-white border-l-4 border-green-600 p-6 shadow-sm">
-          <h4 class="font-bold text-lg mb-3">b) Hukuki Yükümlülüğün Yerine Getirilmesi (KVKK m.5/2-ç)</h4>
-          <p class="text-gray-700">
-            Vergi mevzuatı, ticaret kanunu, tüketici kanunu, KVKK ve diğer yasal düzenlemelerden kaynaklanan yükümlülüklerin yerine getirilmesi için veri işleme yapılır. Örneğin: fatura kayıtları, denetim logları, mahkeme talepleri.
-          </p>
-        </div>
-
-        <div class="bg-white border-l-4 border-purple-600 p-6 shadow-sm">
-          <h4 class="font-bold text-lg mb-3">c) Meşru Menfaat (KVKK m.5/2-f)</h4>
-          <p class="text-gray-700">
-            Veri sorumlusunun veya üçüncü kişinin meşru menfaatleri için veri işleme gerekli olabilir; ancak bu durumda veri sahibinin temel hak ve özgürlükleri ön planda tutulur. Örneğin: platform güvenliği, dolandırıcılık önleme, spam tespiti, performans iyileştirme gibi meşru menfaatlere dayalı veri işleme.
-          </p>
-        </div>
-
-        <div class="bg-white border-l-4 border-orange-600 p-6 shadow-sm">
-          <h4 class="font-bold text-lg mb-3">d) Veri Sorumlusunun Hukuki Yükümlülüklerini Yerine Getirmesi (KVKK m.5/2-ç)</h4>
-          <p class="text-gray-700">
-            Kanunlarda açıkça öngörülen yükümlülüklerin yerine getirilmesi için veri işleme yapılır. Örneğin: Kişisel Verileri Koruma Kurulu'nun taleplerine cevap, mahkeme celpleri.
-          </p>
-        </div>
-
-        <div class="bg-white border-l-4 border-red-600 p-6 shadow-sm">
-          <h4 class="font-bold text-lg mb-3">e) Açık Rıza (KVKK m.5/1)</h4>
-          <p class="text-gray-700">
-            Yukarıdaki hukuki sebeplerin bulunmadığı durumlarda veya özel nitelikli kişisel veri işlenmesi gereken hallerde <strong>açık rızanız</strong> alınır. Açık rıza, bilgilendirilmiş, özgür irade ile ve belirli bir konuya ilişkin olarak verilir. Örneğin: pazarlama iletileri, konum izni, kamera/fotoğraf erişimi.
-          </p>
-          <p class="text-sm text-gray-600 mt-3 italic">
-            <strong>Önemli:</strong> Açık rızanızı istediğiniz zaman geri çekebilirsiniz. Ancak rıza geri çekilmeden önce yapılan veri işleme hukuka uygundur.
-          </p>
-        </div>
-      </div>
-
-      <h2 class="text-2xl mt-12 mb-6 pb-3 border-b-2 border-gray-200">6. Kişisel Verilerin Aktarıldığı Taraflar</h2>
-      
-      <h3 class="text-xl mt-8 mb-4">6.1. Yurt İçi Aktarımlar</h3>
-      <p>Kişisel verileriniz, aşağıdaki kategorilere dahil olan yurt içi üçüncü kişilere aktarılabilir:</p>
-
-      <div class="space-y-4 my-6">
-        <div class="border border-gray-200 rounded-lg p-5">
-          <h4 class="font-bold mb-2">a) İşletmeler / Kuaförler / Salonlar</h4>
-          <p class="text-sm text-gray-700">Randevu oluşturduğunuzda, adınız, telefon numaranız ve randevu detayları ilgili işletme ile paylaşılır. Bu aktarım, sözleşmenin ifası için zorunludur.</p>
-        </div>
-
-        <div class="border border-gray-200 rounded-lg p-5">
-          <h4 class="font-bold mb-2">b) Bilişim Altyapısı Sağlayıcıları</h4>
-          <p class="text-sm text-gray-700">Sunucu barındırma (hosting), bulut depolama (AWS, Google Cloud vb.), veri tabanı yönetimi için teknik hizmet sağlayıcılara veri aktarımı yapılır. Bu aktarım, hizmet sunumu için zorunludur.</p>
-        </div>
-
-        <div class="border border-gray-200 rounded-lg p-5">
-          <h4 class="font-bold mb-2">c) Ödeme Kuruluşları (Gelecek İçin)</h4>
-          <p class="text-sm text-gray-700">Çevrimiçi ödeme altyapısı aktif olduğunda, ödeme bilgileriniz güvenli ödeme sağlayıcılara (Iyzico, PayTR, Stripe vb.) aktarılır. Bu sağlayıcılar PCI-DSS standartlarına uygun çalışır.</p>
-        </div>
-
-        <div class="border border-gray-200 rounded-lg p-5">
-          <h4 class="font-bold mb-2">d) Harita ve Konum Servisleri</h4>
-          <p class="text-sm text-gray-700">Google Maps API kullanımı için konum verileri Google'a aktarılır. Bu aktarım, harita gösterimi ve yol tarifi için gereklidir.</p>
-        </div>
-
-        <div class="border border-gray-200 rounded-lg p-5">
-          <h4 class="font-bold mb-2">e) Analitik ve İstatistik Servisleri</h4>
-          <p class="text-sm text-gray-700">Google Analytics, Firebase Analytics gibi araçlar kullanılarak kullanım verileri toplanabilir. Bu veriler anonimleştirilmiş ve toplulaştırılmış şekildedir.</p>
-        </div>
-
-        <div class="border border-gray-200 rounded-lg p-5">
-          <h4 class="font-bold mb-2">f) Hukuk Danışmanları ve Denetim Firmaları</h4>
-          <p class="text-sm text-gray-700">Yasal danışmanlık, denetim ve uyum çalışmaları kapsamında sınırlı veri paylaşımı yapılabilir.</p>
-        </div>
-
-        <div class="border border-gray-200 rounded-lg p-5">
-          <h4 class="font-bold mb-2">g) Yetkili Kamu Kurumları</h4>
-          <p class="text-sm text-gray-700">Mahkeme, savcılık, kolluk kuvvetleri, Kişisel Verileri Koruma Kurumu, vergi dairesi gibi yetkili mercilerin resmi talepleri doğrultusunda veri aktarımı yapılır.</p>
-        </div>
-      </div>
-
-      <h3 class="text-xl mt-8 mb-4">6.2. Yurt Dışı Aktarımlar</h3>
-      <p>
-        Bazı durumlarda kişisel verileriniz yurt dışına aktarılabilir:
-      </p>
-      <ul class="space-y-2 my-4">
-        <li><strong>Sunucu Konumu:</strong> Veriler, Türkiye dışında konumlanmış sunucularda (AWS, Google Cloud vb.) saklanabilir. Bu durumda, KVKK m.9 uyarınca yeterli koruma sağlanması veya açık rızanızın alınması gerekir.</li>
-        <li><strong>Üçüncü Taraf Servisler:</strong> Google, Apple, Facebook gibi yurt dışı merkezli servislere veri aktarımı yapılabilir (sosyal medya girişi, push bildirim vb.).</li>
-      </ul>
-      <p class="bg-yellow-50 border-l-4 border-yellow-400 p-4 my-6">
-        <strong>Önemli:</strong> Yurt dışı veri aktarımlarında KVKK'nın 9. maddesine uyulur; Kişisel Verileri Koruma Kurulu'nun yeterli koruma kararı olmayan ülkelere aktarım için sizden açık rıza alınır veya yeterli güvenceler sağlanır.
-      </p>
-
-      <h2 class="text-2xl mt-12 mb-6 pb-3 border-b-2 border-gray-200">7. Kişisel Verilerin Saklanma Süreleri</h2>
-      
-      <h3 class="text-xl mt-8 mb-4">7.1. Genel İlke</h3>
-      <p>
-        Kişisel verileriniz, <strong>işlenme amacının gerektirdiği süre kadar</strong> ve <strong>ilgili mevzuatta öngörülen zamanaşımı / saklama süreleri boyunca</strong> muhafaza edilir. Bu süreler sona erdiğinde, verileriniz <strong>silinir, yok edilir veya anonimleştirilir</strong>.
-      </p>
-
-      <h3 class="text-xl mt-8 mb-4">7.2. Detaylı Saklama Süreleri</h3>
-      <div class="space-y-4 my-6">
-        <div class="bg-gray-50 p-5 rounded-lg border border-gray-200">
-          <h4 class="font-bold mb-2">a) Aktif Hesap Verileri</h4>
-          <p class="text-sm text-gray-700">Hesabınız aktif olduğu sürece kimlik, iletişim ve işlem verileriniz saklanır.</p>
-        </div>
-
-        <div class="bg-gray-50 p-5 rounded-lg border border-gray-200">
-          <h4 class="font-bold mb-2">b) Hesap Kapanması Sonrası</h4>
-          <p class="text-sm text-gray-700">Hesabınızı kapattığınızda, verilerinizin çoğu derhal silinir. Ancak yasal yükümlülükler (vergi kayıtları, mahkeme talepleri vb.) nedeniyle bazı veriler 10 yıla kadar saklanabilir.</p>
-        </div>
-
-        <div class="bg-gray-50 p-5 rounded-lg border border-gray-200">
-          <h4 class="font-bold mb-2">c) Yorumlar ve Değerlendirmeler</h4>
-          <p class="text-sm text-gray-700">Yazdığınız yorumlar, hesap kapansa bile anonim hale getirilerek platformda kalabilir (diğer kullanıcıların yararı için).</p>
-        </div>
-
-        <div class="bg-gray-50 p-5 rounded-lg border border-gray-200">
-          <h4 class="font-bold mb-2">d) Log Kayıtları</h4>
-          <p class="text-sm text-gray-700">Güvenlik ve hata logları 1-2 yıl boyunca saklanır, ardından silinir.</p>
-        </div>
-
-        <div class="bg-gray-50 p-5 rounded-lg border border-gray-200">
-          <h4 class="font-bold mb-2">e) Pasif Hesaplar</h4>
-          <p class="text-sm text-gray-700">6 ay veya daha uzun süre kullanılmayan hesaplar, bildirim yapılarak kapatılabilir ve verileri silinebilir.</p>
-        </div>
-
-        <div class="bg-gray-50 p-5 rounded-lg border border-gray-200">
-          <h4 class="font-bold mb-2">f) İstatistiksel ve Anonim Veriler</h4>
-          <p class="text-sm text-gray-700">Anonimleştirilmiş ve toplulaştırılmış veriler süresiz saklanabilir (kişisel kimliğinizle ilişkilendirilemez haldedir).</p>
-        </div>
-      </div>
-
-      <h2 class="text-2xl mt-12 mb-6 pb-3 border-b-2 border-gray-200">8. Kişisel Veri Sahibinin Hakları (KVKK m.11)</h2>
-      
-      <p class="bg-blue-50 p-5 rounded-lg border border-blue-200 my-6">
-        <strong>6698 sayılı KVKK'nın 11. maddesi uyarınca, kişisel veri sahibi olarak aşağıdaki haklara sahipsiniz:</strong>
-      </p>
-
-      <div class="space-y-6 my-8">
-        <div class="border-l-4 border-blue-600 pl-6 py-3">
-          <h4 class="font-bold text-lg mb-2">a) Kişisel Verilerinizin İşlenip İşlenmediğini Öğrenme Hakkı</h4>
-          <p class="text-gray-700">Talha Colfaoğlu'na başvurarak, kişisel verilerinizin işlenip işlenmediğini öğrenebilirsiniz.</p>
-        </div>
-
-        <div class="border-l-4 border-green-600 pl-6 py-3">
-          <h4 class="font-bold text-lg mb-2">b) İşlenmişse Bilgi Talep Etme Hakkı</h4>
-          <p class="text-gray-700">Kişisel verileriniz işlenmişse, hangi verilerin işlendiğini, işlenme amacını ve üçüncü kişilere aktarılıp aktarılmadığını öğrenme hakkına sahipsiniz.</p>
-        </div>
-
-        <div class="border-l-4 border-purple-600 pl-6 py-3">
-          <h4 class="font-bold text-lg mb-2">c) İşlenme Amacını ve Amacına Uygun Kullanılıp Kullanılmadığını Öğrenme Hakkı</h4>
-          <p class="text-gray-700">Verilerinizin neden işlendiğini ve bu amaç doğrultusunda kullanılıp kullanılmadığını öğrenebilirsiniz.</p>
-        </div>
-
-        <div class="border-l-4 border-orange-600 pl-6 py-3">
-          <h4 class="font-bold text-lg mb-2">d) Yurt İçinde veya Yurt Dışında Aktarıldığı Üçüncü Kişileri Bilme Hakkı</h4>
-          <p class="text-gray-700">Kişisel verilerinizin hangi üçüncü kişilere (yurt içi veya yurt dışı) aktarıldığını öğrenebilirsiniz.</p>
-        </div>
-
-        <div class="border-l-4 border-red-600 pl-6 py-3">
-          <h4 class="font-bold text-lg mb-2">e) Eksik veya Yanlış İşlenmişse Düzeltilmesini İsteme Hakkı</h4>
-          <p class="text-gray-700">Kişisel verilerinizde hata, eksiklik veya güncel olmama durumu varsa düzeltilmesini talep edebilirsiniz.</p>
-        </div>
-
-        <div class="border-l-4 border-indigo-600 pl-6 py-3">
-          <h4 class="font-bold text-lg mb-2">f) İşlenmesini Gerektiren Sebeplerin Ortadan Kalkması Halinde Silinmesini veya Yok Edilmesini İsteme Hakkı</h4>
-          <p class="text-gray-700">Kişisel verilerinizin işlenmesini gerektiren sebep ortadan kalkmışsa (örneğin, sözleşme sona ermişse, yasal saklama süresi dolmuşsa) silinmesini veya yok edilmesini isteyebilirsiniz.</p>
-        </div>
-
-        <div class="border-l-4 border-pink-600 pl-6 py-3">
-          <h4 class="font-bold text-lg mb-2">g) Düzeltme, Silme veya Yok Edilme İşlemlerinin Aktarıldığı Üçüncü Kişilere Bildirilmesini İsteme Hakkı</h4>
-          <p class="text-gray-700">Verilerinizde yapılan düzeltme, silme veya yok etme işlemlerinin, verilerinizin aktarıldığı üçüncü kişilere bildirilmesini talep edebilirsiniz.</p>
-        </div>
-
-        <div class="border-l-4 border-teal-600 pl-6 py-3">
-          <h4 class="font-bold text-lg mb-2">h) Otomatik Sistemlerle Analiz Sonucu Aleyhinize Bir Sonuç Çıkmasına İtiraz Etme Hakkı</h4>
-          <p class="text-gray-700">Kişisel verilerinizin otomatik sistemlerle (algoritmalar, yapay zeka) işlenmesi sonucu aleyhinize bir karar verilmişse (örneğin, kredi başvurusu reddedilmesi, hesap engellenmesi) bu karara itiraz edebilirsiniz.</p>
-        </div>
-
-        <div class="border-l-4 border-yellow-600 pl-6 py-3">
-          <h4 class="font-bold text-lg mb-2">ı) Kanuna Aykırı İşleme Sebebiyle Zarara Uğramanız Halinde Zararın Giderilmesini Talep Etme Hakkı</h4>
-          <p class="text-gray-700">Kişisel verilerinizin kanuna aykırı şekilde işlenmesi nedeniyle bir zarara uğradıysanız, zararın tazmin edilmesini talep edebilirsiniz.</p>
-        </div>
-      </div>
-
-      <h3 class="text-xl mt-8 mb-4">8.1. Haklarınızı Nasıl Kullanabilirsiniz?</h3>
-      <p class="bg-green-50 p-5 rounded-lg border border-green-200 my-6">
-        <strong>Başvuru Yöntemi:</strong> Yukarıdaki haklarınızı kullanmak için <strong>yazılı başvuru</strong> yapmanız gerekmektedir. Başvurularınızı aşağıdaki yöntemlerle iletebilirsiniz:
-      </p>
-      <ul class="space-y-3 my-6">
-        <li class="flex items-start">
-          <span class="inline-block w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center mr-3 mt-1 flex-shrink-0">1</span>
-          <div>
-            <strong>E-posta:</strong> <a href="mailto:kvkk@kuafora.com" class="text-blue-600 hover:underline">kvkk@kuafora.com</a> adresine e-posta gönderebilirsiniz.<br>
-            <span class="text-sm text-gray-600">Not: E-postanızı kayıtlı e-posta adresinizden göndermeniz kimlik doğrulama sürecini hızlandırır.</span>
-          </div>
-        </li>
-        <li class="flex items-start">
-          <span class="inline-block w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center mr-3 mt-1 flex-shrink-0">2</span>
-          <div>
-            <strong>Posta:</strong> "Talha Colfaoğlu - Kuafora KVKK Başvurusu" başlıklı dilekçenizi Bursa, Türkiye adresine posta ile gönderebilirsiniz.
-          </div>
-        </li>
-        <li class="flex items-start">
-          <span class="inline-block w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center mr-3 mt-1 flex-shrink-0">3</span>
-          <div>
-            <strong>Uygulama İçi Form:</strong> Kuafora mobil uygulamasında "Ayarlar > Gizlilik > KVKK Başvurusu" bölümünden form doldurabilirsiniz.
-          </div>
-        </li>
-      </ul>
-
-      <h3 class="text-xl mt-8 mb-4">8.2. Başvuru İçeriği</h3>
-      <p>Başvurunuzda aşağıdaki bilgileri belirtmeniz gerekmektedir:</p>
-      <ul class="list-disc ml-6 space-y-2 my-4">
-        <li>Adınız, soyadınız</li>
-        <li>T.C. kimlik numaranız (kimlik doğrulama için)</li>
-        <li>Kayıtlı e-posta adresiniz</li>
-        <li>Telefon numaranız (isteğe bağlı)</li>
-        <li>Talebin konusu (hangi hakkınızı kullanmak istediğiniz)</li>
-        <li>Talebin detaylı açıklaması</li>
-        <li>Varsa destekleyici belgeler</li>
-      </ul>
-
-      <h3 class="text-xl mt-8 mb-4">8.3. Başvurunun Değerlendirilmesi ve Cevaplama Süresi</h3>
-      <p>
-        Başvurunuz alındıktan sonra:
-      </p>
-      <ul class="space-y-2 my-4">
-        <li><strong>Kimlik Doğrulama:</strong> Güvenlik nedeniyle kimliğiniz doğrulanır (T.C. kimlik fotokopisi, kayıtlı e-posta vb.).</li>
-        <li><strong>Değerlendirme:</strong> Talebiniz hukuki ve teknik açıdan değerlendirilir.</li>
-        <li><strong>Cevaplama Süresi:</strong> Başvurunuz, <strong>talebin niteliğine göre en kısa sürede ve en geç 30 gün içinde</strong> ücretsiz olarak yanıtlanır.</li>
-        <li><strong>Ücret:</strong> Başvurular ücretsizdir. Ancak işlemin ayrıca bir maliyet gerektirmesi halinde, Kişisel Verileri Koruma Kurulu'nun belirlediği tarifedeki ücret talep edilebilir.</li>
-        <li><strong>Ret Durumu:</strong> Talebin reddedilmesi halinde, ret gerekçesi yazılı olarak bildirilir ve ret kararına itiraz hakkınız bulunmaktadır.</li>
-      </ul>
-
-      <h3 class="text-xl mt-8 mb-4">8.4. Şikayet ve İtiraz Hakkı</h3>
-      <p class="bg-red-50 p-5 rounded-lg border border-red-200 my-6">
-        Başvurunuzun reddedilmesi, cevabın yetersiz bulunması veya süresinde cevap verilmemesi halinde, <strong>Kişisel Verileri Koruma Kurumu'na</strong> şikayette bulunabilirsiniz.<br><br>
-        <strong>Kişisel Verileri Koruma Kurumu:</strong><br>
-        Adres: Nasuh Akar Mah. Ziyabey Cad. 1407. Sok. No: 4 06520 Balgat-Çankaya/Ankara<br>
-        Web: <a href="https://www.kvkk.gov.tr" class="text-blue-600 hover:underline">www.kvkk.gov.tr</a>
-      </p>
-
-      <h2 class="text-2xl mt-12 mb-6 pb-3 border-b-2 border-gray-200">9. Veri Güvenliği Önlemleri</h2>
-      
-      <p class="my-6">
-        Kuafora, kişisel verilerinizin güvenliğini sağlamak için aşağıdaki teknik ve idari tedbirleri almaktadır:
-      </p>
-
-      <div class="grid md:grid-cols-2 gap-4 my-6">
-        <div class="bg-gray-50 p-5 rounded-lg border border-gray-200">
-          <h4 class="font-bold mb-3">Teknik Önlemler</h4>
-          <ul class="list-disc ml-5 space-y-1 text-sm">
-            <li>SSL/TLS şifreleme (HTTPS)</li>
-            <li>Şifre hash'leme (bcrypt, SHA-256)</li>
-            <li>İki faktörlü kimlik doğrulama (2FA)</li>
-            <li>Güvenlik duvarı (firewall)</li>
-            <li>DDoS koruma</li>
-            <li>SQL injection ve XSS koruması</li>
-            <li>Düzenli güvenlik testleri</li>
-            <li>Veri yedekleme (backup)</li>
-          </ul>
-        </div>
-
-        <div class="bg-gray-50 p-5 rounded-lg border border-gray-200">
-          <h4 class="font-bold mb-3">İdari Önlemler</h4>
-          <ul class="list-disc ml-5 space-y-1 text-sm">
-            <li>Erişim yetkilendirmesi</li>
-            <li>Log kayıtları tutulması</li>
-            <li>Gizlilik sözleşmeleri</li>
-            <li>Personel eğitimleri</li>
-            <li>Veri işleme envanteri</li>
-            <li>Düzenli risk analizleri</li>
-            <li>Olay müdahale planları</li>
-            <li>Üçüncü taraf denetimler</li>
-          </ul>
-        </div>
-      </div>
-
-      <p class="bg-yellow-50 border-l-4 border-yellow-400 p-4 my-6">
-        <strong>Önemli Uyarı:</strong> Her ne kadar en yüksek güvenlik standartları uygulanmış olsa da, internet ve dijital ortamlar %100 güvenli değildir. Bu nedenle, şifrenizi kimseyle paylaşmama, güçlü şifre kullanma ve düzenli değiştirme konusunda sizin de dikkatli olmanız gerekmektedir.
-      </p>
-
-      <h2 class="text-2xl mt-12 mb-6 pb-3 border-b-2 border-gray-200">10. Veri İhlali Bildirimi</h2>
-      
-      <p class="my-6">
-        Kişisel verilerinizin güvenliğini tehlikeye atacak bir veri ihlali (veri sızıntısı, yetkisiz erişim, siber saldırı vb.) tespit edilmesi halinde:
-      </p>
-      <ul class="space-y-2 my-4">
-        <li>Durum <strong>72 saat içinde Kişisel Verileri Koruma Kurumu'na</strong> bildirilir.</li>
-        <li>İhlalden etkilenen veri sahipleri (siz) <strong>mümkün olan en kısa sürede</strong> bilgilendirilir.</li>
-        <li>İhlali önlemek veya etkisini azaltmak için gerekli teknik ve hukuki tedbirler alınır.</li>
-        <li>İhlal nedeniyle zarar görenler, tazminat talep etme hakkına sahiptir.</li>
-      </ul>
-
-      <h2 class="text-2xl mt-12 mb-6 pb-3 border-b-2 border-gray-200">11. Çocukların Gizliliği</h2>
-      
-      <p class="bg-red-50 p-5 rounded-lg border border-red-200 my-6">
-        <strong>Önemli:</strong> Kuafora platformu, <strong>18 yaşından küçük kişiler</strong> için tasarlanmamıştır. 18 yaşından küçükseniz, platformu kullanmadan önce veli/vasi izni almanız gerekmektedir. Eğer 18 yaşından küçük bir kullanıcıya ait veri işlediğimizi fark edersek, derhal sileriz. Ebeveynler, çocuklarının internet kullanımını denetlemelidir.
-      </p>
-
-      <h2 class="text-2xl mt-12 mb-6 pb-3 border-b-2 border-gray-200">12. Aydınlatma Metninin Güncellenmesi</h2>
-      
-      <p class="my-6">
-        İşbu KVKK Aydınlatma Metni, yasal mevzuatta değişiklik olması, hizmetlerin genişletilmesi veya daraltılması, yeni veri işleme amaçlarının ortaya çıkması gibi durumlarda güncellenebilir. Güncellemeler, <code class="bg-gray-100 px-2 py-1 rounded">kuafora.com</code> web sitesinde yayımlandığı andan itibaren yürürlüğe girer. Önemli değişiklikler için e-posta veya bildirim ile haberdar edilmeye çalışılırsınız.
-      </p>
-
-      <div class="bg-blue-50 border-l-4 border-blue-500 p-6 my-10">
-        <p class="font-bold text-lg mb-2">Bilgilendirilme Beyanı</p>
-        <p class="text-gray-700">
-          Kuafora platformunu kullanarak, işbu KVKK Aydınlatma Metni'ni okuduğunuzu, anladığınızı ve kişisel verilerinizin yukarıda açıklanan şekilde işleneceğini kabul ettiğinizi beyan edersiniz.
+<!-- Hero -->
+<section class="relative py-24 overflow-hidden">
+  <div class="absolute inset-0 bg-grid opacity-50"></div>
+  <div class="relative max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+    <span class="badge mb-6">Yasal</span>
+    <h1 class="font-display font-bold text-4xl sm:text-5xl tracking-tight">KVKK Aydınlatma Metni</h1>
+    <p class="mt-6 text-muted">Son güncelleme: {{ now|date:"d.m.Y" }}</p>
+  </div>
+</section>
+
+<section class="py-16 bg-surface">
+  <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="bg-white rounded-2xl border border-border p-8 sm:p-12">
+      <div class="flex items-start gap-4 p-4 bg-surface rounded-xl mb-8">
+        <svg class="w-6 h-6 text-black flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+        </svg>
+        <p class="text-sm text-muted">
+          <strong class="text-black">Önemli Bilgilendirme:</strong> Bu metin, 6698 sayılı Kişisel Verilerin Korunması Kanunu ("KVKK") uyarınca kişisel verilerinizin işlenmesine ilişkin sizleri bilgilendirmek amacıyla hazırlanmıştır.
         </p>
       </div>
+    
+      <div class="prose prose-base max-w-none prose-headings:font-display prose-headings:font-bold prose-headings:text-black prose-p:text-muted prose-p:leading-relaxed prose-li:text-muted prose-strong:text-black prose-a:text-black prose-a:underline">
+        
+        <h2 class="text-2xl mt-12 mb-6 pb-3 border-b border-border">1. Veri Sorumlusu</h2>
+        <p>
+          6698 sayılı Kişisel Verilerin Korunması Kanunu ("KVKK") kapsamında, kişisel verileriniz; <strong>veri sorumlusu</strong> sıfatıyla gerçek kişi <strong>Talha Colfaoğlu</strong> tarafından işlenmektedir.
+        </p>
+        
+        <div class="bg-surface p-6 rounded-xl my-6">
+          <p class="font-bold text-lg mb-3 text-black">İletişim Bilgileri</p>
+          <p><strong>Ad Soyad:</strong> Talha Colfaoğlu</p>
+          <p><strong>Adres:</strong> Bursa, Türkiye</p>
+          <p><strong>E-posta:</strong> <a href="mailto:kvkk@kuafora.com">kvkk@kuafora.com</a></p>
+          <p><strong>Web Sitesi:</strong> <a href="https://kuafora.com">https://kuafora.com</a></p>
+        </div>
 
-      <div class="text-center text-sm text-gray-500 mt-12 pt-8 border-t border-gray-200">
-        <p>© {{ now|date:"Y" }} Kuafora - Talha Colfaoğlu. Tüm hakları saklıdır.</p>
-        <p class="mt-2">Son güncelleme: {{ now|date:"d.m.Y" }}</p>
-        <p class="mt-3">Sorularınız için: <a href="mailto:kvkk@kuafora.com" class="text-blue-600 hover:underline">kvkk@kuafora.com</a></p>
+        <h2 class="text-2xl mt-12 mb-6 pb-3 border-b border-border">2. İşlenen Kişisel Veri Kategorileri</h2>
+        <p>Kuafora platformu kapsamında aşağıdaki kişisel veri kategorileri işlenmektedir:</p>
+
+        <div class="space-y-4 my-8">
+          <div class="bg-surface p-5 rounded-xl">
+            <h4 class="font-bold text-lg mb-2 text-black">Kimlik Verileri</h4>
+            <p class="text-sm">Ad, soyad, doğum tarihi (isteğe bağlı), cinsiyet (isteğe bağlı), profil fotoğrafı</p>
+          </div>
+
+          <div class="bg-surface p-5 rounded-xl">
+            <h4 class="font-bold text-lg mb-2 text-black">İletişim Verileri</h4>
+            <p class="text-sm">E-posta adresi, telefon numarası, adres bilgisi</p>
+          </div>
+
+          <div class="bg-surface p-5 rounded-xl">
+            <h4 class="font-bold text-lg mb-2 text-black">Konum Verileri</h4>
+            <p class="text-sm">GPS koordinatları (kullanıcı izni dahilinde), şehir/ilçe bilgisi</p>
+          </div>
+
+          <div class="bg-surface p-5 rounded-xl">
+            <h4 class="font-bold text-lg mb-2 text-black">İşlem Verileri</h4>
+            <p class="text-sm">Arama geçmişi, randevu kayıtları, yorumlar, favori listesi</p>
+          </div>
+
+          <div class="bg-surface p-5 rounded-xl">
+            <h4 class="font-bold text-lg mb-2 text-black">Teknik Veriler</h4>
+            <p class="text-sm">IP adresi, cihaz modeli, işletim sistemi, uygulama sürümü</p>
+          </div>
+        </div>
+
+        <h2 class="text-2xl mt-12 mb-6 pb-3 border-b border-border">3. İşleme Amaçları</h2>
+        <ul class="space-y-3">
+          <li>Kuaför arama, keşfetme ve randevu hizmetlerinin sunulması</li>
+          <li>Hesap oluşturma ve yönetimi</li>
+          <li>Güvenlik ve kötüye kullanımın önlenmesi</li>
+          <li>Müşteri destek ve iletişim</li>
+          <li>Performans ve kullanım analizi</li>
+          <li>Kişiselleştirme ve öneri sistemleri</li>
+          <li>Pazarlama iletişimleri (açık rızanız ile)</li>
+          <li>Yasal yükümlülüklerin yerine getirilmesi</li>
+        </ul>
+
+        <h2 class="text-2xl mt-12 mb-6 pb-3 border-b border-border">4. Hukuki Sebepler</h2>
+        <p>Kişisel verileriniz, KVKK'nın 5. ve 6. maddelerinde sayılan aşağıdaki hukuki sebeplere dayanılarak işlenmektedir:</p>
+        <ul class="space-y-2">
+          <li>Sözleşmenin kurulması veya ifası</li>
+          <li>Hukuki yükümlülüğün yerine getirilmesi</li>
+          <li>Veri sorumlusunun meşru menfaatleri</li>
+          <li>Açık rıza (gerekli hallerde)</li>
+        </ul>
+
+        <h2 class="text-2xl mt-12 mb-6 pb-3 border-b border-border">5. Veri Aktarımı</h2>
+        <p>Kişisel verileriniz aşağıdaki taraflara aktarılabilir:</p>
+        <ul class="space-y-2">
+          <li>İşletmeler/kuaförler (randevu için)</li>
+          <li>Bilişim altyapısı sağlayıcıları</li>
+          <li>Ödeme kuruluşları (gelecek için)</li>
+          <li>Harita ve konum servisleri</li>
+          <li>Yetkili kamu kurumları</li>
+        </ul>
+
+        <h2 class="text-2xl mt-12 mb-6 pb-3 border-b border-border">6. Haklarınız (KVKK m.11)</h2>
+        <p>KVKK'nın 11. maddesi uyarınca aşağıdaki haklara sahipsiniz:</p>
+        <ul class="space-y-2">
+          <li>Kişisel verilerinizin işlenip işlenmediğini öğrenme</li>
+          <li>İşlenmişse bilgi talep etme</li>
+          <li>İşlenme amacını ve amacına uygun kullanılıp kullanılmadığını öğrenme</li>
+          <li>Aktarıldığı üçüncü kişileri bilme</li>
+          <li>Eksik veya yanlış işlenmişse düzeltilmesini isteme</li>
+          <li>Silinmesini veya yok edilmesini isteme</li>
+          <li>Otomatik analiz sonucu aleyhinize çıkan sonuca itiraz etme</li>
+          <li>Kanuna aykırı işleme sebebiyle zararın giderilmesini talep etme</li>
+        </ul>
+
+        <div class="bg-black text-white p-6 rounded-xl my-8">
+          <p class="font-bold text-lg mb-3">Başvuru</p>
+          <p class="opacity-80">
+            Haklarınızı kullanmak için <a href="mailto:kvkk@kuafora.com" class="underline">kvkk@kuafora.com</a> adresine başvurabilirsiniz. Başvurularınız en geç 30 gün içinde yanıtlanacaktır.
+          </p>
+        </div>
+
+        <h2 class="text-2xl mt-12 mb-6 pb-3 border-b border-border">7. Veri Güvenliği</h2>
+        <p>Kuafora, kişisel verilerinizin güvenliğini sağlamak için aşağıdaki önlemleri almaktadır:</p>
+        <div class="grid md:grid-cols-2 gap-4 my-6">
+          <div class="bg-surface p-5 rounded-xl">
+            <h4 class="font-bold mb-3 text-black">Teknik Önlemler</h4>
+            <ul class="text-sm space-y-1">
+              <li>• SSL/TLS şifreleme</li>
+              <li>• Şifre hash'leme</li>
+              <li>• Güvenlik duvarı</li>
+              <li>• Düzenli güvenlik testleri</li>
+            </ul>
+          </div>
+          <div class="bg-surface p-5 rounded-xl">
+            <h4 class="font-bold mb-3 text-black">İdari Önlemler</h4>
+            <ul class="text-sm space-y-1">
+              <li>• Erişim yetkilendirmesi</li>
+              <li>• Log kayıtları</li>
+              <li>• Gizlilik sözleşmeleri</li>
+              <li>• Düzenli risk analizleri</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="text-center text-sm mt-12 pt-8 border-t border-border">
+          <p>© {{ now|date:"Y" }} Kuafora - Talha Colfaoğlu. Tüm hakları saklıdır.</p>
+          <p class="mt-3">Sorularınız için: <a href="mailto:kvkk@kuafora.com">kvkk@kuafora.com</a></p>
+        </div>
       </div>
     </div>
   </div>

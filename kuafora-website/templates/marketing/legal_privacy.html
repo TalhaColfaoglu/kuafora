@@ -3,59 +3,65 @@
 {% block title %}Kuafora Gizlilik Politikası{% endblock %}
 
 {% block content %}
-<section class="py-16 px-4 sm:px-6 lg:px-8 bg-white">
-  <div class="max-w-3xl mx-auto">
-    <h1 class="text-3xl font-semibold tracking-tight mb-6">Kuafora Gizlilik Politikası</h1>
-    <p class="text-sm text-gray-500 mb-10">Son güncelleme: {{ now|date:"d.m.Y" }}</p>
+<!-- Hero -->
+<section class="relative py-24 overflow-hidden">
+  <div class="absolute inset-0 bg-grid opacity-50"></div>
+  <div class="relative max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+    <span class="badge mb-6">Yasal</span>
+    <h1 class="font-display font-bold text-4xl sm:text-5xl tracking-tight">Gizlilik Politikası</h1>
+    <p class="mt-6 text-muted">Son güncelleme: {{ now|date:"d.m.Y" }}</p>
+  </div>
+</section>
 
-    <div class="prose prose-sm sm:prose-base max-w-none prose-headings:font-semibold prose-a:text-ayder">
-      <p>
-        Bu Gizlilik Politikası, Kuafora mobil uygulaması ve <code>kuafora.com</code> üzerinden sunulan hizmetler
-        kapsamında hangi kişisel verilerinizi hangi amaçlarla işlediğimiz ve nasıl koruduğumuz hakkında özet bilgi sunar.
-        Ayrıntılı bilgiler için “KVKK Aydınlatma Metni” esas alınmalıdır.
+<section class="py-16 bg-surface">
+  <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="bg-white rounded-2xl border border-border p-8 sm:p-12">
+      <p class="text-muted mb-8 leading-relaxed">
+        Bu Gizlilik Politikası, Kuafora mobil uygulaması ve <code class="bg-surface px-2 py-1 rounded text-sm">kuafora.com</code> üzerinden sunulan hizmetler kapsamında hangi kişisel verilerinizi hangi amaçlarla işlediğimiz ve nasıl koruduğumuz hakkında özet bilgi sunar. Ayrıntılı bilgiler için "KVKK Aydınlatma Metni" esas alınmalıdır.
       </p>
 
-      <h2>1. Toplanan Veriler</h2>
-      <p>
-        Kuafora’yı kullanırken; adınız, soyadınız, e‑posta adresiniz, (varsa) telefon numaranız, konum bilgileriniz,
-        uygulama içi işlem geçmişiniz ve cihaz/teknik bilgileriniz (IP, cihaz modeli vb.) işlenebilir.
-      </p>
+      <div class="prose prose-base max-w-none prose-headings:font-display prose-headings:font-bold prose-headings:text-black prose-p:text-muted prose-p:leading-relaxed prose-li:text-muted prose-strong:text-black">
+        
+        <h2 class="text-2xl mt-8 mb-6 pb-3 border-b border-border">1. Toplanan Veriler</h2>
+        <p>
+          Kuafora'yı kullanırken; adınız, soyadınız, e‑posta adresiniz, (varsa) telefon numaranız, konum bilgileriniz, uygulama içi işlem geçmişiniz ve cihaz/teknik bilgileriniz (IP, cihaz modeli vb.) işlenebilir.
+        </p>
 
-      <h2>2. Kullanım Amaçları</h2>
-      <ul>
-        <li>Kuaför keşfetme ve randevu deneyiminizi sağlamak ve geliştirmek,</li>
-        <li>Hesap ve oturum yönetimini yapmak,</li>
-        <li>Güvenlik ve kötüye kullanım tespitlerini gerçekleştirmek,</li>
-        <li>İstatistiksel analizler ve ürün geliştirme çalışmaları yürütmek,</li>
-        <li>Açık rızanız varsa kampanya ve bilgilendirme iletişimleri yapmak.</li>
-      </ul>
+        <h2 class="text-2xl mt-12 mb-6 pb-3 border-b border-border">2. Kullanım Amaçları</h2>
+        <ul class="space-y-2">
+          <li>Kuaför keşfetme ve randevu deneyiminizi sağlamak ve geliştirmek,</li>
+          <li>Hesap ve oturum yönetimini yapmak,</li>
+          <li>Güvenlik ve kötüye kullanım tespitlerini gerçekleştirmek,</li>
+          <li>İstatistiksel analizler ve ürün geliştirme çalışmaları yürütmek,</li>
+          <li>Açık rızanız varsa kampanya ve bilgilendirme iletişimleri yapmak.</li>
+        </ul>
 
-      <h2>3. Veri Paylaşımı</h2>
-      <p>
-        Hizmet sunumu için gerekli olduğu ölçüde verileriniz; kuaför/işletmeler, barındırma hizmeti sağlayan altyapı
-        firmaları ve kanunen yetkili kamu kurumları ile paylaşılabilir. Üçüncü taraflarla yapılacak tüm paylaşımlarda,
-        verilerinizin güvenliği için gerekli teknik ve idari tedbirler alınır.
-      </p>
+        <h2 class="text-2xl mt-12 mb-6 pb-3 border-b border-border">3. Veri Paylaşımı</h2>
+        <p>
+          Hizmet sunumu için gerekli olduğu ölçüde verileriniz; kuaför/işletmeler, barındırma hizmeti sağlayan altyapı firmaları ve kanunen yetkili kamu kurumları ile paylaşılabilir. Üçüncü taraflarla yapılacak tüm paylaşımlarda, verilerinizin güvenliği için gerekli teknik ve idari tedbirler alınır.
+        </p>
 
-      <h2>4. Saklama Süresi</h2>
-      <p>
-        Verileriniz; hesabınız aktif olduğu sürece ve ilgili mevzuatta öngörülen süreler boyunca saklanmakta, bu sürenin
-        sonunda silinmekte, yok edilmekte veya anonim hale getirilmektedir.
-      </p>
+        <h2 class="text-2xl mt-12 mb-6 pb-3 border-b border-border">4. Saklama Süresi</h2>
+        <p>
+          Verileriniz; hesabınız aktif olduğu sürece ve ilgili mevzuatta öngörülen süreler boyunca saklanmakta, bu sürenin sonunda silinmekte, yok edilmekte veya anonim hale getirilmektedir.
+        </p>
 
-      <h2>5. Haklarınız</h2>
-      <p>
-        KVKK m.11 uyarınca; verilerinize erişme, düzeltilmesini veya silinmesini talep etme, işleme faaliyetlerine
-        itiraz etme ve kanuna aykırı işleme sebebiyle zarara uğramanız halinde tazmin talep etme haklarına sahipsiniz.
-        Detaylı açıklama için “KVKK Aydınlatma Metni”ni inceleyebilirsiniz.
-      </p>
+        <h2 class="text-2xl mt-12 mb-6 pb-3 border-b border-border">5. Haklarınız</h2>
+        <p>
+          KVKK m.11 uyarınca; verilerinize erişme, düzeltilmesini veya silinmesini talep etme, işleme faaliyetlerine itiraz etme ve kanuna aykırı işleme sebebiyle zarara uğramanız halinde tazmin talep etme haklarına sahipsiniz. Detaylı açıklama için "KVKK Aydınlatma Metni"ni inceleyebilirsiniz.
+        </p>
 
-      <p>
-        Gizlilik ile ilgili sorularınız ve başvurularınız için: colfaoglutalha@example.com
-      </p>
+        <div class="bg-surface p-6 rounded-xl mt-12">
+          <p class="text-muted">
+            Gizlilik ile ilgili sorularınız ve başvurularınız için: <a href="mailto:destek@kuafora.com" class="text-black underline">destek@kuafora.com</a>
+          </p>
+        </div>
+
+        <div class="text-center text-sm mt-12 pt-8 border-t border-border">
+          <p>© {{ now|date:"Y" }} Kuafora - Talha Colfaoğlu. Tüm hakları saklıdır.</p>
+        </div>
+      </div>
     </div>
   </div>
 </section>
 {% endblock %}
-
-

@@ -1,473 +1,101 @@
 {% extends "base.html" %}
 
-{% block title %}Kuafora Çerez Politikası (Cookie Policy){% endblock %}
+{% block title %}Kuafora Çerez Politikası{% endblock %}
 
 {% block content %}
-<section class="py-16 px-4 sm:px-6 lg:px-8 bg-white">
-  <div class="max-w-4xl mx-auto">
-    <h1 class="text-4xl font-bold tracking-tight mb-6 text-gray-900">Kuafora Çerez Politikası (Cookie Policy)</h1>
-    <p class="text-sm text-gray-500 mb-4">Son güncelleme: {{ now|date:"d.m.Y" }}</p>
-    <p class="text-sm text-gray-600 mb-10 bg-blue-50 p-4 rounded-lg border border-blue-100">
-      <strong>Bilgilendirme:</strong> Bu Çerez Politikası, Kuafora web sitesi (<code class="bg-gray-100 px-1.5 py-0.5 rounded">kuafora.com</code>) ve mobil uygulamasında kullanılan çerezler ve benzeri teknolojiler hakkında sizi bilgilendirmek amacıyla hazırlanmıştır. Lütfen dikkatlice okuyunuz.
-    </p>
+<!-- Hero -->
+<section class="relative py-24 overflow-hidden">
+  <div class="absolute inset-0 bg-grid opacity-50"></div>
+  <div class="relative max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+    <span class="badge mb-6">Yasal</span>
+    <h1 class="font-display font-bold text-4xl sm:text-5xl tracking-tight">Çerez Politikası</h1>
+    <p class="mt-6 text-muted">Son güncelleme: {{ now|date:"d.m.Y" }}</p>
+  </div>
+</section>
 
-    <div class="prose prose-base max-w-none prose-headings:font-bold prose-headings:text-gray-900 prose-p:text-gray-700 prose-p:leading-relaxed prose-li:text-gray-700 prose-strong:text-gray-900">
-      
-      <h2 class="text-2xl mt-12 mb-6 pb-3 border-b-2 border-gray-200">1. Çerez (Cookie) Nedir?</h2>
-      
-      <h3 class="text-xl mt-8 mb-4">1.1. Genel Tanım</h3>
-      <p>
-        Çerezler (cookies), web siteleri ve mobil uygulamalar tarafından kullanıcının cihazına (bilgisayar, tablet, akıllı telefon) kaydedilen küçük metin dosyalarıdır. Bu dosyalar, kullanıcının site ve uygulama kullanım deneyimini iyileştirmek, tercihlerini hatırlamak, güvenliği sağlamak ve performansı ölçmek amacıyla kullanılır.
+<section class="py-16 bg-surface">
+  <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="bg-white rounded-2xl border border-border p-8 sm:p-12">
+      <p class="text-muted mb-8 leading-relaxed">
+        Bu Çerez Politikası, Kuafora web sitesi (<code class="bg-surface px-2 py-1 rounded text-sm">kuafora.com</code>) ve mobil uygulamasında kullanılan çerezler ve benzeri teknolojiler hakkında sizi bilgilendirmek amacıyla hazırlanmıştır.
       </p>
 
-      <h3 class="text-xl mt-8 mb-4">1.2. Çerezlerin İşleyişi</h3>
-      <p>
-        Bir web sitesini veya uygulamayı ziyaret ettiğinizde, site/uygulama tarayıcınıza veya cihazınıza bir çerez dosyası gönderir. Bu çerez, bir oturum boyunca veya belirli bir süre boyunca cihazınızda saklanır ve sonraki ziyaretlerinizde sizi tanımlamaya yardımcı olur.
-      </p>
+      <div class="prose prose-base max-w-none prose-headings:font-display prose-headings:font-bold prose-headings:text-black prose-p:text-muted prose-p:leading-relaxed prose-li:text-muted prose-strong:text-black">
+        
+        <h2 class="text-2xl mt-8 mb-6 pb-3 border-b border-border">1. Çerez Nedir?</h2>
+        <p>
+          Çerezler (cookies), web siteleri ve mobil uygulamalar tarafından kullanıcının cihazına kaydedilen küçük metin dosyalarıdır. Bu dosyalar, kullanıcının site ve uygulama kullanım deneyimini iyileştirmek, tercihlerini hatırlamak, güvenliği sağlamak ve performansı ölçmek amacıyla kullanılır.
+        </p>
 
-      <h3 class="text-xl mt-8 mb-4">1.3. Çerez Türleri (Süre Bazında)</h3>
-      <div class="space-y-4 my-6">
-        <div class="bg-white border border-gray-200 rounded-lg p-5 shadow-sm">
-          <h4 class="font-bold text-lg mb-2 text-blue-900">a) Oturum Çerezleri (Session Cookies)</h4>
-          <p class="text-sm text-gray-700">
-            Geçici çerezlerdir. Sadece tarayıcı oturumu süresince aktiftir ve tarayıcı kapatıldığında otomatik olarak silinir. Örneğin: oturum açma durumu, alışveriş sepeti içeriği.
-          </p>
-        </div>
-
-        <div class="bg-white border border-gray-200 rounded-lg p-5 shadow-sm">
-          <h4 class="font-bold text-lg mb-2 text-green-900">b) Kalıcı Çerezler (Persistent Cookies)</h4>
-          <p class="text-sm text-gray-700">
-            Belirli bir süre boyunca (günler, aylar veya yıllar) cihazınızda saklanan çerezlerdir. Tarayıcı kapatılsa bile silinmez; belirlenen süre dolana veya manuel olarak silinene kadar kalır. Örneğin: dil tercihi, "beni hatırla" seçeneği, analitik veriler.
-          </p>
-        </div>
-      </div>
-
-      <h3 class="text-xl mt-8 mb-4">1.4. Çerez Türleri (Sahiplik Bazında)</h3>
-      <div class="space-y-4 my-6">
-        <div class="bg-white border border-gray-200 rounded-lg p-5 shadow-sm">
-          <h4 class="font-bold text-lg mb-2 text-purple-900">a) Birinci Taraf Çerezler (First-Party Cookies)</h4>
-          <p class="text-sm text-gray-700">
-            Ziyaret ettiğiniz web sitesi veya uygulama (Kuafora) tarafından doğrudan oluşturulan ve yönetilen çerezlerdir. Bu çerezler, site/uygulamanın düzgün çalışması için gereklidir.
-          </p>
-        </div>
-
-        <div class="bg-white border border-gray-200 rounded-lg p-5 shadow-sm">
-          <h4 class="font-bold text-lg mb-2 text-orange-900">b) Üçüncü Taraf Çerezler (Third-Party Cookies)</h4>
-          <p class="text-sm text-gray-700">
-            Ziyaret ettiğiniz site dışında başka bir alan adına ait çerezlerdir. Genellikle analitik, reklam ve sosyal medya entegrasyonları için kullanılır. Örneğin: Google Analytics, Facebook Pixel, YouTube videoları.
-          </p>
-        </div>
-      </div>
-
-      <h2 class="text-2xl mt-12 mb-6 pb-3 border-b-2 border-gray-200">2. Kuafora'nın Kullandığı Çerez Kategorileri</h2>
-      
-      <p class="bg-yellow-50 p-4 rounded-lg border border-yellow-200 my-6">
-        <strong>Önemli:</strong> Kuafora, web sitesi ve mobil uygulamasında aşağıdaki çerez kategorilerini kullanmaktadır. Her kategori, farklı amaçlara hizmet eder.
-      </p>
-
-      <div class="space-y-8 my-10">
-        <div class="border-2 border-red-300 rounded-xl p-6 bg-red-50">
-          <div class="flex items-center mb-4">
-            <span class="inline-block w-10 h-10 rounded-full bg-red-500 text-white flex items-center justify-center mr-3 text-lg font-bold">1</span>
-            <h3 class="text-2xl font-bold text-red-900">Zorunlu / Teknik Çerezler (Strictly Necessary Cookies)</h3>
-          </div>
-          <p class="text-gray-700 mb-4">
-            Bu çerezler, web sitesinin veya uygulamanın temel işlevlerinin çalışması için <strong>mutlaka gereklidir</strong>. Bu çerezler olmadan site/uygulama düzgün çalışmaz. Bu nedenle, bu çerezler için önceden rıza alınmasına gerek yoktur (KVKK ve İlgili mevzuat gereği).
-          </p>
-          
-          <h4 class="font-bold mt-6 mb-3 text-lg">Kullanım Amaçları:</h4>
-          <ul class="list-disc ml-6 space-y-2 mb-4">
-            <li><strong>Oturum Yönetimi:</strong> Kullanıcının giriş yapması, oturumun devam etmesi ve güvenli çıkış yapması</li>
-            <li><strong>Güvenlik:</strong> CSRF (Cross-Site Request Forgery) saldırılarını önleme, güvenlik token'larının yönetimi</li>
-            <li><strong>Yük Dengeleme:</strong> Sunucular arası trafiğin dengelenmesi</li>
-            <li><strong>Temel Fonksiyonlar:</strong> Sepet içeriği (gelecekte), form verilerinin geçici saklanması, çoklu adım işlemlerin takibi</li>
-            <li><strong>Dil ve Bölge Ayarları:</strong> Seçtiğiniz dil ve bölge tercihlerinin hatırlanması</li>
-          </ul>
-
-          <h4 class="font-bold mt-6 mb-3 text-lg">Örnek Çerezler:</h4>
-          <div class="bg-white rounded p-4 border border-red-200">
-            <table class="w-full text-sm">
-              <thead>
-                <tr class="border-b border-gray-300">
-                  <th class="text-left py-2 px-3">Çerez Adı</th>
-                  <th class="text-left py-2 px-3">Amaç</th>
-                  <th class="text-left py-2 px-3">Süre</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr class="border-b border-gray-200">
-                  <td class="py-2 px-3"><code class="bg-gray-100 px-2 py-1 rounded">sessionid</code></td>
-                  <td class="py-2 px-3">Oturum kimliği</td>
-                  <td class="py-2 px-3">Oturum süresi</td>
-                </tr>
-                <tr class="border-b border-gray-200">
-                  <td class="py-2 px-3"><code class="bg-gray-100 px-2 py-1 rounded">csrftoken</code></td>
-                  <td class="py-2 px-3">CSRF koruması</td>
-                  <td class="py-2 px-3">1 yıl</td>
-                </tr>
-                <tr class="border-b border-gray-200">
-                  <td class="py-2 px-3"><code class="bg-gray-100 px-2 py-1 rounded">lang</code></td>
-                  <td class="py-2 px-3">Dil tercihi</td>
-                  <td class="py-2 px-3">1 yıl</td>
-                </tr>
-                <tr>
-                  <td class="py-2 px-3"><code class="bg-gray-100 px-2 py-1 rounded">cookie_consent</code></td>
-                  <td class="py-2 px-3">Çerez tercihleriniz</td>
-                  <td class="py-2 px-3">1 yıl</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-
-          <p class="mt-4 p-3 bg-red-100 rounded border border-red-300 text-sm">
-            <strong>Önemli:</strong> Zorunlu çerezleri engellemek, site/uygulamanın çalışmamasına veya hatalı çalışmasına neden olabilir. Bu çerezler devre dışı bırakılamaz.
-          </p>
-        </div>
-
-        <div class="border-2 border-blue-300 rounded-xl p-6 bg-blue-50">
-          <div class="flex items-center mb-4">
-            <span class="inline-block w-10 h-10 rounded-full bg-blue-500 text-white flex items-center justify-center mr-3 text-lg font-bold">2</span>
-            <h3 class="text-2xl font-bold text-blue-900">Performans / Analitik Çerezler (Performance / Analytics Cookies)</h3>
-          </div>
-          <p class="text-gray-700 mb-4">
-            Bu çerezler, web sitesi ve uygulamanın performansını ölçmek, hangi sayfaların daha çok ziyaret edildiğini, kullanıcı davranışlarını anlamak ve hizmetimizi iyileştirmek için kullanılır. Bu çerezler topladığı veriler <strong>anonim veya takma adlı (pseudonymized)</strong> şekildedir ve kişisel kimliğinizi doğrudan belirlemez.
-          </p>
-          
-          <h4 class="font-bold mt-6 mb-3 text-lg">Kullanım Amaçları:</h4>
-          <ul class="list-disc ml-6 space-y-2 mb-4">
-            <li><strong>Ziyaret İstatistikleri:</strong> Kaç kişinin siteyi ziyaret ettiği, ortalama oturum süresi, sayfa görüntüleme sayısı</li>
-            <li><strong>Kullanıcı Davranış Analizi:</strong> Hangi özelliklerin daha çok kullanıldığı, hangi sayfalarda zaman geçirildiği</li>
-            <li><strong>Hata Tespiti:</strong> Hangi sayfalarda hata alındığı, çökme (crash) raporları</li>
-            <li><strong>Performans Ölçümü:</strong> Sayfa yükleme süreleri, sunucu yanıt süreleri</li>
-            <li><strong>A/B Testler:</strong> Yeni özelliklerin test edilmesi, hangisinin daha iyi performans gösterdiğinin ölçülmesi</li>
-          </ul>
-
-          <h4 class="font-bold mt-6 mb-3 text-lg">Kullanılan Servisler ve Çerezler:</h4>
-          <div class="bg-white rounded p-4 border border-blue-200 space-y-4">
-            <div>
-              <h5 class="font-bold mb-2">Google Analytics</h5>
-              <p class="text-sm mb-2">Kullanım istatistikleri ve davranış analizleri için kullanılır.</p>
-              <table class="w-full text-sm">
-                <thead>
-                  <tr class="border-b border-gray-300">
-                    <th class="text-left py-2 px-3">Çerez Adı</th>
-                    <th class="text-left py-2 px-3">Amaç</th>
-                    <th class="text-left py-2 px-3">Süre</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr class="border-b border-gray-200">
-                    <td class="py-2 px-3"><code class="bg-gray-100 px-2 py-1 rounded">_ga</code></td>
-                    <td class="py-2 px-3">Kullanıcı ayırt etme</td>
-                    <td class="py-2 px-3">2 yıl</td>
-                  </tr>
-                  <tr class="border-b border-gray-200">
-                    <td class="py-2 px-3"><code class="bg-gray-100 px-2 py-1 rounded">_ga_*</code></td>
-                    <td class="py-2 px-3">Oturum durumu</td>
-                    <td class="py-2 px-3">2 yıl</td>
-                  </tr>
-                  <tr>
-                    <td class="py-2 px-3"><code class="bg-gray-100 px-2 py-1 rounded">_gid</code></td>
-                    <td class="py-2 px-3">Kullanıcı ayırt etme</td>
-                    <td class="py-2 px-3">24 saat</td>
-                  </tr>
-                </tbody>
-              </table>
-              <p class="text-xs text-gray-600 mt-2">Google Analytics hakkında detaylı bilgi: <a href="https://policies.google.com/privacy" class="text-blue-600 hover:underline">Google Gizlilik Politikası</a></p>
-            </div>
-
-            <div>
-              <h5 class="font-bold mb-2">Firebase Analytics (Mobil Uygulama)</h5>
-              <p class="text-sm mb-2">Mobil uygulama kullanım metrikleri ve çökme raporları için kullanılır.</p>
-              <ul class="list-disc ml-6 text-sm">
-                <li>Cihaz türü, işletim sistemi, uygulama sürümü</li>
-                <li>Kullanım sıklığı, oturum süreleri</li>
-                <li>Hata ve çökme logları</li>
-              </ul>
-            </div>
-          </div>
-
-          <p class="mt-4 p-3 bg-blue-100 rounded border border-blue-300 text-sm">
-            <strong>İzin:</strong> Bu çerezler için önceden rızanız alınmaktadır. Çerez tercihlerinizden analitik çerezleri devre dışı bırakabilirsiniz.
-          </p>
-        </div>
-
-        <div class="border-2 border-green-300 rounded-xl p-6 bg-green-50">
-          <div class="flex items-center mb-4">
-            <span class="inline-block w-10 h-10 rounded-full bg-green-500 text-white flex items-center justify-center mr-3 text-lg font-bold">3</span>
-            <h3 class="text-2xl font-bold text-green-900">İşlevsel Çerezler (Functional Cookies)</h3>
-          </div>
-          <p class="text-gray-700 mb-4">
-            Bu çerezler, web sitesinin ve uygulamanın daha gelişmiş özelliklerini sunmak ve kullanıcı deneyimini kişiselleştirmek için kullanılır. Bu çerezler olmadan bazı özellikler çalışmayabilir, ancak temel işlevler etkilenmez.
-          </p>
-          
-          <h4 class="font-bold mt-6 mb-3 text-lg">Kullanım Amaçları:</h4>
-          <ul class="list-disc ml-6 space-y-2 mb-4">
-            <li><strong>Kişiselleştirilmiş İçerik:</strong> Size özel kuaför önerileri, konumunuza göre sonuçlar</li>
-            <li><strong>Tercihler:</strong> Karanlık mod / aydınlık mod, font boyutu, bildirim tercihleri</li>
-            <li><strong>Sosyal Medya Entegrasyonu:</strong> YouTube videoları, Facebook/Instagram paylaşımları</li>
-            <li><strong>Harita Servisleri:</strong> Google Maps ile konum gösterimi</li>
-            <li><strong>Chat/Mesajlaşma:</strong> Canlı destek widget'ları</li>
-          </ul>
-
-          <h4 class="font-bold mt-6 mb-3 text-lg">Örnek Çerezler:</h4>
-          <div class="bg-white rounded p-4 border border-green-200">
-            <table class="w-full text-sm">
-              <thead>
-                <tr class="border-b border-gray-300">
-                  <th class="text-left py-2 px-3">Çerez Adı</th>
-                  <th class="text-left py-2 px-3">Amaç</th>
-                  <th class="text-left py-2 px-3">Süre</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr class="border-b border-gray-200">
-                  <td class="py-2 px-3"><code class="bg-gray-100 px-2 py-1 rounded">theme</code></td>
-                  <td class="py-2 px-3">Tema tercihi</td>
-                  <td class="py-2 px-3">1 yıl</td>
-                </tr>
-                <tr class="border-b border-gray-200">
-                  <td class="py-2 px-3"><code class="bg-gray-100 px-2 py-1 rounded">last_location</code></td>
-                  <td class="py-2 px-3">Son arama konumu</td>
-                  <td class="py-2 px-3">30 gün</td>
-                </tr>
-                <tr>
-                  <td class="py-2 px-3"><code class="bg-gray-100 px-2 py-1 rounded">player_volume</code></td>
-                  <td class="py-2 px-3">Video ses seviyesi</td>
-                  <td class="py-2 px-3">6 ay</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-
-          <p class="mt-4 p-3 bg-green-100 rounded border border-green-300 text-sm">
-            <strong>İzin:</strong> Bu çerezler için tercihen rızanız alınmaktadır. Ancak bazı işlevsel çerezler, hizmetin düzgün sunulması için meşru menfaat hukuki sebebine dayanabilir.
-          </p>
-        </div>
-
-        <div class="border-2 border-purple-300 rounded-xl p-6 bg-purple-50">
-          <div class="flex items-center mb-4">
-            <span class="inline-block w-10 h-10 rounded-full bg-purple-500 text-white flex items-center justify-center mr-3 text-lg font-bold">4</span>
-            <h3 class="text-2xl font-bold text-purple-900">Hedefleme / Reklam Çerezleri (Targeting / Advertising Cookies)</h3>
-          </div>
-          <p class="text-gray-700 mb-4">
-            Bu çerezler, size ve ilgi alanlarınıza özel reklamlar göstermek, reklam etkinliğini ölçmek ve reklam sıklığını sınırlamak için kullanılır. Şu anda Kuafora'da <strong>aktif olarak kullanılmamaktadır</strong>, ancak gelecekte eklenebilir.
-          </p>
-          
-          <h4 class="font-bold mt-6 mb-3 text-lg">Kullanım Amaçları (Gelecek İçin):</h4>
-          <ul class="list-disc ml-6 space-y-2 mb-4">
-            <li><strong>İlgi Alanlarınıza Göre Reklamlar:</strong> Aradığınız kuaför türlerine göre özel kampanyalar</li>
-            <li><strong>Yeniden Hedefleme (Retargeting):</strong> Ziyaret ettiğiniz salonların reklamlarını başka sitelerde gösterme</li>
-            <li><strong>Reklam Performansı:</strong> Hangi reklamların daha etkili olduğunu ölçme</li>
-            <li><strong>Sosyal Medya Reklamları:</strong> Facebook Pixel, Instagram, TikTok pixel'leri</li>
-          </ul>
-
-          <h4 class="font-bold mt-6 mb-3 text-lg">Potansiyel Servisler:</h4>
-          <div class="bg-white rounded p-4 border border-purple-200">
-            <ul class="list-disc ml-6 text-sm space-y-2">
-              <li>Google Ads / Google AdSense</li>
-              <li>Facebook Pixel</li>
-              <li>Instagram Ads</li>
-              <li>TikTok Pixel</li>
-              <li>Üçüncü taraf reklam ağları</li>
+        <h2 class="text-2xl mt-12 mb-6 pb-3 border-b border-border">2. Kullandığımız Çerez Kategorileri</h2>
+        
+        <div class="space-y-6 my-8">
+          <div class="bg-black text-white p-6 rounded-xl">
+            <h3 class="font-bold text-xl mb-3">Zorunlu Çerezler</h3>
+            <p class="opacity-80 mb-4">Bu çerezler, web sitesinin temel işlevlerinin çalışması için mutlaka gereklidir.</p>
+            <ul class="opacity-80 space-y-2 text-sm">
+              <li>• Oturum yönetimi</li>
+              <li>• Güvenlik (CSRF koruması)</li>
+              <li>• Dil ve bölge ayarları</li>
             </ul>
           </div>
 
-          <p class="mt-4 p-3 bg-purple-100 rounded border border-purple-300 text-sm">
-            <strong>Durum:</strong> Şu anda reklam çerezleri kullanılmamaktadır. Gelecekte kullanılacak olursa, <strong>mutlaka önceden açık rızanız alınacaktır</strong> ve çerez ayarlarınızdan kolayca devre dışı bırakabileceksiniz.
-          </p>
-        </div>
-      </div>
+          <div class="bg-surface p-6 rounded-xl border">
+            <h3 class="font-bold text-xl mb-3 text-black">Performans/Analitik Çerezler</h3>
+            <p class="text-muted mb-4">Web sitesi performansını ölçmek ve iyileştirmek için kullanılır.</p>
+            <ul class="text-muted space-y-2 text-sm">
+              <li>• Ziyaret istatistikleri</li>
+              <li>• Kullanıcı davranış analizi</li>
+              <li>• Hata tespiti</li>
+            </ul>
+          </div>
 
-      <h2 class="text-2xl mt-12 mb-6 pb-3 border-b-2 border-gray-200">3. Mobil Uygulamada Kullanılan Benzeri Teknolojiler</h2>
-      
-      <p class="my-6">
-        Kuafora mobil uygulamasında, çerezlere benzer şekilde çalışan aşağıdaki teknolojiler kullanılmaktadır:
-      </p>
-
-      <div class="space-y-4 my-6">
-        <div class="bg-white border border-gray-200 rounded-lg p-5 shadow-sm">
-          <h4 class="font-bold text-lg mb-2">a) Yerel Depolama (Local Storage / AsyncStorage)</h4>
-          <p class="text-sm text-gray-700">
-            Kullanıcı tercihleri, önbellek verileri ve geçici oturum bilgileri cihazınızda yerel olarak saklanır. Bu veriler, uygulama silinene kadar kalabilir.
-          </p>
-        </div>
-
-        <div class="bg-white border border-gray-200 rounded-lg p-5 shadow-sm">
-          <h4 class="font-bold text-lg mb-2">b) Cihaz Kimlikleri (Device IDs)</h4>
-          <p class="text-sm text-gray-700">
-            Mobil cihazın benzersiz kimliği (Advertising ID, IDFA, Android ID) performans takibi, hata raporlama ve (gelecekte) reklam hedefleme için kullanılabilir. Bu kimlikler cihaz ayarlarından sıfırlanabilir.
-          </p>
+          <div class="bg-surface p-6 rounded-xl border">
+            <h3 class="font-bold text-xl mb-3 text-black">İşlevsel Çerezler</h3>
+            <p class="text-muted mb-4">Kullanıcı deneyimini kişiselleştirmek için kullanılır.</p>
+            <ul class="text-muted space-y-2 text-sm">
+              <li>• Tema tercihi</li>
+              <li>• Son arama konumu</li>
+              <li>• Sosyal medya entegrasyonu</li>
+            </ul>
+          </div>
         </div>
 
-        <div class="bg-white border border-gray-200 rounded-lg p-5 shadow-sm">
-          <h4 class="font-bold text-lg mb-2">c) SDK'lar (Software Development Kits)</h4>
-          <p class="text-sm text-gray-700">
-            Üçüncü taraf SDK'lar (Firebase, Google Analytics, Crash Reporting vb.) uygulama içinde çalışarak veri toplar. Bu SDK'ların gizlilik politikaları ilgili servis sağlayıcıların web sitelerinde bulunabilir.
-          </p>
-        </div>
-
-        <div class="bg-white border border-gray-200 rounded-lg p-5 shadow-sm">
-          <h4 class="font-bold text-lg mb-2">d) Push Bildirim Token'ları</h4>
-          <p class="text-sm text-gray-700">
-            Size push bildirim göndermek için FCM (Firebase Cloud Messaging) veya APNS (Apple Push Notification Service) token'ları kullanılır. Bu token'lar cihaza özeldir ve kişisel kimliğinizi doğrudan belirlemez.
-          </p>
-        </div>
-      </div>
-
-      <h2 class="text-2xl mt-12 mb-6 pb-3 border-b-2 border-gray-200">4. Çerezleri Nasıl Kontrol Edebilirsiniz?</h2>
-      
-      <h3 class="text-xl mt-8 mb-4">4.1. Kuafora Çerez Tercihleri</h3>
-      <p class="bg-green-50 p-5 rounded-lg border border-green-200 my-6">
-        Kuafora web sitesini ilk ziyaret ettiğinizde, ekranın alt kısmında bir <strong>çerez onay banner'ı</strong> göreceksiniz. Bu banner'dan:
-      </p>
-      <ul class="space-y-2 my-4">
-        <li><strong>"Tümünü Kabul Et":</strong> Tüm çerez kategorilerini (zorunlu, analitik, işlevsel, reklam) kabul edersiniz.</li>
-        <li><strong>"Sadece Zorunlu Çerezler":</strong> Sadece zorunlu çerezleri kabul edersiniz, diğerleri devre dışı kalır.</li>
-        <li><strong>"Çerez Ayarları":</strong> Her çerez kategorisini ayrı ayrı açıp kapatabilirsiniz.</li>
-      </ul>
-      <p class="text-sm text-gray-600 mt-4">
-        Tercihlerinizi istediğiniz zaman değiştirebilirsiniz. Web sitesi alt kısmında bulunan "Çerez Ayarları" linkine tıklayarak tercihlerinizi yönetebilirsiniz.
-      </p>
-
-      <h3 class="text-xl mt-8 mb-4">4.2. Tarayıcı Ayarları Üzerinden Çerez Yönetimi</h3>
-      <p class="my-6">
-        Tüm modern tarayıcılar, çerezleri yönetmenize olanak tanır. Tarayıcınızın ayarlar menüsünden:
-      </p>
-      <ul class="space-y-2 my-4">
-        <li>Mevcut çerezleri görüntüleyebilir,</li>
-        <li>Belirli çerezleri silebilir,</li>
-        <li>Tüm çerezleri engelleyebilir,</li>
-        <li>Üçüncü taraf çerezleri engelleyebilir,</li>
-        <li>Tarayıcı kapandığında otomatik çerez silinmesini aktifleştirebilirsiniz.</li>
-      </ul>
-
-      <div class="bg-gray-50 p-6 rounded-lg border border-gray-200 my-8">
-        <h4 class="font-bold text-lg mb-4">Popüler Tarayıcılar için Çerez Ayarları:</h4>
-        <ul class="space-y-3">
-          <li>
-            <strong>Google Chrome:</strong> Ayarlar → Gizlilik ve güvenlik → Çerezler ve diğer site verileri<br>
-            <a href="https://support.google.com/chrome/answer/95647" class="text-blue-600 hover:underline text-sm">Detaylı yardım</a>
-          </li>
-          <li>
-            <strong>Safari:</strong> Tercihler → Gizlilik → Çerezleri engelle<br>
-            <a href="https://support.apple.com/tr-tr/guide/safari/sfri11471/mac" class="text-blue-600 hover:underline text-sm">Detaylı yardım</a>
-          </li>
-          <li>
-            <strong>Firefox:</strong> Ayarlar → Gizlilik ve Güvenlik → Çerezler ve Site Verileri<br>
-            <a href="https://support.mozilla.org/tr/kb/cerezleri-silme" class="text-blue-600 hover:underline text-sm">Detaylı yardım</a>
-          </li>
-          <li>
-            <strong>Microsoft Edge:</strong> Ayarlar → Gizlilik, arama ve hizmetler → Çerezler<br>
-            <a href="https://support.microsoft.com/tr-tr/microsoft-edge/microsoft-edge-de-%C3%A7erezleri-silme-63947406-40ac-c3b8-57b9-2a946a29ae09" class="text-blue-600 hover:underline text-sm">Detaylı yardım</a>
-          </li>
-        </ul>
-      </div>
-
-      <p class="bg-yellow-50 border-l-4 border-yellow-400 p-4 my-6">
-        <strong>Uyarı:</strong> Çerezleri tamamen engellemek veya silmek, Kuafora ve diğer web sitelerinin bazı özelliklerinin düzgün çalışmamasına neden olabilir. Örneğin: Oturum açamama, tercihlerinizin hatırlanmaması, bazı sayfaların yüklenmemesi.
-      </p>
-
-      <h3 class="text-xl mt-8 mb-4">4.3. Mobil Uygulama İzinleri</h3>
-      <p class="my-6">
-        Kuafora mobil uygulamasında, cihaz ayarlarından aşağıdaki izinleri kontrol edebilirsiniz:
-      </p>
-      <ul class="space-y-2 my-4">
-        <li><strong>iOS:</strong> Ayarlar → Kuafora → İzinler (Konum, Bildirimler, Kamera, Fotoğraflar)</li>
-        <li><strong>Android:</strong> Ayarlar → Uygulamalar → Kuafora → İzinler</li>
-      </ul>
-      <p class="my-4">
-        Ayrıca, reklam ID'nizi sıfırlayarak veya reklam takibini sınırlayarak kişiselleştirilmiş reklamları engelleyebilirsiniz:
-      </p>
-      <ul class="space-y-2 my-4">
-        <li><strong>iOS:</strong> Ayarlar → Gizlilik → Apple Advertising → Kişiselleştirilmiş Reklamları Sınırla</li>
-        <li><strong>Android:</strong> Ayarlar → Google → Reklamlar → Reklam Kimliğini Sıfırla veya İlgi Alanına Dayalı Reklamları Devre Dışı Bırak</li>
-      </ul>
-
-      <h3 class="text-xl mt-8 mb-4">4.4. Çerez Ret Linkleri (Opt-Out)</h4>
-      <p class="my-6">
-        Bazı üçüncü taraf servislerin çerezlerinden çıkabilirsiniz:
-      </p>
-      <ul class="space-y-2 my-4">
-        <li><strong>Google Analytics:</strong> <a href="https://tools.google.com/dlpage/gaoptout" class="text-blue-600 hover:underline">Google Analytics Opt-Out Browser Add-on</a></li>
-        <li><strong>Genel Reklam Ağları:</strong> <a href="http://www.youronlinechoices.eu/" class="text-blue-600 hover:underline">Your Online Choices (EU)</a> veya <a href="https://www.networkadvertising.org/choices/" class="text-blue-600 hover:underline">NAI Opt-Out Tool</a></li>
-      </ul>
-
-      <h2 class="text-2xl mt-12 mb-6 pb-3 border-b-2 border-gray-200">5. Kişisel Veriler ve KVKK İlişkisi</h2>
-      
-      <p class="my-6">
-        Çerezler aracılığıyla toplanan veriler, 6698 sayılı Kişisel Verilerin Korunması Kanunu ("KVKK") kapsamında <strong>kişisel veri</strong> niteliğindedir (özellikle IP adresi, cihaz kimliği, kullanıcı ID'si gibi dolaylı tanımlayıcılar).
-      </p>
-      <p class="my-6">
-        Bu verilerin işlenmesi, KVKK'ya tam uyum sağlanarak yapılmaktadır. Detaylı bilgi için lütfen "<strong>Kuafora KVKK Aydınlatma Metni</strong>" belgesini inceleyiniz.
-      </p>
-      <ul class="space-y-2 my-4">
-        <li><strong>Veri Sorumlusu:</strong> Talha Colfaoğlu</li>
-        <li><strong>İşlenme Amaçları:</strong> Hizmet sunumu, güvenlik, performans ölçümü, kişiselleştirme</li>
-        <li><strong>Hukuki Sebepler:</strong> Sözleşme ifası, meşru menfaat, açık rıza (çerez türüne bağlı)</li>
-        <li><strong>Saklama Süreleri:</strong> Çerez türüne göre birkaç saatten 2 yıla kadar değişir</li>
-        <li><strong>Haklarınız:</strong> KVKK m.11 uyarınca bilgi talep etme, düzeltme, silme, itiraz etme haklarına sahipsiniz</li>
-      </ul>
-
-      <h2 class="text-2xl mt-12 mb-6 pb-3 border-b-2 border-gray-200">6. Uluslararası Veri Aktarımı</h2>
-      
-      <p class="my-6">
-        Bazı çerezler ve üçüncü taraf servisler (Google Analytics, Firebase vb.) yurt dışında konumlanmış sunucularda veri işleyebilir. Bu durumda, KVKK'nın 9. maddesi uyarınca yeterli koruma sağlanması veya açık rızanızın alınması gerekmektedir.
-      </p>
-      <p class="my-6">
-        Kuafora, yurt dışı veri aktarımlarında AB Genel Veri Koruma Tüzüğü (GDPR) ve KVKK standartlarına uygun hareket eder. Google, Firebase gibi global servisler, uluslararası standartlara (Privacy Shield, Standard Contractual Clauses vb.) uyum sağlamaktadır.
-      </p>
-
-      <h2 class="text-2xl mt-12 mb-6 pb-3 border-b-2 border-gray-200">7. Çocukların Gizliliği</h2>
-      
-      <p class="bg-red-50 p-5 rounded-lg border border-red-200 my-6">
-        Kuafora, <strong>18 yaşından küçük kişilerden</strong> bilerek kişisel veri toplamaz ve çerez kullanmaz. Eğer 18 yaşından küçükseniz, platformu kullanmadan önce veli/vasi izni almanız gerekmektedir. Ebeveynler, çocuklarının internet kullanımını ve çerez ayarlarını denetlemelidir.
-      </p>
-
-      <h2 class="text-2xl mt-12 mb-6 pb-3 border-b-2 border-gray-200">8. Çerez Politikasının Güncellenmesi</h2>
-      
-      <p class="my-6">
-        İşbu Çerez Politikası, yasal mevzuatta değişiklik olması, yeni çerez türlerinin kullanılmaya başlanması, hizmetlerin genişletilmesi veya daraltılması gibi durumlarda güncellenebilir. Güncellemeler, <code class="bg-gray-100 px-2 py-1 rounded">kuafora.com</code> web sitesinde yayımlandığı andan itibaren yürürlüğe girer.
-      </p>
-      <p class="my-6">
-        Önemli değişiklikler için e-posta veya uygulama içi bildirim ile haberdar edilmeye çalışılırsınız. Politikayı düzenli olarak kontrol etmeniz önerilir.
-      </p>
-
-      <h2 class="text-2xl mt-12 mb-6 pb-3 border-b-2 border-gray-200">9. İletişim ve Sorular</h2>
-      
-      <p class="my-6">
-        Çerez Politikası hakkında sorularınız veya talepleriniz için bizimle iletişime geçebilirsiniz:
-      </p>
-      <div class="bg-gray-50 p-6 rounded-lg border border-gray-200 my-6">
-        <p class="font-bold text-lg mb-3">İletişim Bilgileri</p>
-        <p><strong>Veri Sorumlusu:</strong> Talha Colfaoğlu</p>
-        <p><strong>E-posta:</strong> <a href="mailto:gizlilik@kuafora.com" class="text-blue-600 hover:underline">gizlilik@kuafora.com</a></p>
-        <p><strong>Çerez Soruları:</strong> <a href="mailto:cerez@kuafora.com" class="text-blue-600 hover:underline">cerez@kuafora.com</a></p>
-        <p><strong>Web Sitesi:</strong> <a href="https://kuafora.com" class="text-blue-600 hover:underline">https://kuafora.com</a></p>
-      </div>
-
-      <h2 class="text-2xl mt-12 mb-6 pb-3 border-b-2 border-gray-200">10. İlgili Belgeler</h2>
-      
-      <p class="my-6">
-        Gizlilik ve kişisel verileriniz hakkında daha fazla bilgi için aşağıdaki belgeleri inceleyebilirsiniz:
-      </p>
-      <ul class="space-y-2 my-4">
-        <li><a href="/legal/terms" class="text-blue-600 hover:underline font-medium">Kuafora Kullanıcı Sözleşmesi ve Kullanım Koşulları</a></li>
-        <li><a href="/legal/kvkk" class="text-blue-600 hover:underline font-medium">Kuafora KVKK Aydınlatma Metni</a></li>
-        <li><a href="https://www.kvkk.gov.tr" class="text-blue-600 hover:underline font-medium">Kişisel Verileri Koruma Kurumu (KVKK)</a></li>
-      </ul>
-
-      <div class="bg-blue-50 border-l-4 border-blue-500 p-6 my-10">
-        <p class="font-bold text-lg mb-2">Kabul Beyanı</p>
-        <p class="text-gray-700">
-          Kuafora web sitesini ve mobil uygulamasını kullanarak, işbu Çerez Politikası'nı okuduğunuzu, anladığınızı ve kabul ettiğinizi beyan edersiniz. Çerez tercihlerinizi dilediğiniz zaman değiştirebilirsiniz.
+        <h2 class="text-2xl mt-12 mb-6 pb-3 border-b border-border">3. Çerezleri Nasıl Kontrol Edebilirsiniz?</h2>
+        <p>
+          Kuafora web sitesini ilk ziyaret ettiğinizde, ekranın alt kısmında bir çerez onay banner'ı göreceksiniz. Bu banner'dan çerez tercihlerinizi yönetebilirsiniz.
         </p>
-      </div>
+        <p class="mt-4">
+          Ayrıca tarayıcınızın ayarlarından çerezleri yönetebilir, engelleyebilir veya silebilirsiniz.
+        </p>
 
-      <div class="text-center text-sm text-gray-500 mt-12 pt-8 border-t border-gray-200">
-        <p>© {{ now|date:"Y" }} Kuafora - Talha Colfaoğlu. Tüm hakları saklıdır.</p>
-        <p class="mt-2">Son güncelleme: {{ now|date:"d.m.Y" }}</p>
-        <p class="mt-3">Sorularınız için: <a href="mailto:cerez@kuafora.com" class="text-blue-600 hover:underline">cerez@kuafora.com</a></p>
+        <div class="bg-surface p-6 rounded-xl my-6">
+          <h4 class="font-bold mb-4 text-black">Tarayıcı Çerez Ayarları:</h4>
+          <ul class="space-y-2 text-sm">
+            <li><strong>Chrome:</strong> Ayarlar → Gizlilik ve güvenlik → Çerezler</li>
+            <li><strong>Safari:</strong> Tercihler → Gizlilik → Çerezleri engelle</li>
+            <li><strong>Firefox:</strong> Ayarlar → Gizlilik ve Güvenlik → Çerezler</li>
+            <li><strong>Edge:</strong> Ayarlar → Gizlilik → Çerezler</li>
+          </ul>
+        </div>
+
+        <h2 class="text-2xl mt-12 mb-6 pb-3 border-b border-border">4. Kişisel Veriler ve KVKK</h2>
+        <p>
+          Çerezler aracılığıyla toplanan veriler, 6698 sayılı Kişisel Verilerin Korunması Kanunu kapsamında kişisel veri niteliğindedir. Bu verilerin işlenmesi KVKK'ya uygun olarak yapılmaktadır.
+        </p>
+        <p class="mt-4">
+          Detaylı bilgi için "<strong>KVKK Aydınlatma Metni</strong>" belgesini inceleyiniz.
+        </p>
+
+        <h2 class="text-2xl mt-12 mb-6 pb-3 border-b border-border">5. İletişim</h2>
+        <div class="bg-surface p-6 rounded-xl">
+          <p class="font-bold mb-2 text-black">Sorularınız için:</p>
+          <p><a href="mailto:destek@kuafora.com" class="text-black underline">destek@kuafora.com</a></p>
+        </div>
+
+        <div class="text-center text-sm mt-12 pt-8 border-t border-border">
+          <p>© {{ now|date:"Y" }} Kuafora - Talha Colfaoğlu. Tüm hakları saklıdır.</p>
+        </div>
       </div>
     </div>
   </div>
