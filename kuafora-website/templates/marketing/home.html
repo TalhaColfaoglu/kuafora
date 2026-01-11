@@ -1,604 +1,584 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Kuafora — Kuaförünü Keşfet, Randevunu Al{% endblock %}
+{% block title %}Kuafora — Kuaförünü Keşfet, Anında Randevu Al{% endblock %}
 
 {% block content %}
 <!-- Hero Section -->
-<section class="relative min-h-[90vh] flex items-center overflow-hidden">
-  <!-- Background Elements -->
-  <div class="absolute inset-0 bg-grid opacity-50"></div>
-  <div class="blur-decoration -top-48 -right-48 opacity-30"></div>
-  <div class="blur-decoration -bottom-48 -left-48 opacity-30"></div>
+<section class="relative min-h-screen flex items-center overflow-hidden bg-white">
+  <!-- Subtle background pattern -->
+  <div class="absolute inset-0 opacity-[0.03]" style="background-image: url('data:image/svg+xml,<svg width=&quot;60&quot; height=&quot;60&quot; viewBox=&quot;0 0 60 60&quot; xmlns=&quot;http://www.w3.org/2000/svg&quot;><g fill=&quot;none&quot; fill-rule=&quot;evenodd&quot;><g fill=&quot;%23000&quot; fill-opacity=&quot;1&quot;><path d=&quot;M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z&quot;/></g></g></svg>');"></div>
   
-  <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
-    <div class="grid lg:grid-cols-2 gap-16 items-center">
+  <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 lg:py-32">
+    <div class="grid lg:grid-cols-2 gap-16 lg:gap-24 items-center">
       <!-- Left Content -->
       <div data-reveal>
-        <div class="inline-flex items-center gap-2 px-4 py-2 bg-surface rounded-full mb-8">
-          <span class="w-2 h-2 bg-black rounded-full animate-pulse"></span>
-          <span class="text-sm font-medium">Türkiye'nin Kuaför Platformu</span>
+        <!-- Badge -->
+        <div class="inline-flex items-center gap-2 px-4 py-2 bg-primary/5 rounded-full mb-8 border border-primary/10">
+          <span class="w-2 h-2 bg-accent-emerald rounded-full pulse-dot"></span>
+          <span class="text-sm font-medium text-primary">Türkiye'nin #1 Kuaför Platformu</span>
         </div>
         
-        <h1 class="font-display font-bold text-4xl sm:text-5xl lg:text-6xl tracking-tight leading-[1.1]">
+        <h1 class="font-display font-extrabold text-5xl sm:text-6xl lg:text-7xl tracking-tight leading-[0.95]">
           Kuaförünü<br>
-          <span class="text-muted">Keşfet</span>,<br>
-          Randevunu Al
+          <span class="gradient-text">Keşfet</span><br>
+          <span class="text-muted">Randevunu Al</span>
         </h1>
         
-        <p class="mt-8 text-lg text-muted max-w-lg leading-relaxed">
-          Size en yakın kuaför ve güzellik salonlarını keşfedin. Yorumları inceleyin, en uygun saati seçin ve randevunuzu saniyeler içinde oluşturun.
+        <p class="mt-8 text-xl text-muted max-w-lg leading-relaxed">
+          Yakınındaki <strong class="text-primary">en iyi kuaför ve güzellik salonlarını</strong> keşfet. 
+          Gerçek yorumları oku, boş saatleri gör ve <strong class="text-primary">saniyeler içinde</strong> randevunu oluştur.
         </p>
         
-        <div class="mt-10 flex flex-col sm:flex-row gap-4">
-          <a href="#download" class="btn-primary">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+        <!-- App Store Buttons -->
+        <div id="download" class="mt-10 flex flex-col sm:flex-row gap-4">
+          <a href="#" class="group flex items-center gap-4 bg-primary text-white px-6 py-4 rounded-2xl hover:bg-secondary transition-all hover:scale-[1.02] hover:shadow-xl">
+            <svg class="w-8 h-8" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/>
             </svg>
-            Uygulamayı İndir
+            <div class="text-left">
+              <div class="text-xs text-white/60">Yakında</div>
+              <div class="text-lg font-semibold">App Store</div>
+            </div>
           </a>
-          <a href="/partner/kuafora-partner/" class="btn-secondary">
-            İşletme Girişi
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"></path>
+          <a href="#" class="group flex items-center gap-4 bg-white text-primary px-6 py-4 rounded-2xl border-2 border-primary/10 hover:border-primary/30 transition-all hover:scale-[1.02] hover:shadow-xl">
+            <svg class="w-8 h-8" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M3,20.5V3.5C3,2.91 3.34,2.39 3.84,2.15L13.69,12L3.84,21.85C3.34,21.6 3,21.09 3,20.5M16.81,15.12L6.05,21.34L14.54,12.85L16.81,15.12M20.16,10.81C20.5,11.08 20.75,11.5 20.75,12C20.75,12.5 20.53,12.9 20.18,13.18L17.89,14.5L15.39,12L17.89,9.5L20.16,10.81M6.05,2.66L16.81,8.88L14.54,11.15L6.05,2.66Z"/>
             </svg>
+            <div class="text-left">
+              <div class="text-xs text-muted">Yakında</div>
+              <div class="text-lg font-semibold">Google Play</div>
+            </div>
           </a>
         </div>
         
         <!-- Stats -->
-        <div class="mt-16 flex items-center gap-12">
-          <div>
-            <div class="text-3xl font-display font-bold">500+</div>
-            <div class="text-sm text-muted mt-1">Aktif Salon</div>
+        <div class="mt-14 flex flex-wrap items-center gap-8 lg:gap-12">
+          <div class="flex items-center gap-3">
+            <div class="w-12 h-12 rounded-2xl bg-accent-rose/10 flex items-center justify-center">
+              <svg class="w-6 h-6 text-accent-rose" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+              </svg>
+            </div>
+            <div>
+              <div class="text-2xl font-display font-bold">500+</div>
+              <div class="text-sm text-muted">Kayıtlı Salon</div>
+            </div>
           </div>
-          <div class="w-px h-12 bg-border"></div>
-          <div>
-            <div class="text-3xl font-display font-bold">10K+</div>
-            <div class="text-sm text-muted mt-1">Kullanıcı</div>
+          <div class="flex items-center gap-3">
+            <div class="w-12 h-12 rounded-2xl bg-accent-violet/10 flex items-center justify-center">
+              <svg class="w-6 h-6 text-accent-violet" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path>
+              </svg>
+            </div>
+            <div>
+              <div class="text-2xl font-display font-bold">10K+</div>
+              <div class="text-sm text-muted">Mutlu Kullanıcı</div>
+            </div>
           </div>
-          <div class="w-px h-12 bg-border"></div>
-          <div>
-            <div class="text-3xl font-display font-bold">4.8</div>
-            <div class="text-sm text-muted mt-1">Ortalama Puan</div>
+          <div class="flex items-center gap-3">
+            <div class="w-12 h-12 rounded-2xl bg-accent-amber/10 flex items-center justify-center">
+              <span class="text-xl">⭐</span>
+            </div>
+            <div>
+              <div class="text-2xl font-display font-bold">4.9</div>
+              <div class="text-sm text-muted">Ortalama Puan</div>
+            </div>
           </div>
         </div>
       </div>
       
-      <!-- Right Content - Phone Mockup -->
+      <!-- Right Content - Phone Mockups -->
       <div class="relative flex justify-center lg:justify-end" data-reveal>
-        <div class="phone-mockup animate-float">
-          <div class="phone-mockup-inner">
-            <div class="phone-mockup-notch"></div>
-            <!-- Görsel eklenince: <img src="https://d1uiu5mb5i1uph.cloudfront.net/website/screens/home-screen.png" alt="Kuafora Uygulaması" class="phone-mockup-screen"> -->
-            <div class="absolute inset-0 bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
-              <div class="text-center p-4">
-                <div class="w-16 h-16 bg-black rounded-2xl flex items-center justify-center mx-auto mb-4">
-                  <span class="text-white text-2xl font-bold">K</span>
+        <!-- Main Phone -->
+        <div class="relative">
+          <div class="phone-mockup animate-float" style="animation-delay: 0s;">
+            <div class="phone-mockup-inner">
+              <div class="phone-mockup-notch"></div>
+              <div class="absolute inset-0 bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
+                <div class="text-center p-6">
+                  <div class="w-20 h-20 bg-primary rounded-3xl flex items-center justify-center mx-auto mb-4 shadow-xl">
+                    <span class="text-white text-3xl font-display font-bold">K</span>
+                  </div>
+                  <p class="text-muted text-sm">Ana Ekran Görseli</p>
                 </div>
-                <span class="text-gray-500 text-sm">Ana Ekran</span>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Floating Card 1 -->
+          <div class="absolute -left-16 top-20 bg-white rounded-2xl p-4 shadow-2xl border border-gray-100 animate-float hidden lg:block" style="animation-delay: 1s;">
+            <div class="flex items-center gap-3">
+              <div class="w-12 h-12 rounded-full bg-gradient-to-br from-accent-rose to-accent-violet flex items-center justify-center text-white font-bold">
+                AB
+              </div>
+              <div>
+                <div class="font-semibold text-sm">Ahmet B.</div>
+                <div class="flex items-center gap-1 text-xs text-accent-amber">
+                  ⭐⭐⭐⭐⭐ <span class="text-muted ml-1">5.0</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Floating Card 2 -->
+          <div class="absolute -right-8 bottom-32 bg-white rounded-2xl p-4 shadow-2xl border border-gray-100 animate-float hidden lg:block" style="animation-delay: 2s;">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 bg-accent-emerald rounded-xl flex items-center justify-center text-white">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                </svg>
+              </div>
+              <div>
+                <div class="font-semibold text-sm">Randevu Onaylandı!</div>
+                <div class="text-xs text-muted">Bugün 14:30</div>
               </div>
             </div>
           </div>
         </div>
-        
-        <!-- Floating Elements -->
-        <div class="absolute -left-8 top-1/4 bg-white rounded-2xl p-4 shadow-lg border border-border animate-float" style="animation-delay: 1s;">
-          <div class="flex items-center gap-3">
-            <div class="w-10 h-10 bg-surface rounded-full flex items-center justify-center">⭐</div>
-            <div>
-              <div class="font-semibold text-sm">4.9 Puan</div>
-              <div class="text-xs text-muted">1200+ yorum</div>
-            </div>
-          </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Scroll indicator -->
+  <div class="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 text-muted">
+    <span class="text-xs uppercase tracking-widest">Keşfet</span>
+    <svg class="w-5 h-5 animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"></path>
+    </svg>
+  </div>
+</section>
+
+<!-- What is Kuafora Section -->
+<section class="py-24 lg:py-32 bg-surface">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="text-center max-w-3xl mx-auto mb-20" data-reveal>
+      <span class="inline-block px-4 py-1.5 bg-accent-violet/10 text-accent-violet text-sm font-medium rounded-full mb-6">
+        Kuafora Nedir?
+      </span>
+      <h2 class="font-display font-bold text-4xl sm:text-5xl tracking-tight">
+        Kuaför Randevusu Almak<br>
+        <span class="text-muted">Hiç Bu Kadar Kolay Olmamıştı</span>
+      </h2>
+      <p class="mt-6 text-lg text-muted leading-relaxed">
+        Kuafora, kuaför ve güzellik salonlarını tek bir platformda toplayan, 
+        <strong class="text-primary">anlık randevu</strong> almanı sağlayan mobil uygulamadır. 
+        Telefon açmadan, bekleme olmadan, istediğin salona istediğin saatte randevu al.
+      </p>
+    </div>
+    
+    <!-- How it works -->
+    <div class="grid md:grid-cols-3 gap-8 lg:gap-12">
+      <div class="text-center group" data-reveal>
+        <div class="relative inline-flex items-center justify-center w-20 h-20 rounded-3xl bg-white shadow-lg mb-6 group-hover:scale-110 transition-transform">
+          <span class="absolute -top-2 -right-2 w-8 h-8 bg-accent-rose text-white rounded-full flex items-center justify-center text-sm font-bold">1</span>
+          <svg class="w-9 h-9 text-accent-rose" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+          </svg>
         </div>
-        
-        <div class="absolute -right-4 bottom-1/4 bg-white rounded-2xl p-4 shadow-lg border border-border animate-float" style="animation-delay: 2s;">
-          <div class="flex items-center gap-3">
-            <div class="w-10 h-10 bg-black rounded-full flex items-center justify-center text-white text-lg">✓</div>
-            <div>
-              <div class="font-semibold text-sm">Randevu Onaylandı</div>
-              <div class="text-xs text-muted">14:30 - Bugün</div>
-            </div>
-          </div>
+        <h3 class="font-display font-bold text-xl mb-3">Keşfet</h3>
+        <p class="text-muted leading-relaxed">
+          Konumuna göre yakınındaki salonları listele. Hizmetleri, fiyatları ve gerçek müşteri yorumlarını incele.
+        </p>
+      </div>
+      
+      <div class="text-center group" data-reveal>
+        <div class="relative inline-flex items-center justify-center w-20 h-20 rounded-3xl bg-white shadow-lg mb-6 group-hover:scale-110 transition-transform">
+          <span class="absolute -top-2 -right-2 w-8 h-8 bg-accent-violet text-white rounded-full flex items-center justify-center text-sm font-bold">2</span>
+          <svg class="w-9 h-9 text-accent-violet" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+          </svg>
         </div>
+        <h3 class="font-display font-bold text-xl mb-3">Seç & Randevu Al</h3>
+        <p class="text-muted leading-relaxed">
+          İstediğin hizmeti ve personeli seç. Müsait saatleri gör ve tek dokunuşla randevunu oluştur.
+        </p>
+      </div>
+      
+      <div class="text-center group" data-reveal>
+        <div class="relative inline-flex items-center justify-center w-20 h-20 rounded-3xl bg-white shadow-lg mb-6 group-hover:scale-110 transition-transform">
+          <span class="absolute -top-2 -right-2 w-8 h-8 bg-accent-emerald text-white rounded-full flex items-center justify-center text-sm font-bold">3</span>
+          <svg class="w-9 h-9 text-accent-emerald" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+          </svg>
+        </div>
+        <h3 class="font-display font-bold text-xl mb-3">Git & Keyfini Çıkar</h3>
+        <p class="text-muted leading-relaxed">
+          Randevu hatırlatması al, salona git ve hizmetinin tadını çıkar. Sonra yorumunu bırak!
+        </p>
       </div>
     </div>
   </div>
 </section>
 
 <!-- Features Section -->
-<section class="py-24 bg-surface">
+<section class="py-24 lg:py-32 bg-white">
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-    <div class="text-center max-w-3xl mx-auto mb-20" data-reveal>
-      <span class="badge mb-6">Özellikler</span>
-      <h2 class="font-display text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight">
-        Güzellik ve bakım<br>artık çok kolay
-      </h2>
-      <p class="mt-6 text-lg text-muted">
-        Kuafora ile randevu almak, ödeme yapmak ve kuaförünüzle iletişim kurmak hiç olmadığı kadar basit.
-      </p>
-    </div>
-    
-    <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-      <!-- Feature 1 -->
-      <div class="card-elevated" data-reveal>
-        <div class="feature-icon mb-6">
-          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
-          </svg>
-        </div>
-        <h3 class="font-display font-semibold text-xl mb-3">Harita ile Keşfet</h3>
-        <p class="text-muted leading-relaxed">Konumunuza en yakın ve en iyi puanlı kuaförleri harita üzerinde görüntüleyin.</p>
-      </div>
-      
-      <!-- Feature 2 -->
-      <div class="card-elevated" data-reveal>
-        <div class="feature-icon mb-6">
-          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-          </svg>
-        </div>
-        <h3 class="font-display font-semibold text-xl mb-3">Kolay Randevu</h3>
-        <p class="text-muted leading-relaxed">Telefon trafiğine son. Müsait saatleri görün, tek tıkla yerinizi ayırtın.</p>
-      </div>
-      
-      <!-- Feature 3 -->
-      <div class="card-elevated" data-reveal>
-        <div class="feature-icon mb-6">
-          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"></path>
-          </svg>
-        </div>
-        <h3 class="font-display font-semibold text-xl mb-3">Gerçek Yorumlar</h3>
-        <p class="text-muted leading-relaxed">Doğrulanmış müşteri yorumları ve puanlarıyla en doğru seçimi yapın.</p>
-      </div>
-      
-      <!-- Feature 4 -->
-      <div class="card-elevated" data-reveal>
-        <div class="feature-icon mb-6">
-          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
-          </svg>
-        </div>
-        <h3 class="font-display font-semibold text-xl mb-3">Güvenli Ödeme</h3>
-        <p class="text-muted leading-relaxed">%25 ön ödeme sistemi ile randevunuz garanti altında. İptal koruması aktif.</p>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- App Showcase Section -->
-<section class="py-24 overflow-hidden">
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-    <!-- Feature Row 1 -->
-    <div class="grid lg:grid-cols-2 gap-16 items-center mb-32">
-      <div class="order-2 lg:order-1 flex justify-center" data-reveal>
-        <div class="phone-mockup">
+    <div class="grid lg:grid-cols-2 gap-16 lg:gap-24 items-center">
+      <!-- Left - Phone -->
+      <div class="relative order-2 lg:order-1" data-reveal>
+        <div class="phone-mockup mx-auto">
           <div class="phone-mockup-inner">
             <div class="phone-mockup-notch"></div>
-            <div class="absolute inset-0 bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
-              <div class="text-center p-4">
-                <svg class="w-12 h-12 mx-auto mb-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div class="absolute inset-0 bg-gradient-to-br from-accent-rose/5 to-accent-violet/5 flex items-center justify-center">
+              <div class="text-center p-6">
+                <svg class="w-16 h-16 mx-auto mb-4 text-accent-rose" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
                 </svg>
-                <span class="text-gray-500 text-sm">Harita Ekranı</span>
+                <p class="text-muted text-sm">Harita Görünümü</p>
               </div>
             </div>
           </div>
         </div>
       </div>
+      
+      <!-- Right - Features -->
       <div class="order-1 lg:order-2" data-reveal>
-        <span class="badge mb-6">Keşif</span>
-        <h3 class="font-display text-3xl lg:text-4xl font-bold tracking-tight mb-6">
-          Aradığınız hizmeti<br>anında bulun
-        </h3>
-        <p class="text-lg text-muted mb-8 leading-relaxed">
-          Şehir, ilçe veya kategoriye göre arama yapın. Saç, sakal, manikür, cilt bakımı ve daha fazlası için en yakın uzmanları keşfedin.
-        </p>
-        <ul class="space-y-4">
-          <li class="flex items-center gap-4">
-            <div class="w-6 h-6 bg-black rounded-full flex items-center justify-center text-white text-xs">✓</div>
-            <span>Konum bazlı akıllı sıralama</span>
-          </li>
-          <li class="flex items-center gap-4">
-            <div class="w-6 h-6 bg-black rounded-full flex items-center justify-center text-white text-xs">✓</div>
-            <span>Açık/Kapalı durumu filtresi</span>
-          </li>
-          <li class="flex items-center gap-4">
-            <div class="w-6 h-6 bg-black rounded-full flex items-center justify-center text-white text-xs">✓</div>
-            <span>Kampanyalı salonları görüntüleme</span>
-          </li>
-        </ul>
-      </div>
-    </div>
-
-    <!-- Feature Row 2 -->
-    <div class="grid lg:grid-cols-2 gap-16 items-center mb-32">
-      <div data-reveal>
-        <span class="badge mb-6">Randevu</span>
-        <h3 class="font-display text-3xl lg:text-4xl font-bold tracking-tight mb-6">
-          Detaylı profil ve<br>personel seçimi
-        </h3>
-        <p class="text-lg text-muted mb-8 leading-relaxed">
-          Salonun fotoğraflarını inceleyin, hizmet fiyatlarını görün ve favori personelinizi seçerek randevunuzu ona göre oluşturun.
-        </p>
-        <ul class="space-y-4">
-          <li class="flex items-center gap-4">
-            <div class="w-6 h-6 bg-black rounded-full flex items-center justify-center text-white text-xs">✓</div>
-            <span>Personel bazlı müsaitlik takvimi</span>
-          </li>
-          <li class="flex items-center gap-4">
-            <div class="w-6 h-6 bg-black rounded-full flex items-center justify-center text-white text-xs">✓</div>
-            <span>Şeffaf fiyat listesi</span>
-          </li>
-          <li class="flex items-center gap-4">
-            <div class="w-6 h-6 bg-black rounded-full flex items-center justify-center text-white text-xs">✓</div>
-            <span>Hizmet süreleri ve detayları</span>
-          </li>
-        </ul>
-      </div>
-      <div class="flex justify-center" data-reveal>
-        <div class="phone-mockup">
-          <div class="phone-mockup-inner">
-            <div class="phone-mockup-notch"></div>
-            <div class="absolute inset-0 bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
-              <div class="text-center p-4">
-                <svg class="w-12 h-12 mx-auto mb-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
-                </svg>
-                <span class="text-gray-500 text-sm">Salon Detay</span>
-              </div>
+        <span class="inline-block px-4 py-1.5 bg-accent-rose/10 text-accent-rose text-sm font-medium rounded-full mb-6">
+          Müşteri Uygulaması
+        </span>
+        <h2 class="font-display font-bold text-4xl sm:text-5xl tracking-tight mb-6">
+          Her Şey<br>
+          <span class="text-muted">Parmaklarının Ucunda</span>
+        </h2>
+        
+        <div class="space-y-6 mt-10">
+          <div class="flex gap-4 p-4 rounded-2xl bg-surface hover:shadow-lg transition-all">
+            <div class="w-12 h-12 rounded-xl bg-accent-sky/10 flex items-center justify-center flex-shrink-0">
+              <svg class="w-6 h-6 text-accent-sky" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+              </svg>
+            </div>
+            <div>
+              <h4 class="font-semibold text-lg">Konum Bazlı Keşif</h4>
+              <p class="text-muted">Yakınındaki tüm salonları harita ve liste görünümünde incele.</p>
+            </div>
+          </div>
+          
+          <div class="flex gap-4 p-4 rounded-2xl bg-surface hover:shadow-lg transition-all">
+            <div class="w-12 h-12 rounded-xl bg-accent-amber/10 flex items-center justify-center flex-shrink-0">
+              <svg class="w-6 h-6 text-accent-amber" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"></path>
+              </svg>
+            </div>
+            <div>
+              <h4 class="font-semibold text-lg">Gerçek Yorumlar</h4>
+              <p class="text-muted">Doğrulanmış müşteri yorumlarını oku, güvenle karar ver.</p>
+            </div>
+          </div>
+          
+          <div class="flex gap-4 p-4 rounded-2xl bg-surface hover:shadow-lg transition-all">
+            <div class="w-12 h-12 rounded-xl bg-accent-emerald/10 flex items-center justify-center flex-shrink-0">
+              <svg class="w-6 h-6 text-accent-emerald" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
+              </svg>
+            </div>
+            <div>
+              <h4 class="font-semibold text-lg">Anlık Mesajlaşma</h4>
+              <p class="text-muted">Salonla direkt iletişim kur, sorularını sor.</p>
+            </div>
+          </div>
+          
+          <div class="flex gap-4 p-4 rounded-2xl bg-surface hover:shadow-lg transition-all">
+            <div class="w-12 h-12 rounded-xl bg-accent-violet/10 flex items-center justify-center flex-shrink-0">
+              <svg class="w-6 h-6 text-accent-violet" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
+              </svg>
+            </div>
+            <div>
+              <h4 class="font-semibold text-lg">Akıllı Hatırlatmalar</h4>
+              <p class="text-muted">Randevunu unutma! Otomatik bildirimlerle her zaman hazır ol.</p>
             </div>
           </div>
         </div>
-      </div>
-    </div>
-    
-    <!-- Feature Row 3 -->
-    <div class="grid lg:grid-cols-2 gap-16 items-center">
-      <div class="order-2 lg:order-1 flex justify-center" data-reveal>
-        <div class="phone-mockup">
-          <div class="phone-mockup-inner">
-            <div class="phone-mockup-notch"></div>
-            <div class="absolute inset-0 bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
-              <div class="text-center p-4">
-                <svg class="w-12 h-12 mx-auto mb-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
-                </svg>
-                <span class="text-gray-500 text-sm">Mesajlaşma</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div class="order-1 lg:order-2" data-reveal>
-        <span class="badge mb-6">İletişim</span>
-        <h3 class="font-display text-3xl lg:text-4xl font-bold tracking-tight mb-6">
-          İletişimde kalın
-        </h3>
-        <p class="text-lg text-muted mb-8 leading-relaxed">
-          Sorularınız mı var? Kuaförünüze uygulama üzerinden direkt mesaj atın. Randevu hatırlatmaları ile zamanınızı yönetin.
-        </p>
-        <ul class="space-y-4">
-          <li class="flex items-center gap-4">
-            <div class="w-6 h-6 bg-black rounded-full flex items-center justify-center text-white text-xs">✓</div>
-            <span>Uygulama içi güvenli chat</span>
-          </li>
-          <li class="flex items-center gap-4">
-            <div class="w-6 h-6 bg-black rounded-full flex items-center justify-center text-white text-xs">✓</div>
-            <span>Randevu onayı ve hatırlatma</span>
-          </li>
-          <li class="flex items-center gap-4">
-            <div class="w-6 h-6 bg-black rounded-full flex items-center justify-center text-white text-xs">✓</div>
-            <span>Yorumlara gelen yanıtlar</span>
-          </li>
-        </ul>
       </div>
     </div>
   </div>
 </section>
 
-<!-- Partner Teaser -->
-<section class="py-24 bg-black text-white">
+<!-- Partner App Section -->
+<section class="py-24 lg:py-32 bg-primary text-white overflow-hidden">
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-    <div class="grid lg:grid-cols-2 gap-16 items-center">
+    <div class="grid lg:grid-cols-2 gap-16 lg:gap-24 items-center">
+      <!-- Left Content -->
       <div data-reveal>
-        <span class="badge badge-dark mb-6">İşletmeler İçin</span>
-        <h2 class="font-display text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight mb-6">
-          Kuafora Partner ile<br>işinizi büyütün
+        <span class="inline-block px-4 py-1.5 bg-white/10 text-white text-sm font-medium rounded-full mb-6 border border-white/20">
+          🏪 İşletme Sahipleri İçin
+        </span>
+        <h2 class="font-display font-bold text-4xl sm:text-5xl tracking-tight mb-6">
+          Kuafora Partner<br>
+          <span class="text-white/60">İşletme Uygulaması</span>
         </h2>
-        <p class="text-lg text-white/70 mb-8 leading-relaxed">
-          Randevularınızı, personelinizi ve gelirinizi tek bir yerden yönetin. Dijital dönüşüme katılın, müşterilerinize modern bir deneyim sunun.
+        <p class="text-xl text-white/70 leading-relaxed mb-8">
+          Salonunuzu dijitalleştirin, randevularınızı yönetin, müşteri tabanınızı büyütün. 
+          <strong class="text-white">Ücretsiz başlayın</strong>, işletmenizi Kuafora ile keşfedilir yapın.
         </p>
-        <a href="/partner/kuafora-partner/" class="inline-flex items-center gap-2 bg-white text-black px-6 py-3 rounded-full font-semibold hover:bg-white/90 transition-colors">
-          Detaylı Bilgi
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        
+        <div class="grid sm:grid-cols-2 gap-4 mb-10">
+          <div class="flex items-start gap-3 p-4 rounded-xl bg-white/5 border border-white/10">
+            <svg class="w-6 h-6 text-accent-emerald flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+            </svg>
+            <div>
+              <h4 class="font-semibold">Randevu Yönetimi</h4>
+              <p class="text-sm text-white/60">7/24 online randevu</p>
+            </div>
+          </div>
+          <div class="flex items-start gap-3 p-4 rounded-xl bg-white/5 border border-white/10">
+            <svg class="w-6 h-6 text-accent-emerald flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+            </svg>
+            <div>
+              <h4 class="font-semibold">Personel Takibi</h4>
+              <p class="text-sm text-white/60">Ekibinizi yönetin</p>
+            </div>
+          </div>
+          <div class="flex items-start gap-3 p-4 rounded-xl bg-white/5 border border-white/10">
+            <svg class="w-6 h-6 text-accent-emerald flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+            </svg>
+            <div>
+              <h4 class="font-semibold">Detaylı Raporlar</h4>
+              <p class="text-sm text-white/60">Gelir & performans</p>
+            </div>
+          </div>
+          <div class="flex items-start gap-3 p-4 rounded-xl bg-white/5 border border-white/10">
+            <svg class="w-6 h-6 text-accent-emerald flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+            </svg>
+            <div>
+              <h4 class="font-semibold">Müşteri CRM</h4>
+              <p class="text-sm text-white/60">Müşteri geçmişi</p>
+            </div>
+          </div>
+        </div>
+        
+        <a href="/partner/kuafora-partner/" class="inline-flex items-center gap-3 bg-white text-primary px-8 py-4 rounded-2xl font-semibold text-lg hover:bg-gray-100 transition-all hover:scale-[1.02] shadow-xl">
+          Partner Başvurusu Yap
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"></path>
           </svg>
         </a>
       </div>
-      <div class="flex justify-center" data-reveal>
-        <div class="grid grid-cols-2 gap-4">
-          <div class="bg-white/10 backdrop-blur rounded-2xl p-6">
-            <div class="text-4xl font-display font-bold mb-2">%40</div>
-            <div class="text-white/60 text-sm">Daha az no-show</div>
-          </div>
-          <div class="bg-white/10 backdrop-blur rounded-2xl p-6">
-            <div class="text-4xl font-display font-bold mb-2">2x</div>
-            <div class="text-white/60 text-sm">Daha fazla görünürlük</div>
-          </div>
-          <div class="bg-white/10 backdrop-blur rounded-2xl p-6">
-            <div class="text-4xl font-display font-bold mb-2">0₺</div>
-            <div class="text-white/60 text-sm">Başlangıç maliyeti</div>
-          </div>
-          <div class="bg-white/10 backdrop-blur rounded-2xl p-6">
-            <div class="text-4xl font-display font-bold mb-2">24/7</div>
-            <div class="text-white/60 text-sm">Online randevu</div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- How it Works -->
-<section class="py-24 bg-surface">
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-    <div class="text-center max-w-3xl mx-auto mb-20" data-reveal>
-      <span class="badge mb-6">Nasıl Çalışır?</span>
-      <h2 class="font-display text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight">
-        Üç adımda randevu
-      </h2>
-    </div>
-    
-    <div class="grid md:grid-cols-3 gap-8 relative">
-      <!-- Connecting Line -->
-      <div class="hidden md:block absolute top-16 left-[20%] right-[20%] h-px bg-border"></div>
       
-      <!-- Step 1 -->
-      <div class="text-center relative" data-reveal>
-        <div class="w-32 h-32 mx-auto bg-white border border-border rounded-full flex items-center justify-center mb-8 relative z-10">
-          <svg class="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
-          </svg>
+      <!-- Right - Tablet Mockup -->
+      <div class="relative" data-reveal>
+        <div class="relative bg-white/5 rounded-3xl p-8 border border-white/10">
+          <div class="aspect-[4/3] bg-gradient-to-br from-white/10 to-white/5 rounded-2xl flex items-center justify-center">
+            <div class="text-center">
+              <div class="w-20 h-20 bg-white rounded-3xl flex items-center justify-center mx-auto mb-4">
+                <span class="text-primary text-3xl font-display font-bold">K</span>
+              </div>
+              <p class="text-white/40 text-sm">Partner Dashboard</p>
+            </div>
+          </div>
         </div>
-        <div class="text-sm font-semibold text-muted mb-2">01</div>
-        <h3 class="font-display font-semibold text-xl mb-3">Uygulamayı İndir</h3>
-        <p class="text-muted">App Store veya Google Play'den ücretsiz indirin.</p>
-      </div>
-      
-      <!-- Step 2 -->
-      <div class="text-center relative" data-reveal>
-        <div class="w-32 h-32 mx-auto bg-white border border-border rounded-full flex items-center justify-center mb-8 relative z-10">
-          <svg class="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-          </svg>
+        
+        <!-- Floating stats -->
+        <div class="absolute -left-4 top-8 bg-white rounded-2xl p-4 shadow-2xl hidden lg:block">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-accent-emerald/10 flex items-center justify-center">
+              <svg class="w-5 h-5 text-accent-emerald" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
+              </svg>
+            </div>
+            <div>
+              <div class="text-sm font-semibold text-primary">+47%</div>
+              <div class="text-xs text-muted">Bu ay</div>
+            </div>
+          </div>
         </div>
-        <div class="text-sm font-semibold text-muted mb-2">02</div>
-        <h3 class="font-display font-semibold text-xl mb-3">Kuaförünü Bul</h3>
-        <p class="text-muted">Yakınındaki en iyi kuaförleri keşfet, yorumları incele.</p>
-      </div>
-      
-      <!-- Step 3 -->
-      <div class="text-center relative" data-reveal>
-        <div class="w-32 h-32 mx-auto bg-black rounded-full flex items-center justify-center mb-8 relative z-10">
-          <svg class="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M5 13l4 4L19 7"></path>
-          </svg>
+        
+        <div class="absolute -right-4 bottom-12 bg-white rounded-2xl p-4 shadow-2xl hidden lg:block">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-accent-violet/10 flex items-center justify-center">
+              <svg class="w-5 h-5 text-accent-violet" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+              </svg>
+            </div>
+            <div>
+              <div class="text-sm font-semibold text-primary">23 Randevu</div>
+              <div class="text-xs text-muted">Bugün</div>
+            </div>
+          </div>
         </div>
-        <div class="text-sm font-semibold text-muted mb-2">03</div>
-        <h3 class="font-display font-semibold text-xl mb-3">Randevunu Al</h3>
-        <p class="text-muted">Tarih ve saati seç, ön ödeme ile garantile.</p>
       </div>
     </div>
   </div>
 </section>
 
 <!-- Pricing Section -->
-<section id="pricing" class="py-24">
+<section id="pricing" class="py-24 lg:py-32 bg-surface">
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-    <div class="text-center max-w-3xl mx-auto mb-20" data-reveal>
-      <span class="badge mb-6">Fiyatlandırma</span>
-      <h2 class="font-display text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight">
-        İşletme modelleri
+    <div class="text-center max-w-3xl mx-auto mb-16" data-reveal>
+      <span class="inline-block px-4 py-1.5 bg-accent-emerald/10 text-accent-emerald text-sm font-medium rounded-full mb-6">
+        Fiyatlandırma
+      </span>
+      <h2 class="font-display font-bold text-4xl sm:text-5xl tracking-tight">
+        Her Bütçeye Uygun<br>
+        <span class="text-muted">Esnek Planlar</span>
       </h2>
       <p class="mt-6 text-lg text-muted">
-        İhtiyacınıza uygun modeli seçin, hemen kazanmaya başlayın.
+        Müşteri uygulaması tamamen ücretsiz. İşletme sahipleri için esnek planlarımızı inceleyin.
       </p>
     </div>
     
-    <div class="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
-      <!-- Bilgi Modeli -->
-      <div class="pricing-card" data-reveal>
-        <div class="mb-8">
-          <h3 class="font-display font-semibold text-xl mb-2">Bilgi Gösterimi</h3>
-          <p class="text-muted text-sm">Sadece dijital vitrinim olsun diyenler için.</p>
-        </div>
-        <div class="mb-8">
-          <div class="text-4xl font-display font-bold">190₺</div>
-          <div class="text-muted text-sm">/ay</div>
-        </div>
-        <ul class="space-y-4 mb-8">
-          <li class="flex items-center gap-3 text-sm">
-            <svg class="w-5 h-5 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
-            İşletme Profili
-          </li>
-          <li class="flex items-center gap-3 text-sm">
-            <svg class="w-5 h-5 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
-            Hizmet & Fiyat Listesi
-          </li>
-          <li class="flex items-center gap-3 text-sm">
-            <svg class="w-5 h-5 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
-            Haritada Görünürlük
-          </li>
-          <li class="flex items-center gap-3 text-sm text-muted">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-            Randevu Sistemi Yok
-          </li>
-        </ul>
-        <a href="/partner/kuafora-partner/" class="btn-secondary w-full">Seç</a>
-      </div>
-      
-      <!-- Sıra Modeli -->
-      <div class="pricing-card" data-reveal>
-        <div class="mb-8">
-          <h3 class="font-display font-semibold text-xl mb-2">Sıra Sistemi</h3>
-          <p class="text-muted text-sm">Hızlı akışlı, randevusuz çalışan berberler için.</p>
-        </div>
-        <div class="mb-8">
-          <div class="text-4xl font-display font-bold">290₺</div>
-          <div class="text-muted text-sm">/ay</div>
-        </div>
-        <ul class="space-y-4 mb-8">
-          <li class="flex items-center gap-3 text-sm">
-            <svg class="w-5 h-5 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
-            Tüm Bilgi Özellikleri
-          </li>
-          <li class="flex items-center gap-3 text-sm">
-            <svg class="w-5 h-5 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
-            Online Sıra Alma
-          </li>
-          <li class="flex items-center gap-3 text-sm">
-            <svg class="w-5 h-5 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
-            Canlı Sıra Takibi
-          </li>
-          <li class="flex items-center gap-3 text-sm">
-            <svg class="w-5 h-5 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
-            SMS Bildirimleri
-          </li>
-        </ul>
-        <a href="/partner/kuafora-partner/" class="btn-secondary w-full">Seç</a>
-      </div>
-      
-      <!-- Randevu Modeli (Featured) -->
-      <div class="pricing-card-featured relative" data-reveal>
-        <div class="absolute -top-4 left-1/2 -translate-x-1/2">
-          <span class="bg-white text-black px-4 py-1 rounded-full text-sm font-semibold">En Popüler</span>
-        </div>
-        <div class="mb-8 pt-4">
-          <h3 class="font-display font-semibold text-xl mb-2">Randevu Sistemi</h3>
-          <p class="text-white/70 text-sm">Tam profesyonel yönetim isteyenler için.</p>
-        </div>
-        <div class="mb-8">
+    <div class="grid md:grid-cols-3 gap-8 lg:gap-10">
+      <!-- Free Plan -->
+      <div class="bg-white rounded-3xl p-8 border border-border hover:shadow-xl transition-all" data-reveal>
+        <div class="text-center mb-8">
+          <h3 class="font-display font-bold text-xl mb-2">Başlangıç</h3>
           <div class="text-4xl font-display font-bold">Ücretsiz</div>
-          <div class="text-white/70 text-sm">%3 komisyon*</div>
+          <p class="text-muted mt-2">Sonsuza kadar</p>
         </div>
         <ul class="space-y-4 mb-8">
-          <li class="flex items-center gap-3 text-sm">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
-            Gelişmiş Takvim
+          <li class="flex items-center gap-3">
+            <svg class="w-5 h-5 text-accent-emerald" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+            </svg>
+            <span>Sınırsız randevu ara</span>
           </li>
-          <li class="flex items-center gap-3 text-sm">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
-            Personel Yönetimi
+          <li class="flex items-center gap-3">
+            <svg class="w-5 h-5 text-accent-emerald" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+            </svg>
+            <span>Tüm salonları keşfet</span>
           </li>
-          <li class="flex items-center gap-3 text-sm">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
-            %25 Ön Ödeme Koruması
+          <li class="flex items-center gap-3">
+            <svg class="w-5 h-5 text-accent-emerald" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+            </svg>
+            <span>Yorum yaz & oku</span>
           </li>
-          <li class="flex items-center gap-3 text-sm">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
-            Gelir Raporları
+          <li class="flex items-center gap-3">
+            <svg class="w-5 h-5 text-accent-emerald" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+            </svg>
+            <span>Randevu hatırlatmaları</span>
           </li>
         </ul>
-        <a href="/partner/kuafora-partner/" class="inline-flex items-center justify-center w-full bg-white text-black px-6 py-3 rounded-full font-semibold hover:bg-white/90 transition-colors">Hemen Başla</a>
-        <p class="text-xs text-center text-white/50 mt-4">*Randevulardan %3 hizmet komisyonu alınır.</p>
+        <a href="#download" class="block w-full text-center py-4 rounded-xl border-2 border-primary text-primary font-semibold hover:bg-primary hover:text-white transition-all">
+          Uygulamayı İndir
+        </a>
+      </div>
+      
+      <!-- Pro Plan -->
+      <div class="bg-primary text-white rounded-3xl p-8 relative overflow-hidden scale-105 shadow-2xl" data-reveal>
+        <div class="absolute top-0 right-0 bg-accent-rose text-white text-xs font-bold px-4 py-1 rounded-bl-xl">
+          POPÜLER
+        </div>
+        <div class="text-center mb-8">
+          <h3 class="font-display font-bold text-xl mb-2">İşletme Pro</h3>
+          <div class="text-4xl font-display font-bold">₺299<span class="text-lg font-normal text-white/60">/ay</span></div>
+          <p class="text-white/60 mt-2">Küçük işletmeler için</p>
+        </div>
+        <ul class="space-y-4 mb-8">
+          <li class="flex items-center gap-3">
+            <svg class="w-5 h-5 text-accent-emerald" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+            </svg>
+            <span>Sınırsız randevu</span>
+          </li>
+          <li class="flex items-center gap-3">
+            <svg class="w-5 h-5 text-accent-emerald" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+            </svg>
+            <span>5'e kadar personel</span>
+          </li>
+          <li class="flex items-center gap-3">
+            <svg class="w-5 h-5 text-accent-emerald" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+            </svg>
+            <span>Detaylı raporlar</span>
+          </li>
+          <li class="flex items-center gap-3">
+            <svg class="w-5 h-5 text-accent-emerald" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+            </svg>
+            <span>Öncelikli destek</span>
+          </li>
+          <li class="flex items-center gap-3">
+            <svg class="w-5 h-5 text-accent-emerald" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+            </svg>
+            <span>Kampanya oluşturma</span>
+          </li>
+        </ul>
+        <a href="/partner/kuafora-partner/" class="block w-full text-center py-4 rounded-xl bg-white text-primary font-semibold hover:bg-gray-100 transition-all">
+          Hemen Başla
+        </a>
+      </div>
+      
+      <!-- Enterprise Plan -->
+      <div class="bg-white rounded-3xl p-8 border border-border hover:shadow-xl transition-all" data-reveal>
+        <div class="text-center mb-8">
+          <h3 class="font-display font-bold text-xl mb-2">Kurumsal</h3>
+          <div class="text-4xl font-display font-bold">Özel</div>
+          <p class="text-muted mt-2">Büyük işletmeler için</p>
+        </div>
+        <ul class="space-y-4 mb-8">
+          <li class="flex items-center gap-3">
+            <svg class="w-5 h-5 text-accent-emerald" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+            </svg>
+            <span>Pro'daki her şey</span>
+          </li>
+          <li class="flex items-center gap-3">
+            <svg class="w-5 h-5 text-accent-emerald" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+            </svg>
+            <span>Sınırsız personel</span>
+          </li>
+          <li class="flex items-center gap-3">
+            <svg class="w-5 h-5 text-accent-emerald" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+            </svg>
+            <span>Çoklu şube desteği</span>
+          </li>
+          <li class="flex items-center gap-3">
+            <svg class="w-5 h-5 text-accent-emerald" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+            </svg>
+            <span>API erişimi</span>
+          </li>
+          <li class="flex items-center gap-3">
+            <svg class="w-5 h-5 text-accent-emerald" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+            </svg>
+            <span>Özel hesap yöneticisi</span>
+          </li>
+        </ul>
+        <a href="mailto:kurumsal@kuafora.com" class="block w-full text-center py-4 rounded-xl border-2 border-primary text-primary font-semibold hover:bg-primary hover:text-white transition-all">
+          İletişime Geç
+        </a>
       </div>
     </div>
   </div>
 </section>
 
-<!-- FAQ Section -->
-<section id="faq" class="py-24 bg-surface">
-  <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
-    <div class="text-center mb-16" data-reveal>
-      <span class="badge mb-6">SSS</span>
-      <h2 class="font-display text-3xl sm:text-4xl font-bold tracking-tight">
-        Sıkça sorulan sorular
-      </h2>
-    </div>
-    
-    <div class="space-y-4" data-reveal>
-      <details class="group bg-white border border-border rounded-2xl overflow-hidden">
-        <summary class="flex justify-between items-center p-6 cursor-pointer">
-          <span class="font-semibold pr-4">Kuafora ücretli mi?</span>
-          <svg class="w-5 h-5 text-muted transition-transform group-open:rotate-180 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-          </svg>
-        </summary>
-        <div class="px-6 pb-6">
-          <p class="text-muted">Müşteriler için uygulama kullanımı tamamen ücretsizdir. Sadece aldığınız hizmetin bedelini ödersiniz.</p>
-        </div>
-      </details>
-      
-      <details class="group bg-white border border-border rounded-2xl overflow-hidden">
-        <summary class="flex justify-between items-center p-6 cursor-pointer">
-          <span class="font-semibold pr-4">Ön ödeme neden var?</span>
-          <svg class="w-5 h-5 text-muted transition-transform group-open:rotate-180 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-          </svg>
-        </summary>
-        <div class="px-6 pb-6">
-          <p class="text-muted">Randevunuzu garanti altına almak ve işletmelerin zaman kaybını (no-show) önlemek için %25 ön ödeme alınır. Kalan tutarı salonda ödersiniz.</p>
-        </div>
-      </details>
-      
-      <details class="group bg-white border border-border rounded-2xl overflow-hidden">
-        <summary class="flex justify-between items-center p-6 cursor-pointer">
-          <span class="font-semibold pr-4">Randevumu iptal edebilir miyim?</span>
-          <svg class="w-5 h-5 text-muted transition-transform group-open:rotate-180 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-          </svg>
-        </summary>
-        <div class="px-6 pb-6">
-          <p class="text-muted">Evet, işletmenin belirlediği iptal süresi (örneğin randevudan 24 saat önce) içinde iptal ederseniz ön ödemeniz iade edilir.</p>
-        </div>
-      </details>
-      
-      <details class="group bg-white border border-border rounded-2xl overflow-hidden">
-        <summary class="flex justify-between items-center p-6 cursor-pointer">
-          <span class="font-semibold pr-4">İşletme sahibiyim, nasıl katılabilirim?</span>
-          <svg class="w-5 h-5 text-muted transition-transform group-open:rotate-180 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-          </svg>
-        </summary>
-        <div class="px-6 pb-6">
-          <p class="text-muted">Kuafora Partner programına başvurarak işletmenizi dakikalar içinde dijitalleştirebilirsiniz. "İşletme Girişi" butonuna tıklamanız yeterli.</p>
-        </div>
-      </details>
-    </div>
-  </div>
-</section>
-
-<!-- Download CTA -->
-<section id="download" class="py-24">
+<!-- Final CTA -->
+<section class="py-24 lg:py-32 bg-white">
   <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center" data-reveal>
-    <h2 class="font-display text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight mb-6">
-      Hemen indirin,<br>güzelliği keşfedin
+    <h2 class="font-display font-bold text-4xl sm:text-5xl lg:text-6xl tracking-tight mb-6">
+      Randevu Almak İçin<br>
+      <span class="gradient-text">Artık Telefon Açma</span>
     </h2>
-    <p class="text-lg text-muted mb-12 max-w-2xl mx-auto">
-      Türkiye'nin en kapsamlı kuaför platformuyla tanışın. Ücretsiz indirin, hemen kullanmaya başlayın.
+    <p class="text-xl text-muted mb-10 max-w-2xl mx-auto">
+      Kuafora ile kuaförünü bul, uygun saati seç ve randevunu al. Hepsi tek uygulama, tek dokunuş.
     </p>
-    <div class="flex flex-col sm:flex-row justify-center gap-4">
-      <a href="#" class="app-store-btn">
-        <svg class="w-8 h-8" viewBox="0 0 24 24" fill="currentColor">
+    <div class="flex flex-col sm:flex-row gap-4 justify-center">
+      <a href="#download" class="inline-flex items-center justify-center gap-3 bg-primary text-white px-8 py-5 rounded-2xl font-semibold text-lg hover:bg-secondary transition-all hover:scale-[1.02] shadow-xl">
+        <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
           <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/>
         </svg>
-        <div class="text-left">
-          <div class="text-xs opacity-80">Download on the</div>
-          <div class="font-semibold">App Store</div>
-        </div>
+        Uygulamayı İndir
       </a>
-      <a href="#" class="app-store-btn">
-        <svg class="w-7 h-7" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M3,20.5V3.5C3,2.91 3.34,2.39 3.84,2.15L13.69,12L3.84,21.85C3.34,21.6 3,21.09 3,20.5M16.81,15.12L6.05,21.34L14.54,12.85L16.81,15.12M20.16,10.81C20.5,11.08 20.75,11.5 20.75,12C20.75,12.5 20.5,12.92 20.16,13.19L17.89,14.5L15.39,12L17.89,9.5L20.16,10.81M6.05,2.66L16.81,8.88L14.54,11.15L6.05,2.66Z"/>
+      <a href="/partner/kuafora-partner/" class="inline-flex items-center justify-center gap-3 bg-surface text-primary px-8 py-5 rounded-2xl font-semibold text-lg border-2 border-border hover:border-primary transition-all hover:scale-[1.02]">
+        İşletme Başvurusu
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"></path>
         </svg>
-        <div class="text-left">
-          <div class="text-xs opacity-80">GET IT ON</div>
-          <div class="font-semibold">Google Play</div>
-        </div>
       </a>
     </div>
   </div>

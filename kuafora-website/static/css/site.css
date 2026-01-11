@@ -1,16 +1,23 @@
-/* Kuafora Site Styles - Modern Monochrome Theme */
+/* Kuafora Site Styles - Modern Theme with Accent Colors */
 
 /* ===== CSS Variables ===== */
 :root {
-  --color-primary: #000000;
+  --color-primary: #0A0A0A;
   --color-secondary: #1A1A1A;
-  --color-muted: #6B7280;
+  --color-muted: #71717A;
   --color-surface: #FAFAFA;
-  --color-surface-dark: #F5F5F5;
-  --color-border: #E5E5E5;
+  --color-surface-dark: #F4F4F5;
+  --color-border: #E4E4E7;
   --color-white: #FFFFFF;
   
-  --font-display: 'Clash Display', 'Inter', system-ui, sans-serif;
+  /* Accent Colors */
+  --color-accent-rose: #F43F5E;
+  --color-accent-violet: #8B5CF6;
+  --color-accent-emerald: #10B981;
+  --color-accent-amber: #F59E0B;
+  --color-accent-sky: #0EA5E9;
+  
+  --font-display: 'Cabinet Grotesk', 'Inter', system-ui, sans-serif;
   --font-body: 'Satoshi', 'Inter', system-ui, sans-serif;
   
   --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);

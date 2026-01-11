@@ -8,15 +8,13 @@
     <meta name="description" content="Kuafora, Türkiye'nin modern kuaför ve güzellik platformu. Yakınındaki kuaförleri keşfet, randevunu al." />
     
     <!-- Favicon - K logo as SVG data URI -->
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23000'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='central' text-anchor='middle' fill='white' font-family='system-ui' font-weight='700' font-size='18'%3EK%3C/text%3E%3C/svg%3E">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23000'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='central' text-anchor='middle' fill='white' font-family='system-ui' font-weight='700' font-size='18'%3EK%3C/text%3E%3C/svg%3E">
 
-    <!-- Fonts - Clash Display for headings, Satoshi for body -->
+    <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    
-    <!-- Fontshare CDN for premium fonts -->
-    <link href="https://api.fontshare.com/v2/css?f[]=clash-display@400,500,600,700&f[]=satoshi@400,500,700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://api.fontshare.com/v2/css?f[]=cabinet-grotesk@400,500,700,800&f[]=satoshi@400,500,700&display=swap" rel="stylesheet">
 
     <!-- Local compiled Tailwind CSS if available -->
     <link rel="stylesheet" href="{% static 'dist/styles.css' %}">
@@ -28,16 +26,21 @@
           theme: {
             extend: {
               colors: {
-                primary: '#000000',
+                primary: '#0A0A0A',
                 secondary: '#1A1A1A',
-                accent: '#000000',
-                muted: '#6B7280',
+                muted: '#71717A',
                 surface: '#FAFAFA',
-                'surface-dark': '#F5F5F5',
-                border: '#E5E5E5'
+                'surface-dark': '#F4F4F5',
+                border: '#E4E4E7',
+                // Accent colors
+                'accent-rose': '#F43F5E',
+                'accent-violet': '#8B5CF6',
+                'accent-emerald': '#10B981',
+                'accent-amber': '#F59E0B',
+                'accent-sky': '#0EA5E9'
               },
               fontFamily: {
-                display: ['Clash Display', 'Inter', 'system-ui', 'sans-serif'],
+                display: ['Cabinet Grotesk', 'Inter', 'system-ui', 'sans-serif'],
                 sans: ['Satoshi', 'Inter', 'system-ui', 'sans-serif']
               }
             }
@@ -48,128 +51,265 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="{% static 'css/site.css' %}">
 
+    <style>
+      /* Dynamic Island Navigation */
+      .dynamic-nav {
+        background: rgba(10, 10, 10, 0.95);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+      
+      .dynamic-nav:hover {
+        transform: scale(1.02);
+        box-shadow: 0 20px 40px -12px rgba(0, 0, 0, 0.35);
+      }
+      
+      .dynamic-nav .nav-pill {
+        color: rgba(255, 255, 255, 0.7);
+        transition: all 0.3s ease;
+        position: relative;
+      }
+      
+      .dynamic-nav .nav-pill:hover {
+        color: #fff;
+      }
+      
+      .dynamic-nav .nav-pill.active {
+        color: #fff;
+        background: rgba(255, 255, 255, 0.15);
+      }
+      
+      /* Gradient text */
+      .gradient-text {
+        background: linear-gradient(135deg, #F43F5E 0%, #8B5CF6 50%, #0EA5E9 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+      }
+      
+      /* Gradient border */
+      .gradient-border {
+        position: relative;
+      }
+      .gradient-border::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        border-radius: inherit;
+        padding: 2px;
+        background: linear-gradient(135deg, #F43F5E, #8B5CF6, #0EA5E9);
+        -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+        mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+        -webkit-mask-composite: xor;
+        mask-composite: exclude;
+      }
+      
+      /* Soft gradient backgrounds */
+      .bg-gradient-soft {
+        background: linear-gradient(180deg, #FAFAFA 0%, #FFFFFF 100%);
+      }
+      
+      .bg-gradient-rose {
+        background: linear-gradient(135deg, rgba(244, 63, 94, 0.08) 0%, rgba(244, 63, 94, 0.02) 100%);
+      }
+      
+      .bg-gradient-violet {
+        background: linear-gradient(135deg, rgba(139, 92, 246, 0.08) 0%, rgba(139, 92, 246, 0.02) 100%);
+      }
+      
+      .bg-gradient-emerald {
+        background: linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, rgba(16, 185, 129, 0.02) 100%);
+      }
+      
+      /* Float animation */
+      @keyframes float {
+        0%, 100% { transform: translateY(0px); }
+        50% { transform: translateY(-10px); }
+      }
+      
+      .animate-float {
+        animation: float 4s ease-in-out infinite;
+      }
+      
+      /* Pulse dot */
+      @keyframes pulse-dot {
+        0%, 100% { opacity: 1; transform: scale(1); }
+        50% { opacity: 0.5; transform: scale(1.2); }
+      }
+      
+      .pulse-dot {
+        animation: pulse-dot 2s ease-in-out infinite;
+      }
+    </style>
+
     {% block head %}{% endblock %}
   </head>
   <body class="h-full antialiased bg-white text-primary font-sans">
-    <header data-header class="fixed top-0 inset-x-0 z-50">
-      <div data-nav class="bg-white/90 backdrop-blur-xl border-b border-border transition-all duration-500 ease-out">
-        {% block site_nav %}
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
+    
+    <!-- Dynamic Island Navigation -->
+    <header class="fixed top-0 inset-x-0 z-50 pointer-events-none">
+      <div class="flex justify-center pt-4 px-4">
+        <nav class="dynamic-nav rounded-full px-2 py-2 flex items-center gap-1 pointer-events-auto shadow-2xl">
           <!-- Logo -->
-          <a href="/" class="flex items-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/20 rounded-lg group">
-            <div class="w-8 h-8 rounded-lg bg-black flex items-center justify-center">
-              <span class="text-white font-display font-bold text-lg">K</span>
+          <a href="/" class="flex items-center gap-2 pl-3 pr-4 py-1.5 rounded-full hover:bg-white/10 transition-all">
+            <div class="w-7 h-7 rounded-lg bg-white flex items-center justify-center">
+              <span class="text-black font-display font-bold text-sm">K</span>
             </div>
-            <span class="font-display font-bold text-xl tracking-tight">Kuafora</span>
+            <span class="font-display font-bold text-white text-sm tracking-tight hidden sm:block">Kuafora</span>
           </a>
           
-          <!-- Navigation -->
-          <nav class="hidden md:flex items-center gap-1">
-            {% if request.resolver_match.url_name|slice:":7" == "partner" or request.resolver_match.url_name == 'reviews_dashboard' or request.resolver_match.url_name == 'appointments_dashboard' or request.resolver_match.url_name == 'staff_dashboard' %}
-              <!-- Partner Navigation -->
-              <a href="/partner/kuafora-partner/" class="nav-link {% if request.resolver_match.url_name == 'partner_landing' %}active{% endif %}">Ana Sayfa</a>
-              <a href="/partner/kuafora-partner/ozellikler/" class="nav-link {% if request.resolver_match.url_name == 'partner_features' %}active{% endif %}">Özellikler</a>
-              <a href="/partner/kuafora-partner/ekranlar/" class="nav-link {% if request.resolver_match.url_name == 'partner_screens' %}active{% endif %}">Ekranlar</a>
-              <a href="/partner/kuafora-partner/sss/" class="nav-link {% if request.resolver_match.url_name == 'partner_faq' %}active{% endif %}">SSS</a>
-            {% else %}
-              <!-- Main Site Navigation -->
-              <a href="/" class="nav-link">Ana Sayfa</a>
-              <a href="{% url 'customer_app' %}" class="nav-link">Uygulama</a>
-              <a href="/partner/kuafora-partner/" class="nav-link">İşletmeler</a>
-              <a href="/#pricing" class="nav-link">Fiyatlar</a>
-            {% endif %}
-          </nav>
+          <!-- Divider -->
+          <div class="w-px h-6 bg-white/20 hidden md:block"></div>
           
-          <!-- Mobile menu button & CTA -->
-          <div class="flex items-center gap-4">
-            <button id="mobile-menu-btn" class="md:hidden p-2 rounded-lg hover:bg-surface transition-colors focus:outline-none" aria-label="Menü">
-              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 6h16M4 12h16M4 18h16"></path>
-              </svg>
-            </button>
+          <!-- Navigation Links -->
+          <div class="hidden md:flex items-center">
             {% if request.resolver_match.url_name|slice:":7" == "partner" %}
-              <a href="/partner/kuafora-partner/#join" class="btn-primary hidden sm:inline-flex">
-                Başvur
-              </a>
+              <a href="/partner/kuafora-partner/" class="nav-pill px-4 py-2 rounded-full text-sm font-medium {% if request.resolver_match.url_name == 'partner_landing' %}active{% endif %}">Ana Sayfa</a>
+              <a href="/partner/kuafora-partner/ozellikler/" class="nav-pill px-4 py-2 rounded-full text-sm font-medium {% if request.resolver_match.url_name == 'partner_features' %}active{% endif %}">Özellikler</a>
+              <a href="/partner/kuafora-partner/sss/" class="nav-pill px-4 py-2 rounded-full text-sm font-medium {% if request.resolver_match.url_name == 'partner_faq' %}active{% endif %}">SSS</a>
             {% else %}
-              <a href="/partner/kuafora-partner/" class="btn-primary hidden sm:inline-flex">
-                İşletme Girişi
-              </a>
+              <a href="/" class="nav-pill px-4 py-2 rounded-full text-sm font-medium">Ana Sayfa</a>
+              <a href="{% url 'customer_app' %}" class="nav-pill px-4 py-2 rounded-full text-sm font-medium">Uygulama</a>
+              <a href="/partner/kuafora-partner/" class="nav-pill px-4 py-2 rounded-full text-sm font-medium">İşletmeler</a>
+              <a href="/#pricing" class="nav-pill px-4 py-2 rounded-full text-sm font-medium">Fiyatlar</a>
             {% endif %}
           </div>
-        </div>
-        {% endblock %}
+          
+          <!-- Divider -->
+          <div class="w-px h-6 bg-white/20 hidden md:block"></div>
+          
+          <!-- CTA Button -->
+          {% if request.resolver_match.url_name|slice:":7" == "partner" %}
+            <a href="/partner/kuafora-partner/#join" class="hidden sm:flex items-center gap-2 bg-white text-black px-5 py-2 rounded-full text-sm font-semibold hover:bg-gray-100 transition-all">
+              <span class="w-2 h-2 bg-accent-emerald rounded-full pulse-dot"></span>
+              Başvur
+            </a>
+          {% else %}
+            <a href="#download" class="hidden sm:flex items-center gap-2 bg-white text-black px-5 py-2 rounded-full text-sm font-semibold hover:bg-gray-100 transition-all">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+              </svg>
+              İndir
+            </a>
+          {% endif %}
+          
+          <!-- Mobile Menu Button -->
+          <button id="mobile-menu-btn" class="md:hidden p-2 rounded-full hover:bg-white/10 transition-colors text-white" aria-label="Menü">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+            </svg>
+          </button>
+        </nav>
       </div>
       
       <!-- Mobile Menu -->
-      <div id="mobile-menu" class="hidden md:hidden bg-white border-b border-border">
-        <div class="px-4 py-6 space-y-4">
+      <div id="mobile-menu" class="hidden pointer-events-auto mx-4 mt-2">
+        <div class="dynamic-nav rounded-3xl p-4 space-y-2">
           {% if request.resolver_match.url_name|slice:":7" == "partner" %}
-            <a href="/partner/kuafora-partner/" class="block py-2 text-lg font-medium">Ana Sayfa</a>
-            <a href="/partner/kuafora-partner/ozellikler/" class="block py-2 text-lg font-medium">Özellikler</a>
-            <a href="/partner/kuafora-partner/ekranlar/" class="block py-2 text-lg font-medium">Ekranlar</a>
-            <a href="/partner/kuafora-partner/sss/" class="block py-2 text-lg font-medium">SSS</a>
+            <a href="/partner/kuafora-partner/" class="block text-white/80 hover:text-white py-3 px-4 rounded-xl hover:bg-white/10 transition-all font-medium">Ana Sayfa</a>
+            <a href="/partner/kuafora-partner/ozellikler/" class="block text-white/80 hover:text-white py-3 px-4 rounded-xl hover:bg-white/10 transition-all font-medium">Özellikler</a>
+            <a href="/partner/kuafora-partner/sss/" class="block text-white/80 hover:text-white py-3 px-4 rounded-xl hover:bg-white/10 transition-all font-medium">SSS</a>
           {% else %}
-            <a href="/" class="block py-2 text-lg font-medium">Ana Sayfa</a>
-            <a href="{% url 'customer_app' %}" class="block py-2 text-lg font-medium">Uygulama</a>
-            <a href="/partner/kuafora-partner/" class="block py-2 text-lg font-medium">İşletmeler</a>
-            <a href="/#pricing" class="block py-2 text-lg font-medium">Fiyatlar</a>
+            <a href="/" class="block text-white/80 hover:text-white py-3 px-4 rounded-xl hover:bg-white/10 transition-all font-medium">Ana Sayfa</a>
+            <a href="{% url 'customer_app' %}" class="block text-white/80 hover:text-white py-3 px-4 rounded-xl hover:bg-white/10 transition-all font-medium">Uygulama</a>
+            <a href="/partner/kuafora-partner/" class="block text-white/80 hover:text-white py-3 px-4 rounded-xl hover:bg-white/10 transition-all font-medium">İşletmeler</a>
+            <a href="/#pricing" class="block text-white/80 hover:text-white py-3 px-4 rounded-xl hover:bg-white/10 transition-all font-medium">Fiyatlar</a>
           {% endif %}
+          <div class="pt-2">
+            <a href="#download" class="flex items-center justify-center gap-2 bg-white text-black py-3 px-4 rounded-xl font-semibold">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+              </svg>
+              Uygulamayı İndir
+            </a>
+          </div>
         </div>
       </div>
     </header>
 
-    <main id="top" class="pt-[72px]">
+    <main id="top" class="pt-20">
       {% block content %}{% endblock %}
     </main>
 
-    <footer id="contact" class="border-t border-border bg-surface">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        <div class="grid gap-12 md:grid-cols-4">
-          <div class="md:col-span-2">
-            <div class="flex items-center gap-2 mb-6">
-              <div class="w-7 h-7 rounded-lg bg-black flex items-center justify-center">
-                <span class="text-white font-display font-bold text-sm">K</span>
+    <footer id="contact" class="bg-primary text-white">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
+        <div class="grid gap-12 md:grid-cols-12">
+          <!-- Brand Column -->
+          <div class="md:col-span-5">
+            <div class="flex items-center gap-3 mb-6">
+              <div class="w-10 h-10 rounded-xl bg-white flex items-center justify-center">
+                <span class="text-black font-display font-bold text-lg">K</span>
               </div>
-              <span class="font-display font-bold text-lg tracking-tight">Kuafora</span>
+              <span class="font-display font-bold text-2xl tracking-tight">Kuafora</span>
             </div>
-            <p class="text-muted max-w-sm leading-relaxed">
-              Türkiye'nin modern kuaför ve güzellik platformu. Yakınındaki en iyi kuaförleri keşfet, hemen randevunu al.
+            <p class="text-white/60 max-w-sm leading-relaxed text-lg">
+              Türkiye'nin en modern kuaför ve güzellik platformu. Yakınındaki en iyi salonları keşfet, anında randevu al.
             </p>
-            <div class="flex items-center gap-4 mt-8">
-              <a href="#" class="w-10 h-10 rounded-full border border-border flex items-center justify-center hover:bg-black hover:text-white hover:border-black transition-all duration-300" aria-label="Instagram">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5"><path d="M12 2c2.717 0 3.056.01 4.122.06 1.065.05 1.79.217 2.428.465.66.254 1.216.598 1.772 1.153a4.908 4.908 0 0 1 1.153 1.772c.247.637.415 1.363.465 2.428.047 1.066.06 1.405.06 4.122 0 2.717-.01 3.056-.06 4.122-.05 1.065-.218 1.79-.465 2.428a4.883 4.883 0 0 1-1.153 1.772 4.915 4.915 0 0 1-1.772 1.153c-.637.247-1.363.415-2.428.465-1.066.047-1.405.06-4.122.06-2.717 0-3.056-.01-4.122-.06-1.065-.05-1.79-.218-2.428-.465a4.89 4.89 0 0 1-1.772-1.153 4.904 4.904 0 0 1-1.153-1.772c-.248-.637-.415-1.363-.465-2.428C2.013 15.056 2 14.717 2 12c0-2.717.01-3.056.06-4.122.05-1.066.217-1.79.465-2.428a4.88 4.88 0 0 1 1.153-1.772A4.897 4.897 0 0 1 5.45 2.525c.638-.248 1.362-.415 2.428-.465C8.944 2.013 9.283 2 12 2zm0 1.802c-2.67 0-2.986.01-4.04.058-.976.045-1.505.207-1.858.344-.466.182-.8.398-1.15.748-.35.35-.566.684-.748 1.15-.137.353-.3.882-.344 1.857-.048 1.055-.058 1.37-.058 4.041 0 2.67.01 2.986.058 4.04.045.976.207 1.505.344 1.858.182.466.399.8.748 1.15.35.35.684.566 1.15.748.353.137.882.3 1.857.344 1.054.048 1.37.058 4.041.058 2.67 0 2.987-.01 4.04-.058.976-.045 1.505-.207 1.858-.344.466-.182.8-.398 1.15-.748.35-.35.566-.684.748-1.15.137-.353.3-.882.344-1.857.048-1.055.058-1.37.058-4.041 0-2.67-.01-2.986-.058-4.04-.045-.976-.207-1.505-.344-1.858a3.097 3.097 0 0 0-.748-1.15 3.098 3.098 0 0 0-1.15-.748c-.353-.137-.882-.3-1.857-.344-1.055-.048-1.37-.058-4.041-.058zm0 3.063a5.135 5.135 0 1 1 0 10.27 5.135 5.135 0 0 1 0-10.27zm0 8.468a3.333 3.333 0 1 0 0-6.666 3.333 3.333 0 0 0 0 6.666zm6.538-8.671a1.2 1.2 0 1 1-2.4 0 1.2 1.2 0 0 1 2.4 0z"/></svg>
+            <div class="flex items-center gap-3 mt-8">
+              <a href="#" class="w-11 h-11 rounded-full bg-white/10 flex items-center justify-center hover:bg-white hover:text-black transition-all duration-300" aria-label="Instagram">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5"><path d="M12 2c2.717 0 3.056.01 4.122.06 1.065.05 1.79.217 2.428.465.66.254 1.216.598 1.772 1.153a4.908 4.908 0 0 1 1.153 1.772c.247.637.415 1.363.465 2.428.047 1.066.06 1.405.06 4.122 0 2.717-.01 3.056-.06 4.122-.05 1.065-.218 1.79-.465 2.428a4.883 4.883 0 0 1-1.153 1.772 4.915 4.915 0 0 1-1.772 1.153c-.637.247-1.363.415-2.428.465-1.066.047-1.405.06-4.122.06-2.717 0-3.056-.01-4.122-.06-1.065-.05-1.79-.218-2.428-.465a4.89 4.89 0 0 1-1.772-1.153 4.904 4.904 0 0 1-1.153-1.772c-.248-.637-.415-1.363-.465-2.428C2.013 15.056 2 14.717 2 12c0-2.717.01-3.056.06-4.122.05-1.066.217-1.79.465-2.428a4.88 4.88 0 0 1 1.153-1.772A4.897 4.897 0 0 1 5.45 2.525c.638-.248 1.362-.415 2.428-.465C8.944 2.013 9.283 2 12 2zm0 5a5 5 0 1 0 0 10 5 5 0 0 0 0-10zm0 8.25a3.25 3.25 0 1 1 0-6.5 3.25 3.25 0 0 1 0 6.5zm5.25-9.5a1.25 1.25 0 1 0 0 2.5 1.25 1.25 0 0 0 0-2.5z"/></svg>
               </a>
-              <a href="#" class="w-10 h-10 rounded-full border border-border flex items-center justify-center hover:bg-black hover:text-white hover:border-black transition-all duration-300" aria-label="X/Twitter">
+              <a href="#" class="w-11 h-11 rounded-full bg-white/10 flex items-center justify-center hover:bg-white hover:text-black transition-all duration-300" aria-label="X/Twitter">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-4 h-4"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
               </a>
-              <a href="#" class="w-10 h-10 rounded-full border border-border flex items-center justify-center hover:bg-black hover:text-white hover:border-black transition-all duration-300" aria-label="LinkedIn">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 0 1-2.063-2.065 2.064 2.064 0 1 1 2.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
+              <a href="#" class="w-11 h-11 rounded-full bg-white/10 flex items-center justify-center hover:bg-white hover:text-black transition-all duration-300" aria-label="TikTok">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5"><path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z"/></svg>
               </a>
             </div>
           </div>
-          <div>
-            <h4 class="font-display font-semibold text-sm uppercase tracking-wider mb-6">Keşfet</h4>
-            <ul class="space-y-4 text-muted">
-              <li><a href="/" class="hover:text-black transition-colors">Ana Sayfa</a></li>
-              <li><a href="{% url 'customer_app' %}" class="hover:text-black transition-colors">Uygulama</a></li>
-              <li><a href="/#pricing" class="hover:text-black transition-colors">Fiyatlandırma</a></li>
-              <li><a href="/partner/kuafora-partner/" class="hover:text-black transition-colors">İşletmeler İçin</a></li>
+          
+          <!-- Links -->
+          <div class="md:col-span-2">
+            <h4 class="font-semibold text-sm uppercase tracking-wider text-white/40 mb-6">Platform</h4>
+            <ul class="space-y-4">
+              <li><a href="/" class="text-white/70 hover:text-white transition-colors">Ana Sayfa</a></li>
+              <li><a href="{% url 'customer_app' %}" class="text-white/70 hover:text-white transition-colors">Uygulama</a></li>
+              <li><a href="/#pricing" class="text-white/70 hover:text-white transition-colors">Fiyatlar</a></li>
+              <li><a href="/partner/kuafora-partner/" class="text-white/70 hover:text-white transition-colors">İşletmeler</a></li>
             </ul>
           </div>
-          <div>
-            <h4 class="font-display font-semibold text-sm uppercase tracking-wider mb-6">Yasal</h4>
-            <ul class="space-y-4 text-muted">
-              <li><a href="{% url 'legal_terms' %}" class="hover:text-black transition-colors">Kullanım Şartları</a></li>
-              <li><a href="{% url 'legal_privacy' %}" class="hover:text-black transition-colors">Gizlilik Politikası</a></li>
-              <li><a href="{% url 'legal_kvkk' %}" class="hover:text-black transition-colors">KVKK</a></li>
-              <li><a href="{% url 'legal_cookies' %}" class="hover:text-black transition-colors">Çerez Politikası</a></li>
+          
+          <div class="md:col-span-2">
+            <h4 class="font-semibold text-sm uppercase tracking-wider text-white/40 mb-6">Yasal</h4>
+            <ul class="space-y-4">
+              <li><a href="{% url 'legal_terms' %}" class="text-white/70 hover:text-white transition-colors">Kullanım Şartları</a></li>
+              <li><a href="{% url 'legal_privacy' %}" class="text-white/70 hover:text-white transition-colors">Gizlilik</a></li>
+              <li><a href="{% url 'legal_kvkk' %}" class="text-white/70 hover:text-white transition-colors">KVKK</a></li>
+              <li><a href="{% url 'legal_cookies' %}" class="text-white/70 hover:text-white transition-colors">Çerezler</a></li>
+            </ul>
+          </div>
+          
+          <div class="md:col-span-3">
+            <h4 class="font-semibold text-sm uppercase tracking-wider text-white/40 mb-6">İletişim</h4>
+            <ul class="space-y-4">
+              <li>
+                <a href="mailto:destek@kuafora.com" class="text-white/70 hover:text-white transition-colors flex items-center gap-2">
+                  <svg class="w-5 h-5 text-accent-rose" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+                  </svg>
+                  destek@kuafora.com
+                </a>
+              </li>
+              <li>
+                <a href="#" class="text-white/70 hover:text-white transition-colors flex items-center gap-2">
+                  <svg class="w-5 h-5 text-accent-violet" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                  </svg>
+                  İstanbul, Türkiye
+                </a>
+              </li>
             </ul>
           </div>
         </div>
-        <div class="mt-16 pt-8 border-t border-border flex flex-col sm:flex-row justify-between items-center gap-4">
-          <p class="text-sm text-muted">© {% now "Y" %} Kuafora. Tüm hakları saklıdır.</p>
-          <p class="text-sm text-muted">İletişim: <a href="mailto:destek@kuafora.com" class="hover:text-black transition-colors">destek@kuafora.com</a></p>
+        
+        <div class="mt-16 pt-8 border-t border-white/10 flex flex-col sm:flex-row justify-between items-center gap-4">
+          <p class="text-sm text-white/40">© {% now "Y" %} Kuafora. Tüm hakları saklıdır.</p>
+          <div class="flex items-center gap-6">
+            <a href="#" class="text-sm text-white/40 hover:text-white transition-colors">Türkçe 🇹🇷</a>
+          </div>
         </div>
       </div>
     </footer>
@@ -200,8 +340,7 @@
         const target = document.querySelector(hash);
         if(!target) return;
         e.preventDefault();
-        const header = document.querySelector('[data-header]');
-        const offset = header ? header.offsetHeight + 24 : 0;
+        const offset = 100;
         const top = target.getBoundingClientRect().top + window.pageYOffset - offset;
         window.scrollTo({ top, behavior: prefersReduced ? 'auto' : 'smooth' });
       });
@@ -222,19 +361,6 @@
           observer.observe(el);
         });
       }
-      
-      // Header background on scroll
-      const navWrapper = document.querySelector('[data-nav]');
-      function updateHeader(){
-        if(window.scrollY > 50){
-          navWrapper.classList.add('shadow-sm');
-          navWrapper.classList.remove('border-transparent');
-        } else {
-          navWrapper.classList.remove('shadow-sm');
-        }
-      }
-      updateHeader();
-      window.addEventListener('scroll', updateHeader, { passive: true });
     </script>
   </body>
 </html>
