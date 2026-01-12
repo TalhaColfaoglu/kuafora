@@ -3,6 +3,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
 from django.db import models
+from django.db.models import Q
 from .models import ChatRoom, ChatMessage, ChatBan
 from .serializers import ChatRoomSerializer, ChatMessageSerializer
 from app.barbers.models import Barbershop
@@ -18,20 +19,26 @@ class ChatRoomViewSet(viewsets.ModelViewSet):
 
         user = self.request.user
         queryset = ChatRoom.objects.all()
-        
-        if self.request.query_params.get("as_partner") == "true":
-             staff_profiles = user.staff_profiles.all()
-             shop_ids = staff_profiles.values_list("barbershop_id", flat=True)
-             queryset = queryset.filter(barbershop__id__in=shop_ids)
-        else:
-            # Kullanıcı kendi özel odalarını ve katıldığı public odaları görebilir (public odalar için ek logic gerekebilir, şimdilik basitleştirilmiş)
-            # Public rooms are theoretically visible to everyone, but typically accessed via start_public
-            queryset = queryset.filter(
-                models.Q(customer=user, room_type=ChatRoom.RoomType.PRIVATE) | 
-                models.Q(room_type=ChatRoom.RoomType.PUBLIC)
-            )
-            
-        return queryset.order_by("-last_message_at")
+
+        as_partner = self.request.query_params.get("as_partner") == "true"
+
+        # If the user is a staff member of any shop, allow access to those shops' rooms as well.
+        staff_profiles = getattr(user, "staff_profiles", None)
+        shop_ids = []
+        if staff_profiles is not None:
+            shop_ids = list(staff_profiles.all().values_list("barbershop_id", flat=True))
+
+        if as_partner:
+            # Partner-side listing: only rooms for staff's shops
+            if not shop_ids:
+                return ChatRoom.objects.none()
+            return queryset.filter(barbershop__id__in=shop_ids).order_by("-last_message_at")
+
+        # Default: customer rooms + public rooms + (if staff) their shop rooms
+        q = Q(room_type=ChatRoom.RoomType.PUBLIC) | Q(customer=user, room_type=ChatRoom.RoomType.PRIVATE)
+        if shop_ids:
+            q |= Q(barbershop__id__in=shop_ids)
+        return queryset.filter(q).order_by("-last_message_at")
 
     @action(detail=False, methods=["post"])
     def start(self, request):
@@ -47,7 +54,7 @@ class ChatRoomViewSet(viewsets.ModelViewSet):
             barbershop=shop,
             room_type=ChatRoom.RoomType.PRIVATE
         )
-        return Response(ChatRoomSerializer(room).data)
+        return Response(ChatRoomSerializer(room, context={"request": request}).data)
 
     @action(detail=False, methods=["post"])
     def start_public(self, request):
@@ -64,7 +71,7 @@ class ChatRoomViewSet(viewsets.ModelViewSet):
             room_type=ChatRoom.RoomType.PUBLIC,
             defaults={'customer': None}
         )
-        return Response(ChatRoomSerializer(room).data)
+        return Response(ChatRoomSerializer(room, context={"request": request}).data)
 
     @action(detail=True, methods=["post"])
     def send_message(self, request, pk=None):
@@ -111,6 +118,32 @@ class ChatRoomViewSet(viewsets.ModelViewSet):
         
         msgs = room.messages.all().select_related('sender').order_by("created_at")
         return Response(ChatMessageSerializer(msgs, many=True, context={"request": request}).data)
+
+    @action(detail=True, methods=["delete"], url_path=r"messages/(?P<message_id>[^/.]+)")
+    def delete_message(self, request, pk=None, message_id=None):
+        room = self.get_object()
+
+        # Re-use the same access control as "messages"
+        if room.room_type == ChatRoom.RoomType.PRIVATE:
+            is_staff = room.barbershop.staff.filter(user=request.user).exists()
+            if room.customer != request.user and not is_staff:
+                return Response({"detail": "Not authorized"}, status=403)
+
+        msg = get_object_or_404(ChatMessage, id=message_id, room=room)
+
+        is_staff = room.barbershop.staff.filter(user=request.user).exists()
+        is_sender = msg.sender_id == request.user.id
+        if not is_staff and not is_sender:
+            return Response({"detail": "Not authorized"}, status=403)
+
+        msg.delete()
+
+        # Keep room.last_message_at consistent
+        last = room.messages.order_by("-created_at").first()
+        room.last_message_at = last.created_at if last else room.created_at
+        room.save(update_fields=["last_message_at", "updated_at"])
+
+        return Response({"success": True}, status=status.HTTP_200_OK)
 
     @action(detail=True, methods=["post"])
     def ban_user(self, request, pk=None):
