@@ -88,5 +88,6 @@ urlpatterns = [
     path("health/", health),
 ]
 
-if settings.DEBUG:
+# Serve media files locally when using local storage (DEBUG or when S3 is not configured)
+if settings.DEBUG or settings.DEFAULT_FILE_STORAGE == "django.core.files.storage.FileSystemStorage":
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

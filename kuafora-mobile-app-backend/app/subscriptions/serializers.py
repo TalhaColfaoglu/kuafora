@@ -42,6 +42,27 @@ class SubscriptionSerializer(serializers.ModelSerializer):
     status_info = serializers.ReadOnlyField()
     days_until_trial_ends = serializers.ReadOnlyField()
     is_active_subscription = serializers.ReadOnlyField()
+    applied_coupons = serializers.SerializerMethodField()
+    
+    def get_applied_coupons(self, obj: Subscription):
+        # En güncel önce görünsün
+        qs = obj.coupon_usages.select_related('coupon').order_by('-applied_at')
+        out = []
+        for usage in qs:
+            c = usage.coupon
+            days_added = 0
+            if c.discount_type == 'free_months':
+                # Basit ve tutarlı: 1 ay = 30 gün
+                days_added = int(c.discount_value) * 30
+            out.append({
+                'code': c.code,
+                'discount_type': c.discount_type,
+                'discount_value': c.discount_value,
+                'discount_display': c.discount_display,
+                'applied_at': usage.applied_at,
+                'days_added': days_added,
+            })
+        return out
     
     class Meta:
         model = Subscription
@@ -51,6 +72,7 @@ class SubscriptionSerializer(serializers.ModelSerializer):
             'current_period_start', 'current_period_end',
             'coupon_code', 'coupon_applied_at',
             'days_until_trial_ends', 'is_active_subscription',
+            'applied_coupons',
             'created_at', 'updated_at'
         ]
 

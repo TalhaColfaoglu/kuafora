@@ -1230,12 +1230,27 @@ class PartnerBarbershopViewSet(viewsets.ModelViewSet):
                     plan = SubscriptionPlan.objects.filter(is_active=True).first()
                 
                 if plan:
-                    Subscription.objects.create(
+                    subscription = Subscription.objects.create(
                         barbershop=barbershop,
                         plan=plan,
                         status='trial',
                         trial_ends_at=timezone.now() + timedelta(days=90)
                     )
+                    # İlk 200 kuaför: ILK200 kuponu varsa otomatik uygula (quota doluysa otomatik atlar)
+                    try:
+                        from app.subscriptions.models import Coupon, CouponUsage
+                        coupon = Coupon.objects.filter(code='ILK200', is_active=True).first()
+                        if coupon and coupon.is_valid:
+                            subscription.coupon = coupon
+                            subscription.coupon_applied_at = timezone.now()
+                            subscription.status = 'lifetime'
+                            subscription.save(update_fields=['coupon', 'coupon_applied_at', 'status'])
+                            _, created = CouponUsage.objects.get_or_create(coupon=coupon, subscription=subscription)
+                            if created:
+                                coupon.current_uses += 1
+                                coupon.save()
+                    except Exception:
+                        pass
         except Exception:
             # Subscription oluşturma hatası kritik değil, sessizce geç
             pass
@@ -1257,15 +1272,36 @@ class PartnerBarbershopViewSet(viewsets.ModelViewSet):
         BarbershopImage.objects.create(barbershop=bs, image=image)
         return Response({'detail': 'ok'})
 
-    @action(detail=True, methods=["post"], url_path="main-image")
-    def set_main_image(self, request, pk=None):
+    @action(detail=True, methods=["delete"], url_path=r"images/(?P<image_id>[^/.]+)")
+    def delete_image(self, request, pk=None, image_id=None):
+        from django.shortcuts import get_object_or_404
+        from .models import BarbershopImage
         bs = self.get_object()
-        image = request.FILES.get('image')
-        if not image:
-            return Response({'detail': 'No image'}, status=400)
-        bs.main_image = image
-        bs.save(update_fields=["main_image"])
+        img = get_object_or_404(BarbershopImage, id=image_id, barbershop=bs)
+        img.delete()
         return Response({'detail': 'ok'})
+
+    @action(detail=True, methods=["post", "delete"], url_path="main-image")
+    def set_main_image(self, request, pk=None):
+        import traceback
+        try:
+            bs = self.get_object()
+            if request.method.lower() == "delete":
+                bs.main_image = None
+                bs.main_image_thumb = None
+                bs.save(update_fields=["main_image", "main_image_thumb"])
+                return Response({'detail': 'ok'})
+            image = request.FILES.get('image')
+            if not image:
+                return Response({'detail': 'No image'}, status=400)
+            bs.main_image = image
+            # Don't use update_fields - model save() generates thumbnail which also needs to be saved
+            bs.save()
+            return Response({'detail': 'ok'})
+        except Exception as e:
+            print(f"[set_main_image ERROR] {e}")
+            traceback.print_exc()
+            return Response({'detail': str(e)}, status=500)
 
 
 class PartnerServiceViewSetSecure(viewsets.ModelViewSet):

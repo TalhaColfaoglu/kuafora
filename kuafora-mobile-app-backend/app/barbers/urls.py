@@ -102,6 +102,11 @@ urlpatterns = [
         SubscriptionViewSet.as_view({"post": "start_trial"}),
         name="partner-subscriptions-start-trial",
     ),
+    path(
+        "partner/subscriptions/apply-coupon/",
+        SubscriptionViewSet.as_view({"post": "apply_coupon"}),
+        name="partner-subscriptions-apply-coupon",
+    ),
     
     # Calendar aliases for APPEND_SLASH=False compatibility
     path("calendar/holidays", CalendarStatusViewSet.as_view({'get': 'holidays'}), name="calendar-holidays-alias"),
