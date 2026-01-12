@@ -1,7 +1,7 @@
 from rest_framework import viewsets, permissions
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from django.db import ProgrammingError
+from django.db import DatabaseError, OperationalError, ProgrammingError
 from .models import Notification
 from .serializers import NotificationSerializer
 
@@ -14,8 +14,8 @@ class NotificationViewSet(viewsets.ReadOnlyModelViewSet):
             return Notification.objects.none()
         try:
             return Notification.objects.filter(user=self.request.user)
-        except ProgrammingError:
-            # Tablo yoksa (migration uygulanmadıysa) boş dönerek 500'ü engelle
+        except (ProgrammingError, OperationalError, DatabaseError):
+            # DB hazır değil / tablo yok / migrate uygulanmadıysa boş dönerek 500'ü engelle
             return Notification.objects.none()
 
     @action(detail=True, methods=["post"])
