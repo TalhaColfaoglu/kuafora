@@ -196,10 +196,10 @@
           
           <!-- Mobile Menu Button -->
           <button id="mobile-menu-btn" class="md:hidden p-2 rounded-full hover:bg-white/10 transition-colors text-white" aria-label="Menü">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
-            </svg>
-          </button>
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+              </svg>
+            </button>
         </nav>
       </div>
       
@@ -273,7 +273,7 @@
               <li><a href="{% url 'customer_app' %}" class="text-white/70 hover:text-white transition-colors">Nasıl Çalışır</a></li>
               <li><a href="/partner/kuafora-partner/" class="text-white/70 hover:text-white transition-colors">İşletmeler İçin</a></li>
             </ul>
-          </div>
+        </div>
           
           <div class="md:col-span-2">
             <h4 class="font-semibold text-sm uppercase tracking-wider text-white/40 mb-6">Yasal</h4>
@@ -282,8 +282,8 @@
               <li><a href="{% url 'legal_privacy' %}" class="text-white/70 hover:text-white transition-colors">Gizlilik</a></li>
               <li><a href="{% url 'legal_kvkk' %}" class="text-white/70 hover:text-white transition-colors">KVKK</a></li>
               <li><a href="{% url 'legal_cookies' %}" class="text-white/70 hover:text-white transition-colors">Çerezler</a></li>
-            </ul>
-          </div>
+          </ul>
+        </div>
           
           <div class="md:col-span-3">
             <h4 class="font-semibold text-sm uppercase tracking-wider text-white/40 mb-6">İletişim</h4>
@@ -305,7 +305,7 @@
                   İstanbul, Türkiye
                 </a>
               </li>
-            </ul>
+          </ul>
           </div>
         </div>
         
@@ -353,8 +353,8 @@
       const revealElements = document.querySelectorAll('[data-reveal]');
       
       if(!prefersReduced && revealElements.length > 0){
-        const observer = new IntersectionObserver((entries)=>{
-          entries.forEach(entry=>{
+      const observer = new IntersectionObserver((entries)=>{
+        entries.forEach(entry=>{
             if(entry.isIntersecting){ 
               // Add delay based on data attribute or index
               const delay = entry.target.dataset.delay || 0;
@@ -364,7 +364,7 @@
               }, delay);
               observer.unobserve(entry.target);
             }
-          })
+        })
         },{threshold:0.05, rootMargin: '50px'});
         
         revealElements.forEach((el, index) => {

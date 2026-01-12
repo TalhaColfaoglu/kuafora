@@ -30,15 +30,15 @@
   }, {
     threshold: 0.1,
     rootMargin: '0px 0px -50px 0px'
-  });
-
+        });
+        
   // Initialize reveal elements
   function initReveal() {
     document.querySelectorAll('[data-reveal]').forEach(el => {
       el.classList.add('reveal-ready');
       revealObserver.observe(el);
-    });
-  }
+  });
+}
 
   // Add CSS for reveal animations
   const style = document.createElement('style');
@@ -60,7 +60,7 @@
         opacity: 1;
         transform: none;
         transition: none;
-      }
+}
     }
   `;
   document.head.appendChild(style);
@@ -68,7 +68,7 @@
   // Run on DOM ready
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initReveal);
-  } else {
+    } else {
     initReveal();
   }
 })();

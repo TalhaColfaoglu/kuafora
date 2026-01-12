@@ -1285,19 +1285,19 @@ class PartnerBarbershopViewSet(viewsets.ModelViewSet):
     def set_main_image(self, request, pk=None):
         import traceback
         try:
-            bs = self.get_object()
+        bs = self.get_object()
             if request.method.lower() == "delete":
                 bs.main_image = None
                 bs.main_image_thumb = None
                 bs.save(update_fields=["main_image", "main_image_thumb"])
                 return Response({'detail': 'ok'})
-            image = request.FILES.get('image')
-            if not image:
-                return Response({'detail': 'No image'}, status=400)
-            bs.main_image = image
+        image = request.FILES.get('image')
+        if not image:
+            return Response({'detail': 'No image'}, status=400)
+        bs.main_image = image
             # Don't use update_fields - model save() generates thumbnail which also needs to be saved
             bs.save()
-            return Response({'detail': 'ok'})
+        return Response({'detail': 'ok'})
         except Exception as e:
             print(f"[set_main_image ERROR] {e}")
             traceback.print_exc()
