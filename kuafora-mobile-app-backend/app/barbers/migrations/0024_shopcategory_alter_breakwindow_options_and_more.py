@@ -84,125 +84,429 @@ class Migration(migrations.Migration):
             model_name='breakwindow',
             name='updated_at',
         ),
-        migrations.AddField(
-            model_name='barbershop',
-            name='external_booking',
-            field=models.JSONField(blank=True, default=dict, help_text='Harici randevu yontemleri: whatsapp, website, instagram, other_app, custom'),
+        # NOTE:
+        # Multiple earlier migrations in this app apply schema via RunSQL/RunPython (idempotent)
+        # without updating migration state (e.g. 0008, 0009, 0012, 0017, 0020).
+        # This migration brings Django state back in sync. DB ops must be idempotent.
+        migrations.SeparateDatabaseAndState(
+            database_operations=[
+                migrations.RunSQL(
+                    sql=(
+                        "ALTER TABLE barbers_barbershop "
+                        "ADD COLUMN IF NOT EXISTS external_booking jsonb DEFAULT '{}'::jsonb NOT NULL;"
+                    ),
+                    reverse_sql=(
+                        "ALTER TABLE barbers_barbershop "
+                        "DROP COLUMN IF EXISTS external_booking;"
+                    ),
+                ),
+            ],
+            state_operations=[
+                migrations.AddField(
+                    model_name="barbershop",
+                    name="external_booking",
+                    field=models.JSONField(
+                        blank=True,
+                        default=dict,
+                        help_text="Harici randevu yontemleri: whatsapp, website, instagram, other_app, custom",
+                    ),
+                ),
+            ],
         ),
-        migrations.AddField(
-            model_name='barbershop',
-            name='facebook',
-            field=models.CharField(blank=True, max_length=100),
+        migrations.SeparateDatabaseAndState(
+            database_operations=[
+                migrations.RunSQL(
+                    sql=(
+                        "ALTER TABLE barbers_barbershop "
+                        "ADD COLUMN IF NOT EXISTS facebook varchar(100) DEFAULT '' NOT NULL;"
+                    ),
+                    reverse_sql=(
+                        "ALTER TABLE barbers_barbershop "
+                        "DROP COLUMN IF EXISTS facebook;"
+                    ),
+                ),
+            ],
+            state_operations=[
+                migrations.AddField(
+                    model_name="barbershop",
+                    name="facebook",
+                    field=models.CharField(blank=True, max_length=100),
+                ),
+            ],
         ),
-        migrations.AddField(
-            model_name='barbershop',
-            name='instagram',
-            field=models.CharField(blank=True, max_length=100),
+        migrations.SeparateDatabaseAndState(
+            database_operations=[
+                migrations.RunSQL(
+                    sql=(
+                        "ALTER TABLE barbers_barbershop "
+                        "ADD COLUMN IF NOT EXISTS instagram varchar(100) DEFAULT '' NOT NULL;"
+                    ),
+                    reverse_sql=(
+                        "ALTER TABLE barbers_barbershop "
+                        "DROP COLUMN IF EXISTS instagram;"
+                    ),
+                ),
+            ],
+            state_operations=[
+                migrations.AddField(
+                    model_name="barbershop",
+                    name="instagram",
+                    field=models.CharField(blank=True, max_length=100),
+                ),
+            ],
         ),
-        migrations.AddField(
-            model_name='barbershop',
-            name='latitude',
-            field=models.FloatField(blank=True, null=True),
+        migrations.SeparateDatabaseAndState(
+            database_operations=[
+                migrations.RunSQL(
+                    sql="ALTER TABLE barbers_barbershop ADD COLUMN IF NOT EXISTS latitude double precision;",
+                    reverse_sql="ALTER TABLE barbers_barbershop DROP COLUMN IF EXISTS latitude;",
+                ),
+            ],
+            state_operations=[
+                migrations.AddField(
+                    model_name="barbershop",
+                    name="latitude",
+                    field=models.FloatField(blank=True, null=True),
+                ),
+            ],
         ),
-        migrations.AddField(
-            model_name='barbershop',
-            name='longitude',
-            field=models.FloatField(blank=True, null=True),
+        migrations.SeparateDatabaseAndState(
+            database_operations=[
+                migrations.RunSQL(
+                    sql="ALTER TABLE barbers_barbershop ADD COLUMN IF NOT EXISTS longitude double precision;",
+                    reverse_sql="ALTER TABLE barbers_barbershop DROP COLUMN IF EXISTS longitude;",
+                ),
+            ],
+            state_operations=[
+                migrations.AddField(
+                    model_name="barbershop",
+                    name="longitude",
+                    field=models.FloatField(blank=True, null=True),
+                ),
+            ],
         ),
-        migrations.AddField(
-            model_name='barbershop',
-            name='main_image_thumb',
-            field=models.ImageField(blank=True, null=True, upload_to='barbershops/main/thumbs/'),
+        migrations.SeparateDatabaseAndState(
+            database_operations=[
+                migrations.RunSQL(
+                    sql="ALTER TABLE barbers_barbershop ADD COLUMN IF NOT EXISTS main_image_thumb varchar(100);",
+                    reverse_sql="ALTER TABLE barbers_barbershop DROP COLUMN IF EXISTS main_image_thumb;",
+                ),
+            ],
+            state_operations=[
+                migrations.AddField(
+                    model_name="barbershop",
+                    name="main_image_thumb",
+                    field=models.ImageField(blank=True, null=True, upload_to="barbershops/main/thumbs/"),
+                ),
+            ],
         ),
-        migrations.AddField(
-            model_name='barbershop',
-            name='system_type',
-            field=models.CharField(choices=[('info', 'Information'), ('booking', 'Kuafora Booking'), ('external', 'External Booking')], default='info', help_text='Isletme sistem modu: info, booking veya external', max_length=15),
+        migrations.SeparateDatabaseAndState(
+            database_operations=[
+                migrations.RunSQL(
+                    sql=(
+                        "ALTER TABLE barbers_barbershop "
+                        "ADD COLUMN IF NOT EXISTS system_type varchar(15) DEFAULT 'info' NOT NULL;"
+                    ),
+                    reverse_sql="ALTER TABLE barbers_barbershop DROP COLUMN IF EXISTS system_type;",
+                ),
+            ],
+            state_operations=[
+                migrations.AddField(
+                    model_name="barbershop",
+                    name="system_type",
+                    field=models.CharField(
+                        choices=[
+                            ("info", "Information"),
+                            ("booking", "Kuafora Booking"),
+                            ("external", "External Booking"),
+                        ],
+                        default="info",
+                        help_text="Isletme sistem modu: info, booking veya external",
+                        max_length=15,
+                    ),
+                ),
+            ],
         ),
-        migrations.AddField(
-            model_name='barbershop',
-            name='twitter',
-            field=models.CharField(blank=True, max_length=100),
+        migrations.SeparateDatabaseAndState(
+            database_operations=[
+                migrations.RunSQL(
+                    sql=(
+                        "ALTER TABLE barbers_barbershop "
+                        "ADD COLUMN IF NOT EXISTS twitter varchar(100) DEFAULT '' NOT NULL;"
+                    ),
+                    reverse_sql="ALTER TABLE barbers_barbershop DROP COLUMN IF EXISTS twitter;",
+                ),
+            ],
+            state_operations=[
+                migrations.AddField(
+                    model_name="barbershop",
+                    name="twitter",
+                    field=models.CharField(blank=True, max_length=100),
+                ),
+            ],
         ),
-        migrations.AddField(
-            model_name='barbershop',
-            name='whatsapp',
-            field=models.CharField(blank=True, max_length=100),
+        migrations.SeparateDatabaseAndState(
+            database_operations=[
+                migrations.RunSQL(
+                    sql=(
+                        "ALTER TABLE barbers_barbershop "
+                        "ADD COLUMN IF NOT EXISTS whatsapp varchar(100) DEFAULT '' NOT NULL;"
+                    ),
+                    reverse_sql="ALTER TABLE barbers_barbershop DROP COLUMN IF EXISTS whatsapp;",
+                ),
+            ],
+            state_operations=[
+                migrations.AddField(
+                    model_name="barbershop",
+                    name="whatsapp",
+                    field=models.CharField(blank=True, max_length=100),
+                ),
+            ],
         ),
-        migrations.AddField(
-            model_name='barbershopimage',
-            name='image_thumb',
-            field=models.ImageField(blank=True, null=True, upload_to='barbershops/extra/thumbs/'),
+        migrations.SeparateDatabaseAndState(
+            database_operations=[
+                migrations.RunSQL(
+                    sql="ALTER TABLE barbers_barbershopimage ADD COLUMN IF NOT EXISTS image_thumb varchar(100);",
+                    reverse_sql="ALTER TABLE barbers_barbershopimage DROP COLUMN IF EXISTS image_thumb;",
+                ),
+            ],
+            state_operations=[
+                migrations.AddField(
+                    model_name="barbershopimage",
+                    name="image_thumb",
+                    field=models.ImageField(blank=True, null=True, upload_to="barbershops/extra/thumbs/"),
+                ),
+            ],
         ),
-        migrations.AddField(
-            model_name='staff',
-            name='appointment_interval',
-            field=models.PositiveIntegerField(choices=[(5, '5 dk'), (10, '10 dk'), (15, '15 dk'), (20, '20 dk'), (30, '30 dk')], default=15, help_text='Randevu aralığı (dakika)'),
+        migrations.SeparateDatabaseAndState(
+            database_operations=[
+                migrations.RunSQL(
+                    sql=(
+                        "ALTER TABLE barbers_staff "
+                        "ADD COLUMN IF NOT EXISTS appointment_interval integer DEFAULT 15 NOT NULL;"
+                    ),
+                    reverse_sql="ALTER TABLE barbers_staff DROP COLUMN IF EXISTS appointment_interval;",
+                ),
+            ],
+            state_operations=[
+                migrations.AddField(
+                    model_name="staff",
+                    name="appointment_interval",
+                    field=models.PositiveIntegerField(
+                        choices=[(5, "5 dk"), (10, "10 dk"), (15, "15 dk"), (20, "20 dk"), (30, "30 dk")],
+                        default=15,
+                        help_text="Randevu aralığı (dakika)",
+                    ),
+                ),
+            ],
         ),
-        migrations.AddField(
-            model_name='staff',
-            name='auto_approval',
-            field=models.BooleanField(default=False, help_text='Randevular otomatik onayla mı?'),
+        migrations.SeparateDatabaseAndState(
+            database_operations=[
+                migrations.RunSQL(
+                    sql="ALTER TABLE barbers_staff ADD COLUMN IF NOT EXISTS auto_approval boolean DEFAULT false NOT NULL;",
+                    reverse_sql="ALTER TABLE barbers_staff DROP COLUMN IF EXISTS auto_approval;",
+                ),
+            ],
+            state_operations=[
+                migrations.AddField(
+                    model_name="staff",
+                    name="auto_approval",
+                    field=models.BooleanField(default=False, help_text="Randevular otomatik onayla mı?"),
+                ),
+            ],
         ),
-        migrations.AddField(
-            model_name='staff',
-            name='bio',
-            field=models.TextField(blank=True, help_text='Personel hakkında açıklama'),
+        migrations.SeparateDatabaseAndState(
+            database_operations=[
+                migrations.RunSQL(
+                    sql="ALTER TABLE barbers_staff ADD COLUMN IF NOT EXISTS bio text DEFAULT '' NOT NULL;",
+                    reverse_sql="ALTER TABLE barbers_staff DROP COLUMN IF EXISTS bio;",
+                ),
+            ],
+            state_operations=[
+                migrations.AddField(
+                    model_name="staff",
+                    name="bio",
+                    field=models.TextField(blank=True, help_text="Personel hakkında açıklama"),
+                ),
+            ],
         ),
-        migrations.AddField(
-            model_name='staff',
-            name='career_start_year',
-            field=models.PositiveIntegerField(blank=True, help_text='Kuaförlüğe başladığı yıl (YYYY)', null=True),
+        migrations.SeparateDatabaseAndState(
+            database_operations=[
+                migrations.RunSQL(
+                    sql="ALTER TABLE barbers_staff ADD COLUMN IF NOT EXISTS career_start_year integer;",
+                    reverse_sql="ALTER TABLE barbers_staff DROP COLUMN IF EXISTS career_start_year;",
+                ),
+            ],
+            state_operations=[
+                migrations.AddField(
+                    model_name="staff",
+                    name="career_start_year",
+                    field=models.PositiveIntegerField(blank=True, help_text="Kuaförlüğe başladığı yıl (YYYY)", null=True),
+                ),
+            ],
         ),
-        migrations.AddField(
-            model_name='staff',
-            name='commission_rate',
-            field=models.DecimalField(blank=True, decimal_places=2, help_text='Personelin yaptığı hizmetten alacağı pay (yüzde)', max_digits=5, null=True),
+        migrations.SeparateDatabaseAndState(
+            database_operations=[
+                migrations.RunSQL(
+                    sql="ALTER TABLE barbers_staff ADD COLUMN IF NOT EXISTS commission_rate numeric(5, 2);",
+                    reverse_sql="ALTER TABLE barbers_staff DROP COLUMN IF EXISTS commission_rate;",
+                ),
+            ],
+            state_operations=[
+                migrations.AddField(
+                    model_name="staff",
+                    name="commission_rate",
+                    field=models.DecimalField(
+                        blank=True,
+                        decimal_places=2,
+                        help_text="Personelin yaptığı hizmetten alacağı pay (yüzde)",
+                        max_digits=5,
+                        null=True,
+                    ),
+                ),
+            ],
         ),
-        migrations.AddField(
-            model_name='staff',
-            name='experience_years',
-            field=models.PositiveIntegerField(blank=True, help_text='Kuaförlük deneyimi (yıl)', null=True),
+        migrations.SeparateDatabaseAndState(
+            database_operations=[
+                migrations.RunSQL(
+                    sql="ALTER TABLE barbers_staff ADD COLUMN IF NOT EXISTS experience_years integer;",
+                    reverse_sql="ALTER TABLE barbers_staff DROP COLUMN IF EXISTS experience_years;",
+                ),
+            ],
+            state_operations=[
+                migrations.AddField(
+                    model_name="staff",
+                    name="experience_years",
+                    field=models.PositiveIntegerField(blank=True, help_text="Kuaförlük deneyimi (yıl)", null=True),
+                ),
+            ],
         ),
-        migrations.AddField(
-            model_name='staff',
-            name='facebook',
-            field=models.CharField(blank=True, max_length=100),
+        migrations.SeparateDatabaseAndState(
+            database_operations=[
+                migrations.RunSQL(
+                    sql="ALTER TABLE barbers_staff ADD COLUMN IF NOT EXISTS facebook varchar(100) DEFAULT '' NOT NULL;",
+                    reverse_sql="ALTER TABLE barbers_staff DROP COLUMN IF EXISTS facebook;",
+                ),
+            ],
+            state_operations=[
+                migrations.AddField(
+                    model_name="staff",
+                    name="facebook",
+                    field=models.CharField(blank=True, max_length=100),
+                ),
+            ],
         ),
-        migrations.AddField(
-            model_name='staff',
-            name='gender_preference',
-            field=models.CharField(choices=[('all', 'Herkese Hizmet'), ('male', 'Sadece Erkek'), ('female', 'Sadece Kadın')], default='all', max_length=10),
+        migrations.SeparateDatabaseAndState(
+            database_operations=[
+                migrations.RunSQL(
+                    sql=(
+                        "ALTER TABLE barbers_staff "
+                        "ADD COLUMN IF NOT EXISTS gender_preference varchar(10) DEFAULT 'all' NOT NULL;"
+                    ),
+                    reverse_sql="ALTER TABLE barbers_staff DROP COLUMN IF EXISTS gender_preference;",
+                ),
+            ],
+            state_operations=[
+                migrations.AddField(
+                    model_name="staff",
+                    name="gender_preference",
+                    field=models.CharField(
+                        choices=[("all", "Herkese Hizmet"), ("male", "Sadece Erkek"), ("female", "Sadece Kadın")],
+                        default="all",
+                        max_length=10,
+                    ),
+                ),
+            ],
         ),
-        migrations.AddField(
-            model_name='staff',
-            name='instagram',
-            field=models.CharField(blank=True, max_length=100),
+        migrations.SeparateDatabaseAndState(
+            database_operations=[
+                migrations.RunSQL(
+                    sql="ALTER TABLE barbers_staff ADD COLUMN IF NOT EXISTS instagram varchar(100) DEFAULT '' NOT NULL;",
+                    reverse_sql="ALTER TABLE barbers_staff DROP COLUMN IF EXISTS instagram;",
+                ),
+            ],
+            state_operations=[
+                migrations.AddField(
+                    model_name="staff",
+                    name="instagram",
+                    field=models.CharField(blank=True, max_length=100),
+                ),
+            ],
         ),
-        migrations.AddField(
-            model_name='staff',
-            name='photo_thumb',
-            field=models.ImageField(blank=True, null=True, upload_to='staff/photos/thumbs/'),
+        migrations.SeparateDatabaseAndState(
+            database_operations=[
+                migrations.RunSQL(
+                    sql="ALTER TABLE barbers_staff ADD COLUMN IF NOT EXISTS photo_thumb varchar(100);",
+                    reverse_sql="ALTER TABLE barbers_staff DROP COLUMN IF EXISTS photo_thumb;",
+                ),
+            ],
+            state_operations=[
+                migrations.AddField(
+                    model_name="staff",
+                    name="photo_thumb",
+                    field=models.ImageField(blank=True, null=True, upload_to="staff/photos/thumbs/"),
+                ),
+            ],
         ),
-        migrations.AddField(
-            model_name='staff',
-            name='rating_avg',
-            field=models.FloatField(default=0, editable=False),
+        migrations.SeparateDatabaseAndState(
+            database_operations=[
+                migrations.RunSQL(
+                    sql="ALTER TABLE barbers_staff ADD COLUMN IF NOT EXISTS rating_avg double precision DEFAULT 0 NOT NULL;",
+                    reverse_sql="ALTER TABLE barbers_staff DROP COLUMN IF EXISTS rating_avg;",
+                ),
+            ],
+            state_operations=[
+                migrations.AddField(
+                    model_name="staff",
+                    name="rating_avg",
+                    field=models.FloatField(default=0, editable=False),
+                ),
+            ],
         ),
-        migrations.AddField(
-            model_name='staff',
-            name='tags',
-            field=models.JSONField(blank=True, default=list, help_text="Uzmanlık etiketleri: ['boyama_ustasi', '20_yillik_usta', ...]"),
+        migrations.SeparateDatabaseAndState(
+            database_operations=[
+                migrations.RunSQL(
+                    sql="ALTER TABLE barbers_staff ADD COLUMN IF NOT EXISTS tags jsonb DEFAULT '[]'::jsonb NOT NULL;",
+                    reverse_sql="ALTER TABLE barbers_staff DROP COLUMN IF EXISTS tags;",
+                ),
+            ],
+            state_operations=[
+                migrations.AddField(
+                    model_name="staff",
+                    name="tags",
+                    field=models.JSONField(blank=True, default=list, help_text="Uzmanlık etiketleri: ['boyama_ustasi', '20_yillik_usta', ...]"),
+                ),
+            ],
         ),
-        migrations.AddField(
-            model_name='staff',
-            name='twitter',
-            field=models.CharField(blank=True, max_length=100),
+        migrations.SeparateDatabaseAndState(
+            database_operations=[
+                migrations.RunSQL(
+                    sql="ALTER TABLE barbers_staff ADD COLUMN IF NOT EXISTS twitter varchar(100) DEFAULT '' NOT NULL;",
+                    reverse_sql="ALTER TABLE barbers_staff DROP COLUMN IF EXISTS twitter;",
+                ),
+            ],
+            state_operations=[
+                migrations.AddField(
+                    model_name="staff",
+                    name="twitter",
+                    field=models.CharField(blank=True, max_length=100),
+                ),
+            ],
         ),
-        migrations.AddField(
-            model_name='staff',
-            name='whatsapp',
-            field=models.CharField(blank=True, max_length=100),
+        migrations.SeparateDatabaseAndState(
+            database_operations=[
+                migrations.RunSQL(
+                    sql="ALTER TABLE barbers_staff ADD COLUMN IF NOT EXISTS whatsapp varchar(100) DEFAULT '' NOT NULL;",
+                    reverse_sql="ALTER TABLE barbers_staff DROP COLUMN IF EXISTS whatsapp;",
+                ),
+            ],
+            state_operations=[
+                migrations.AddField(
+                    model_name="staff",
+                    name="whatsapp",
+                    field=models.CharField(blank=True, max_length=100),
+                ),
+            ],
         ),
         migrations.AlterField(
             model_name='breakwindow',
