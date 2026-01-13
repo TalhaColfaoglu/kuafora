@@ -49,15 +49,52 @@ class Migration(migrations.Migration):
             new_name='appointment_expires_783ed3_idx',
             old_name='hold_expires_idx',
         ),
-        migrations.AddField(
-            model_name='appointment',
-            name='attended_at',
-            field=models.DateTimeField(blank=True, null=True),
+        # NOTE:
+        # `0005_add_attendance_fields` adds `is_attended` and `attended_at` via RunSQL (IF NOT EXISTS)
+        # but does not update Django's migration state. In fresh DBs, by the time we reach this
+        # migration those columns already exist, so plain AddField causes DuplicateColumn.
+        # Fix: make the DB operation idempotent and still update the migration state.
+        migrations.SeparateDatabaseAndState(
+            database_operations=[
+                migrations.RunSQL(
+                    sql=(
+                        "ALTER TABLE appointments_appointment "
+                        "ADD COLUMN IF NOT EXISTS attended_at timestamp with time zone;"
+                    ),
+                    reverse_sql=(
+                        "ALTER TABLE appointments_appointment "
+                        "DROP COLUMN IF EXISTS attended_at;"
+                    ),
+                ),
+            ],
+            state_operations=[
+                migrations.AddField(
+                    model_name="appointment",
+                    name="attended_at",
+                    field=models.DateTimeField(blank=True, null=True),
+                ),
+            ],
         ),
-        migrations.AddField(
-            model_name='appointment',
-            name='is_attended',
-            field=models.BooleanField(blank=True, null=True),
+        migrations.SeparateDatabaseAndState(
+            database_operations=[
+                migrations.RunSQL(
+                    sql=(
+                        "ALTER TABLE appointments_appointment "
+                        "ADD COLUMN IF NOT EXISTS is_attended boolean;"
+                    ),
+                    reverse_sql=(
+                        "ALTER TABLE appointments_appointment "
+                        "DROP COLUMN IF EXISTS is_attended;"
+                    ),
+                ),
+            ],
+            state_operations=[
+                migrations.AddField(
+                    model_name="appointment",
+                    name="is_attended",
+                    field=models.BooleanField(blank=True, null=True),
+                ),
+            ],
         ),
         migrations.AddConstraint(
             model_name='appointment',
