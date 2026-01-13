@@ -11,64 +11,96 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.AlterUniqueTogether(
-            name='lastviewed',
-            unique_together=None,
-        ),
-        migrations.RemoveField(
-            model_name='lastviewed',
-            name='barbershop',
-        ),
-        migrations.RemoveField(
-            model_name='lastviewed',
-            name='user',
-        ),
-        migrations.AlterModelOptions(
-            name='useraddress',
-            options={},
-        ),
-        migrations.RemoveField(
-            model_name='useraddress',
-            name='latitude',
-        ),
-        migrations.RemoveField(
-            model_name='useraddress',
-            name='longitude',
-        ),
-        migrations.AddField(
-            model_name='user',
-            name='image_thumb',
-            field=models.ImageField(blank=True, null=True, upload_to=app.users.models.user_profile_thumb_upload_to),
-        ),
-        migrations.AddField(
-            model_name='useraddress',
-            name='address_line',
-            field=models.CharField(blank=True, default='', max_length=255),
-        ),
-        migrations.AddField(
-            model_name='useraddress',
-            name='label',
-            field=models.CharField(blank=True, default='', max_length=50),
-        ),
-        migrations.AlterField(
-            model_name='user',
-            name='image',
-            field=models.ImageField(blank=True, null=True, upload_to=app.users.models.user_profile_image_upload_to),
-        ),
-        migrations.AlterField(
-            model_name='useraddress',
-            name='city',
-            field=models.CharField(blank=True, max_length=100),
-        ),
-        migrations.AlterField(
-            model_name='useraddress',
-            name='district',
-            field=models.CharField(blank=True, max_length=100),
-        ),
-        migrations.DeleteModel(
-            name='Favorite',
-        ),
-        migrations.DeleteModel(
-            name='LastViewed',
+        # NOTE:
+        # `0005_cleanup_old_tables` already DROPs `users_lastviewed` and `users_favorite`.
+        # However this migration (generated later) still tries to alter constraints/fields
+        # for `users_lastviewed`, which crashes on fresh DBs with:
+        # "Found wrong number (0) of constraints for users_lastviewed(user_id, barbershop_id)"
+        #
+        # Fix: apply DB changes idempotently (IF EXISTS) and update Django migration state
+        # without touching the dropped tables via schema_editor.
+        migrations.SeparateDatabaseAndState(
+            database_operations=[
+                migrations.RunSQL(
+                    sql="""
+                    -- Ensure legacy tables are gone (idempotent)
+                    DROP TABLE IF EXISTS users_lastviewed CASCADE;
+                    DROP TABLE IF EXISTS users_favorite CASCADE;
+
+                    -- Ensure new address fields exist (idempotent)
+                    ALTER TABLE users_useraddress
+                      ADD COLUMN IF NOT EXISTS address_line varchar(255) DEFAULT '' NOT NULL;
+                    ALTER TABLE users_useraddress
+                      ADD COLUMN IF NOT EXISTS label varchar(50) DEFAULT '' NOT NULL;
+
+                    -- Remove deprecated columns if they exist
+                    ALTER TABLE users_useraddress DROP COLUMN IF EXISTS latitude;
+                    ALTER TABLE users_useraddress DROP COLUMN IF EXISTS longitude;
+                    """,
+                    reverse_sql="",
+                ),
+            ],
+            state_operations=[
+                migrations.AlterUniqueTogether(
+                    name='lastviewed',
+                    unique_together=None,
+                ),
+                migrations.RemoveField(
+                    model_name='lastviewed',
+                    name='barbershop',
+                ),
+                migrations.RemoveField(
+                    model_name='lastviewed',
+                    name='user',
+                ),
+                migrations.AlterModelOptions(
+                    name='useraddress',
+                    options={},
+                ),
+                migrations.RemoveField(
+                    model_name='useraddress',
+                    name='latitude',
+                ),
+                migrations.RemoveField(
+                    model_name='useraddress',
+                    name='longitude',
+                ),
+                migrations.AddField(
+                    model_name='user',
+                    name='image_thumb',
+                    field=models.ImageField(blank=True, null=True, upload_to=app.users.models.user_profile_thumb_upload_to),
+                ),
+                migrations.AddField(
+                    model_name='useraddress',
+                    name='address_line',
+                    field=models.CharField(blank=True, default='', max_length=255),
+                ),
+                migrations.AddField(
+                    model_name='useraddress',
+                    name='label',
+                    field=models.CharField(blank=True, default='', max_length=50),
+                ),
+                migrations.AlterField(
+                    model_name='user',
+                    name='image',
+                    field=models.ImageField(blank=True, null=True, upload_to=app.users.models.user_profile_image_upload_to),
+                ),
+                migrations.AlterField(
+                    model_name='useraddress',
+                    name='city',
+                    field=models.CharField(blank=True, max_length=100),
+                ),
+                migrations.AlterField(
+                    model_name='useraddress',
+                    name='district',
+                    field=models.CharField(blank=True, max_length=100),
+                ),
+                migrations.DeleteModel(
+                    name='Favorite',
+                ),
+                migrations.DeleteModel(
+                    name='LastViewed',
+                ),
+            ],
         ),
     ]
