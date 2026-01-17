@@ -47,12 +47,30 @@ class LoginSerializer(serializers.Serializer):
     def validate(self, attrs):
         email = (attrs.get("email") or "").strip().lower()
         password = (attrs.get("password") or "")
-        if email and password:
-            user = authenticate(request=self.context.get("request"), email=email, password=password)
-            if not user:
-                raise serializers.ValidationError("Invalid email or password.")
-        else:
-            raise serializers.ValidationError("Must include email and password.")
+
+        if not email or not password:
+            raise serializers.ValidationError({"detail": "E-posta ve şifre zorunludur.", "reason": "missing_fields"})
+
+        # We intentionally distinguish common cases so the app can show the right message.
+        # Note: This reveals whether the email exists. This is acceptable here because the
+        # mobile flow already calls /auth/check-email/ before login.
+        user_obj = User.objects.filter(email__iexact=email).only("id", "email", "is_active", "password").first()
+        if not user_obj:
+            raise serializers.ValidationError({"detail": "Bu e-posta ile kayıt bulunamadı.", "reason": "user_not_found"})
+
+        if not user_obj.is_active:
+            raise serializers.ValidationError({"detail": "Hesabınız banlanmış veya pasif durumda.", "reason": "banned"})
+
+        # Check password explicitly for a clearer error than generic authenticate(None).
+        if not user_obj.check_password(password):
+            raise serializers.ValidationError({"detail": "Şifre yanlış.", "reason": "wrong_password"})
+
+        # Re-run authenticate to keep backend compatibility / future-proofing.
+        user = authenticate(request=self.context.get("request"), email=email, password=password)
+        if not user:
+            # Fallback: should be rare if the above checks passed.
+            raise serializers.ValidationError({"detail": "E-posta veya şifre hatalı.", "reason": "invalid_credentials"})
+
         attrs["user"] = user
         attrs["email"] = email
         return attrs

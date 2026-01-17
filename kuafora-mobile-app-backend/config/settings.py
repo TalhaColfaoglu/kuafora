@@ -352,6 +352,18 @@ REST_FRAMEWORK = {
         "rest_framework.filters.SearchFilter",
         "rest_framework.filters.OrderingFilter",
     ),
+    # Abuse protection (second layer after Nginx): scope-based throttling
+    "DEFAULT_THROTTLE_CLASSES": (
+        "rest_framework.throttling.ScopedRateThrottle",
+    ),
+    "DEFAULT_THROTTLE_RATES": {
+        # Auth endpoints
+        "auth_login": "10/min",
+        "auth_register": "6/min",
+        "auth_check_email": "12/min",
+        "auth_forgot_password": "5/min",
+        "auth_verify_email": "5/min",
+    },
 }
 
 SPECTACULAR_SETTINGS = {

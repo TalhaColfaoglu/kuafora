@@ -40,32 +40,50 @@ User = get_user_model()
 
 class RegisterView(generics.CreateAPIView):
     serializer_class = RegisterSerializer
+    throttle_scope = "auth_register"
 
 
 class LoginView(generics.GenericAPIView):
     serializer_class = LoginSerializer
+    throttle_scope = "auth_login"
 
     def post(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         try:
             serializer.is_valid(raise_exception=True)
         except ValidationError as exc:
-            # Yanlış kimlik bilgileri için 401 döndür (400 yerine)
-            msgs = exc.detail if hasattr(exc, 'detail') else exc.args
+            msgs = exc.detail if hasattr(exc, "detail") else exc.args
+
+            # If serializer raised structured error, pass it through.
+            if isinstance(msgs, dict) and ("detail" in msgs or "reason" in msgs):
+                reason = str(msgs.get("reason", "") or "")
+                # Map known reasons to proper status codes
+                if reason == "banned":
+                    return Response({"detail": msgs.get("detail", ""), "reason": reason}, status=status.HTTP_403_FORBIDDEN)
+                if reason in {"wrong_password", "user_not_found", "invalid_credentials"}:
+                    return Response({"detail": msgs.get("detail", ""), "reason": reason}, status=status.HTTP_401_UNAUTHORIZED)
+                if reason == "missing_fields":
+                    return Response({"detail": msgs.get("detail", ""), "reason": reason}, status=status.HTTP_400_BAD_REQUEST)
+                # Default fallback for structured errors
+                return Response({"detail": msgs.get("detail", ""), "reason": reason}, status=status.HTTP_400_BAD_REQUEST)
+
+            # Legacy fallback: turn any validation error into a plain text detail
             text = ""
             if isinstance(msgs, dict):
-                # {'non_field_errors': ['Invalid email or password.']}
                 for v in msgs.values():
                     if isinstance(v, list) and v:
                         text = str(v[0])
                         break
+                    if isinstance(v, str) and v:
+                        text = v
+                        break
             elif isinstance(msgs, list) and msgs:
                 text = str(msgs[0])
             else:
-                text = "Invalid email or password."
+                text = "Bad request"
+
             if "Invalid email or password" in text:
-                return Response({"detail": text}, status=status.HTTP_401_UNAUTHORIZED)
-            # Alan eksikliği gibi durumlar için standart 400
+                return Response({"detail": text, "reason": "invalid_credentials"}, status=status.HTTP_401_UNAUTHORIZED)
             return Response({"detail": text or "Bad request"}, status=status.HTTP_400_BAD_REQUEST)
 
         user = serializer.validated_data["user"]
@@ -256,6 +274,7 @@ class ChangePasswordView(generics.UpdateAPIView):
 
 class VerifyEmailView(generics.GenericAPIView):
     serializer_class = EmailSerializer
+    throttle_scope = "auth_verify_email"
 
     def post(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
@@ -362,6 +381,7 @@ class ConfirmEmailView(generics.GenericAPIView):
 
 class ForgotPasswordView(generics.GenericAPIView):
     serializer_class = EmailSerializer
+    throttle_scope = "auth_forgot_password"
 
     def post(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
@@ -528,6 +548,7 @@ class ResetPasswordConfirmView(generics.GenericAPIView):
 
 class CheckEmailView(generics.GenericAPIView):
     serializer_class = EmailSerializer
+    throttle_scope = "auth_check_email"
 
     def post(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
