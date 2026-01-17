@@ -12,6 +12,11 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from django.db.models import Count
 from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiParameter
 from django.conf import settings
+from django.utils import timezone
+from django.http import HttpResponse
+from django.core.mail import send_mail
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.decorators import method_decorator
 
 from .serializers import (
     RegisterSerializer,
@@ -253,15 +258,106 @@ class VerifyEmailView(generics.GenericAPIView):
     serializer_class = EmailSerializer
 
     def post(self, request, *args, **kwargs):
-        # In real production, send an email containing token link
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        user = User.objects.filter(email=serializer.validated_data["email"]).first()
+        email = (serializer.validated_data["email"] or "").strip().lower()
+        user = User.objects.filter(email__iexact=email).first()
+
+        # Always return a generic response to prevent email enumeration
+        generic = {"detail": "If the email exists, a verification mail will be sent."}
         if not user:
-            return Response({"detail": "If the email exists, a verification mail will be sent."})
+            return Response(generic)
+
+        # If already verified, we can still return generic (no-op)
+        if getattr(user, "email_verified", False):
+            return Response(generic)
+
         uid = urlsafe_base64_encode(force_bytes(user.pk))
         token = default_token_generator.make_token(user)
-        return Response({"uid": uid, "token": token})
+
+        api_origin = getattr(settings, "PUBLIC_API_ORIGIN", "").rstrip("/")
+        if not api_origin:
+            # Safe default: use request host
+            api_origin = (request.build_absolute_uri("/") or "").rstrip("/")
+
+        confirm_url = f"{api_origin}/api/auth/verify-email/confirm/?uid={uid}&token={token}"
+
+        subject = "Kuafora • E-posta Doğrulama"
+        body = (
+            "Merhaba,\n\n"
+            "Kuafora hesabınızı doğrulamak için aşağıdaki bağlantıya tıklayın:\n\n"
+            f"{confirm_url}\n\n"
+            "Bu isteği siz yapmadıysanız bu e-postayı yok sayabilirsiniz.\n\n"
+            "Kuafora"
+        )
+
+        try:
+            send_mail(
+                subject,
+                body,
+                getattr(settings, "DEFAULT_FROM_EMAIL", None),
+                [user.email],
+                fail_silently=False,
+            )
+        except Exception as e:
+            # Don't leak internals; log server-side and still return generic
+            print(f"[EMAIL][VERIFY] send_mail failed: {e}")
+
+        return Response(generic)
+
+
+class ConfirmEmailView(generics.GenericAPIView):
+    """Link target used in verification email.
+    GET /api/auth/verify-email/confirm/?uid=...&token=..."""
+
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request, *args, **kwargs):
+        uid = request.query_params.get("uid") or ""
+        token = request.query_params.get("token") or ""
+
+        def _html(title: str, message: str) -> HttpResponse:
+            return HttpResponse(
+                f"""<!doctype html>
+<html lang="tr">
+  <head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <title>{title}</title>
+    <style>
+      body{{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;background:#fff;margin:0;padding:40px;}}
+      .card{{max-width:520px;margin:0 auto;border:1px solid #eee;border-radius:16px;padding:24px;}}
+      h1{{font-size:22px;margin:0 0 8px;}}
+      p{{color:#444;line-height:1.5;margin:0;}}
+      .ok{{color:#059669;font-weight:700;}}
+      .bad{{color:#b91c1c;font-weight:700;}}
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <h1>{title}</h1>
+      <p>{message}</p>
+    </div>
+  </body>
+</html>""",
+                content_type="text/html; charset=utf-8",
+            )
+
+        try:
+            user_id = force_str(urlsafe_base64_decode(uid))
+            user = User.objects.get(pk=user_id)
+        except Exception:
+            return _html("Geçersiz bağlantı", "<span class='bad'>Bağlantı geçersiz.</span>")
+
+        if not default_token_generator.check_token(user, token):
+            return _html("Bağlantı süresi doldu", "<span class='bad'>Doğrulama bağlantısı geçersiz veya süresi dolmuş.</span>")
+
+        if not getattr(user, "email_verified", False):
+            user.email_verified = True
+            user.email_verified_at = timezone.now()
+            user.save(update_fields=["email_verified", "email_verified_at", "updated_at"])
+
+        return _html("E-posta doğrulandı", "<span class='ok'>E-postanız doğrulandı.</span> Artık uygulamaya geri dönebilirsiniz.")
 
 
 class ForgotPasswordView(generics.GenericAPIView):
@@ -270,12 +366,44 @@ class ForgotPasswordView(generics.GenericAPIView):
     def post(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        user = User.objects.filter(email=serializer.validated_data["email"]).first()
+        email = (serializer.validated_data["email"] or "").strip().lower()
+        user = User.objects.filter(email__iexact=email).first()
+
+        # Always generic response to prevent email enumeration
+        generic = {"detail": "If the email exists, a reset mail will be sent."}
         if not user:
-            return Response({"detail": "If the email exists, a reset mail will be sent."})
+            return Response(generic)
+
         uid = urlsafe_base64_encode(force_bytes(user.pk))
         token = default_token_generator.make_token(user)
-        return Response({"uid": uid, "token": token})
+
+        api_origin = getattr(settings, "PUBLIC_API_ORIGIN", "").rstrip("/")
+        if not api_origin:
+            api_origin = (request.build_absolute_uri("/") or "").rstrip("/")
+
+        confirm_url = f"{api_origin}/api/auth/reset-password/confirm/?uid={uid}&token={token}"
+
+        subject = "Kuafora • Şifre Sıfırlama"
+        body = (
+            "Merhaba,\n\n"
+            "Kuafora hesabınızın şifresini sıfırlamak için aşağıdaki bağlantıya tıklayın:\n\n"
+            f"{confirm_url}\n\n"
+            "Bu isteği siz yapmadıysanız bu e-postayı yok sayabilirsiniz.\n\n"
+            "Kuafora"
+        )
+
+        try:
+            send_mail(
+                subject,
+                body,
+                getattr(settings, "DEFAULT_FROM_EMAIL", None),
+                [user.email],
+                fail_silently=False,
+            )
+        except Exception as e:
+            print(f"[EMAIL][RESET] send_mail failed: {e}")
+
+        return Response(generic)
 
 
 class ResetPasswordView(generics.GenericAPIView):
@@ -294,6 +422,108 @@ class ResetPasswordView(generics.GenericAPIView):
         user.set_password(serializer.validated_data["new_password"])
         user.save()
         return Response({"detail": "Password reset successful"})
+
+
+@method_decorator(csrf_exempt, name="dispatch")
+class ResetPasswordConfirmView(generics.GenericAPIView):
+    """HTML reset page.
+    GET renders the form, POST sets the new password after validating uid/token."""
+
+    permission_classes = [permissions.AllowAny]
+
+    def _render(self, title: str, message: str, uid: str = "", token: str = "", is_error: bool = False) -> HttpResponse:
+        status_cls = "bad" if is_error else "ok"
+        return HttpResponse(
+            f"""<!doctype html>
+<html lang="tr">
+  <head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <title>{title}</title>
+    <style>
+      body{{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;background:#fff;margin:0;padding:40px;}}
+      .card{{max-width:560px;margin:0 auto;border:1px solid #eee;border-radius:18px;padding:24px;}}
+      h1{{font-size:22px;margin:0 0 10px;}}
+      p{{color:#444;line-height:1.55;margin:0 0 14px;}}
+      label{{display:block;margin:10px 0 6px;color:#111827;font-weight:700;font-size:13px;}}
+      input{{width:100%;padding:12px 14px;border:1px solid #e5e7eb;border-radius:12px;font-size:14px;}}
+      .row{{display:flex;gap:12px;}}
+      .btn{{margin-top:14px;width:100%;padding:12px 14px;border:0;border-radius:12px;background:#111827;color:#fff;font-weight:800;font-size:14px;cursor:pointer;}}
+      .hint{{font-size:12px;color:#6b7280;margin-top:10px;}}
+      .ok{{color:#059669;font-weight:800;}}
+      .bad{{color:#b91c1c;font-weight:800;}}
+      .msg{{margin:10px 0 14px;}}
+      .pill{{display:inline-block;padding:6px 10px;border-radius:999px;background:#f3f4f6;color:#111827;font-weight:700;font-size:12px;}}
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <h1>{title}</h1>
+      <div class="msg"><span class="{status_cls}">{message}</span></div>
+      <div class="pill">Kuafora</div>
+      <form method="post" style="margin-top:14px;">
+        <input type="hidden" name="uid" value="{uid}"/>
+        <input type="hidden" name="token" value="{token}"/>
+        <label>Yeni şifre</label>
+        <input type="password" name="password1" placeholder="En az 8 karakter, harf + rakam" required minlength="8"/>
+        <label>Yeni şifre (tekrar)</label>
+        <input type="password" name="password2" placeholder="Tekrar girin" required minlength="8"/>
+        <button class="btn" type="submit">Şifreyi Güncelle</button>
+        <div class="hint">İpucu: Çok yaygın şifreler kabul edilmeyebilir. Harf + rakam kullanın.</div>
+      </form>
+    </div>
+  </body>
+</html>""",
+            content_type="text/html; charset=utf-8",
+        )
+
+    def get(self, request, *args, **kwargs):
+        uid = request.query_params.get("uid") or ""
+        token = request.query_params.get("token") or ""
+        if not uid or not token:
+            return self._render("Geçersiz bağlantı", "Bağlantı eksik veya hatalı.", is_error=True)
+        return self._render("Şifre Sıfırlama", "Yeni şifrenizi belirleyin.", uid=uid, token=token, is_error=False)
+
+    def post(self, request, *args, **kwargs):
+        uid = (request.POST.get("uid") or "").strip()
+        token = (request.POST.get("token") or "").strip()
+        p1 = request.POST.get("password1") or ""
+        p2 = request.POST.get("password2") or ""
+
+        if not uid or not token:
+            return self._render("Geçersiz bağlantı", "Bağlantı eksik veya hatalı.", is_error=True)
+        if not p1 or len(p1) < 8:
+            return self._render("Şifre geçersiz", "Şifre en az 8 karakter olmalı.", uid=uid, token=token, is_error=True)
+        if p1 != p2:
+            return self._render("Şifreler uyuşmuyor", "İki şifre aynı olmalı.", uid=uid, token=token, is_error=True)
+
+        try:
+            user_id = force_str(urlsafe_base64_decode(uid))
+            user = User.objects.get(pk=user_id)
+        except Exception:
+            return self._render("Geçersiz bağlantı", "Bağlantı geçersiz.", is_error=True)
+
+        if not default_token_generator.check_token(user, token):
+            return self._render("Bağlantı süresi doldu", "Bağlantı geçersiz veya süresi dolmuş.", is_error=True)
+
+        # Validate password using Django validators
+        try:
+            from django.contrib.auth.password_validation import validate_password
+            validate_password(p1, user=user)
+        except Exception as e:
+            # e may be ValidationError with messages
+            msg = "Şifre çok zayıf. Lütfen daha güçlü bir şifre deneyin."
+            try:
+                msgs = getattr(e, "messages", None)
+                if msgs:
+                    msg = " ".join([str(m) for m in msgs])
+            except Exception:
+                pass
+            return self._render("Şifre kabul edilmedi", msg, uid=uid, token=token, is_error=True)
+
+        user.set_password(p1)
+        user.save()
+        return self._render("Şifre güncellendi", "Şifreniz güncellendi. Uygulamaya geri dönüp giriş yapabilirsiniz.", is_error=False)
 
 
 class CheckEmailView(generics.GenericAPIView):

@@ -123,6 +123,8 @@ class User(AbstractBaseUser, PermissionsMixin):
     image_thumb = models.ImageField(upload_to=user_profile_thumb_upload_to, null=True, blank=True)
     full_name = models.CharField(max_length=150, blank=True)
     email = models.EmailField(unique=True)
+    email_verified = models.BooleanField(default=False)
+    email_verified_at = models.DateTimeField(null=True, blank=True)
     phone = models.CharField(max_length=20, blank=True)
     gender = models.CharField(max_length=6, choices=Gender.choices, blank=True)
     is_active = models.BooleanField(default=True)

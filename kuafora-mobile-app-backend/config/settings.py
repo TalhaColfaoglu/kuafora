@@ -365,6 +365,26 @@ SPECTACULAR_SETTINGS = {
     ],
 }
 
+# -----------------------------------------------------------------------------
+# Email (SMTP) - used for email verification and password reset
+# -----------------------------------------------------------------------------
+# If SMTP vars are not configured, fall back to console backend in DEBUG.
+PUBLIC_API_ORIGIN = env("PUBLIC_API_ORIGIN", default="").strip()  # e.g. https://api.kuafora.com
+
+EMAIL_HOST = env("EMAIL_HOST", default="").strip()
+EMAIL_PORT = env.int("EMAIL_PORT", default=587)
+EMAIL_HOST_USER = env("EMAIL_HOST_USER", default="").strip()
+EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD", default="").strip()
+EMAIL_USE_TLS = env.bool("EMAIL_USE_TLS", default=True)
+EMAIL_USE_SSL = env.bool("EMAIL_USE_SSL", default=False)
+DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", default="noreply@kuafora.com").strip()
+
+if EMAIL_HOST and EMAIL_HOST_USER and EMAIL_HOST_PASSWORD:
+    EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+else:
+    # Dev-safe fallback (shows emails in logs/console)
+    EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend" if DEBUG else "django.core.mail.backends.dummy.EmailBackend"
+
 from datetime import timedelta
 
 SIMPLE_JWT = {

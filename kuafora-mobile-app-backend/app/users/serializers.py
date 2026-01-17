@@ -69,8 +69,21 @@ class UserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ("id", "email", "full_name", "phone", "gender", "image", "image_thumb", "image_url", "image_thumb_url", "ban_status")
-        read_only_fields = ("id", "image", "image_thumb", "image_url", "image_thumb_url") 
+        fields = (
+            "id",
+            "email",
+            "email_verified",
+            "email_verified_at",
+            "full_name",
+            "phone",
+            "gender",
+            "image",
+            "image_thumb",
+            "image_url",
+            "image_thumb_url",
+            "ban_status",
+        )
+        read_only_fields = ("id", "email_verified", "email_verified_at", "image", "image_thumb", "image_url", "image_thumb_url")
     
     @extend_schema_field(serializers.CharField(allow_null=True))
     def get_image_url(self, obj):

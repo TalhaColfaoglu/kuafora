@@ -49,10 +49,27 @@ class ChatRoomViewSet(viewsets.ModelViewSet):
         if ChatBan.objects.filter(barbershop=shop, user=request.user).exists():
             return Response({"detail": "You are banned from chatting with this shop."}, status=status.HTTP_403_FORBIDDEN)
 
-        room, created = ChatRoom.objects.get_or_create(
-            customer=request.user, 
+        # IMPORTANT: Without a DB uniqueness constraint, duplicates can happen (race conditions / legacy data),
+        # which leads to split conversations (customer sees only their own messages). Canonicalize on access.
+        rooms = ChatRoom.objects.filter(
+            customer=request.user,
             barbershop=shop,
-            room_type=ChatRoom.RoomType.PRIVATE
+            room_type=ChatRoom.RoomType.PRIVATE,
+        ).order_by("created_at", "id")
+
+        if rooms.exists():
+            room = rooms.first()
+            dupes = rooms.exclude(id=room.id)
+            if dupes.exists():
+                # Move messages into the canonical room, then remove duplicates.
+                ChatMessage.objects.filter(room__in=dupes).update(room=room)
+                dupes.delete()
+            return Response(ChatRoomSerializer(room, context={"request": request}).data)
+
+        room = ChatRoom.objects.create(
+            customer=request.user,
+            barbershop=shop,
+            room_type=ChatRoom.RoomType.PRIVATE,
         )
         return Response(ChatRoomSerializer(room, context={"request": request}).data)
 
@@ -65,11 +82,30 @@ class ChatRoomViewSet(viewsets.ModelViewSet):
         if ChatBan.objects.filter(barbershop=shop, user=request.user).exists():
             return Response({"detail": "You are banned from chatting with this shop."}, status=status.HTTP_403_FORBIDDEN)
 
-        # Public room is unique per shop
-        room, created = ChatRoom.objects.get_or_create(
+        # Public room should be unique per shop. Canonicalize duplicates if any exist.
+        rooms = ChatRoom.objects.filter(
             barbershop=shop,
             room_type=ChatRoom.RoomType.PUBLIC,
-            defaults={'customer': None}
+        ).order_by("created_at", "id")
+
+        if rooms.exists():
+            room = rooms.first()
+            # Ensure public room has no customer bound.
+            if room.customer_id is not None:
+                room.customer = None
+                room.save(update_fields=["customer", "updated_at"])
+
+            dupes = rooms.exclude(id=room.id)
+            if dupes.exists():
+                ChatMessage.objects.filter(room__in=dupes).update(room=room)
+                dupes.delete()
+            return Response(ChatRoomSerializer(room, context={"request": request}).data)
+
+        room = ChatRoom.objects.create(
+            barbershop=shop,
+            room_type=ChatRoom.RoomType.PUBLIC,
+            customer=None,
+            is_public=True,
         )
         return Response(ChatRoomSerializer(room, context={"request": request}).data)
 
