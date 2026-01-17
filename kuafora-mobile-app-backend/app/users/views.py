@@ -17,6 +17,8 @@ from django.http import HttpResponse
 from django.core.mail import send_mail
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
+from django.utils.crypto import salted_hmac
+import secrets
 
 from .serializers import (
     RegisterSerializer,
@@ -25,6 +27,7 @@ from .serializers import (
     UserUpdateSerializer,
     ChangePasswordSerializer,
     EmailSerializer,
+    VerifyEmailCodeSerializer,
     PhoneSerializer,
     ResetPasswordSerializer,
     UserAddressSerializer,
@@ -33,6 +36,7 @@ from .serializers import (
     
 )
 from .models import UserAddress
+from .models import EmailVerificationCode
 from app.barbers.models import Barbershop, LastViewed, ViewEvent
 
 User = get_user_model()
@@ -41,6 +45,19 @@ User = get_user_model()
 class RegisterView(generics.CreateAPIView):
     serializer_class = RegisterSerializer
     throttle_scope = "auth_register"
+
+    def perform_create(self, serializer):
+        user = serializer.save()
+        # Always mark as unverified for first-time verification.
+        if getattr(user, "email_verified", False):
+            user.email_verified = False
+            user.email_verified_at = None
+            user.save(update_fields=["email_verified", "email_verified_at", "updated_at"])
+        # Send OTP code (best-effort)
+        try:
+            _send_email_verification_code(user, request=self.request)
+        except Exception as e:
+            print(f"[EMAIL][VERIFY_CODE][REGISTER] failed: {e}")
 
 
 class LoginView(generics.GenericAPIView):
@@ -59,6 +76,8 @@ class LoginView(generics.GenericAPIView):
                 reason = str(msgs.get("reason", "") or "")
                 # Map known reasons to proper status codes
                 if reason == "banned":
+                    return Response({"detail": msgs.get("detail", ""), "reason": reason}, status=status.HTTP_403_FORBIDDEN)
+                if reason == "email_not_verified":
                     return Response({"detail": msgs.get("detail", ""), "reason": reason}, status=status.HTTP_403_FORBIDDEN)
                 if reason in {"wrong_password", "user_not_found", "invalid_credentials"}:
                     return Response({"detail": msgs.get("detail", ""), "reason": reason}, status=status.HTTP_401_UNAUTHORIZED)
@@ -283,7 +302,7 @@ class VerifyEmailView(generics.GenericAPIView):
         user = User.objects.filter(email__iexact=email).first()
 
         # Always return a generic response to prevent email enumeration
-        generic = {"detail": "If the email exists, a verification mail will be sent."}
+        generic = {"detail": "If the email exists, a verification code will be sent."}
         if not user:
             return Response(generic)
 
@@ -291,38 +310,96 @@ class VerifyEmailView(generics.GenericAPIView):
         if getattr(user, "email_verified", False):
             return Response(generic)
 
-        uid = urlsafe_base64_encode(force_bytes(user.pk))
-        token = default_token_generator.make_token(user)
-
-        api_origin = getattr(settings, "PUBLIC_API_ORIGIN", "").rstrip("/")
-        if not api_origin:
-            # Safe default: use request host
-            api_origin = (request.build_absolute_uri("/") or "").rstrip("/")
-
-        confirm_url = f"{api_origin}/api/auth/verify-email/confirm/?uid={uid}&token={token}"
-
-        subject = "Kuafora • E-posta Doğrulama"
-        body = (
-            "Merhaba,\n\n"
-            "Kuafora hesabınızı doğrulamak için aşağıdaki bağlantıya tıklayın:\n\n"
-            f"{confirm_url}\n\n"
-            "Bu isteği siz yapmadıysanız bu e-postayı yok sayabilirsiniz.\n\n"
-            "Kuafora"
-        )
-
         try:
-            send_mail(
-                subject,
-                body,
-                getattr(settings, "DEFAULT_FROM_EMAIL", None),
-                [user.email],
-                fail_silently=False,
-            )
+            _send_email_verification_code(user, request=request)
         except Exception as e:
-            # Don't leak internals; log server-side and still return generic
-            print(f"[EMAIL][VERIFY] send_mail failed: {e}")
+            print(f"[EMAIL][VERIFY_CODE] send_mail failed: {e}")
 
         return Response(generic)
+
+
+class VerifyEmailCodeView(generics.GenericAPIView):
+    """Verify email with OTP code."""
+
+    serializer_class = VerifyEmailCodeSerializer
+    throttle_scope = "auth_verify_email"
+
+    def post(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        email = (serializer.validated_data["email"] or "").strip().lower()
+        code = (serializer.validated_data["code"] or "").strip()
+
+        # Generic invalid response (do not reveal whether email exists)
+        invalid = {"detail": "Kod hatalı veya süresi dolmuş.", "reason": "invalid_or_expired"}
+
+        user = User.objects.filter(email__iexact=email).first()
+        if not user:
+            return Response(invalid, status=status.HTTP_400_BAD_REQUEST)
+
+        if getattr(user, "email_verified", False):
+            return Response({"detail": "E-posta zaten doğrulanmış."})
+
+        # Latest active code
+        ev = (
+            EmailVerificationCode.objects.filter(user=user, consumed_at__isnull=True)
+            .order_by("-created_at")
+            .first()
+        )
+        if not ev or ev.is_expired:
+            return Response(invalid, status=status.HTTP_400_BAD_REQUEST)
+
+        # Basic attempt limiting
+        if ev.attempts >= 5:
+            ev.consumed_at = timezone.now()
+            ev.save(update_fields=["consumed_at"])
+            return Response(invalid, status=status.HTTP_400_BAD_REQUEST)
+
+        expected = _hash_email_code(user_id=str(user.pk), code=code)
+        if not secrets.compare_digest(ev.code_hash, expected):
+            ev.attempts += 1
+            ev.save(update_fields=["attempts"])
+            return Response(invalid, status=status.HTTP_400_BAD_REQUEST)
+
+        # Success
+        ev.consumed_at = timezone.now()
+        ev.save(update_fields=["consumed_at"])
+        user.email_verified = True
+        user.email_verified_at = timezone.now()
+        user.save(update_fields=["email_verified", "email_verified_at", "updated_at"])
+        return Response({"detail": "E-posta doğrulandı."})
+
+
+def _hash_email_code(*, user_id: str, code: str) -> str:
+    # Use SECRET_KEY via salted_hmac internally; no need to import settings here.
+    return salted_hmac("email-verify-otp", f"{user_id}:{code}").hexdigest()
+
+
+def _send_email_verification_code(user, request=None) -> None:
+    # Delete previous active codes
+    EmailVerificationCode.objects.filter(user=user, consumed_at__isnull=True).delete()
+
+    code = f"{secrets.randbelow(1000000):06d}"
+    code_hash = _hash_email_code(user_id=str(user.pk), code=code)
+    expires_at = timezone.now() + timezone.timedelta(minutes=10)
+    EmailVerificationCode.objects.create(user=user, code_hash=code_hash, expires_at=expires_at)
+
+    subject = "Kuafora • E-posta Doğrulama Kodu"
+    body = (
+        "Merhaba,\n\n"
+        "Kuafora hesabınızı doğrulamak için doğrulama kodunuz:\n\n"
+        f"{code}\n\n"
+        "Kod 10 dakika içinde geçerliliğini yitirir.\n"
+        "Bu isteği siz yapmadıysanız bu e-postayı yok sayabilirsiniz.\n\n"
+        "Kuafora"
+    )
+    send_mail(
+        subject,
+        body,
+        getattr(settings, "DEFAULT_FROM_EMAIL", None),
+        [user.email],
+        fail_silently=False,
+    )
 
 
 class ConfirmEmailView(generics.GenericAPIView):

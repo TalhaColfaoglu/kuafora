@@ -10,6 +10,7 @@ from PIL import Image, ImageOps
 from io import BytesIO
 from django.core.files.base import ContentFile
 import os
+from django.utils import timezone
 
 
 def user_profile_image_upload_to(instance: "User", filename: str) -> str:
@@ -176,3 +177,30 @@ class UserAddress(models.Model):
 
     def __str__(self) -> str:  # pragma: no cover - trivial
         return f"{self.user.email} - {self.label}"
+
+
+class EmailVerificationCode(models.Model):
+    """Short-lived email verification code (OTP) for first-time verification.
+
+    We store only a hash of the code to avoid leaking the OTP if DB is exposed.
+    """
+
+    user = models.ForeignKey("User", on_delete=models.CASCADE, related_name="email_verification_codes")
+    code_hash = models.CharField(max_length=128)
+    attempts = models.PositiveIntegerField(default=0)
+    consumed_at = models.DateTimeField(null=True, blank=True)
+    expires_at = models.DateTimeField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=["user", "expires_at"]),
+        ]
+
+    @property
+    def is_expired(self) -> bool:
+        return timezone.now() >= self.expires_at
+
+    @property
+    def is_consumed(self) -> bool:
+        return self.consumed_at is not None

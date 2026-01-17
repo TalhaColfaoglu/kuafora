@@ -54,7 +54,7 @@ class LoginSerializer(serializers.Serializer):
         # We intentionally distinguish common cases so the app can show the right message.
         # Note: This reveals whether the email exists. This is acceptable here because the
         # mobile flow already calls /auth/check-email/ before login.
-        user_obj = User.objects.filter(email__iexact=email).only("id", "email", "is_active", "password").first()
+        user_obj = User.objects.filter(email__iexact=email).only("id", "email", "is_active", "password", "email_verified").first()
         if not user_obj:
             raise serializers.ValidationError({"detail": "Bu e-posta ile kayıt bulunamadı.", "reason": "user_not_found"})
 
@@ -64,6 +64,9 @@ class LoginSerializer(serializers.Serializer):
         # Check password explicitly for a clearer error than generic authenticate(None).
         if not user_obj.check_password(password):
             raise serializers.ValidationError({"detail": "Şifre yanlış.", "reason": "wrong_password"})
+
+        if not getattr(user_obj, "email_verified", False):
+            raise serializers.ValidationError({"detail": "E-posta doğrulanmadı.", "reason": "email_not_verified"})
 
         # Re-run authenticate to keep backend compatibility / future-proofing.
         user = authenticate(request=self.context.get("request"), email=email, password=password)
@@ -153,6 +156,11 @@ class ChangePasswordSerializer(serializers.Serializer):
 
 class EmailSerializer(serializers.Serializer):
     email = serializers.EmailField()
+
+
+class VerifyEmailCodeSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    code = serializers.CharField(min_length=4, max_length=12)
 
 
 class PhoneSerializer(serializers.Serializer):
