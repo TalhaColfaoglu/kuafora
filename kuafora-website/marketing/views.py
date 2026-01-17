@@ -8,6 +8,9 @@ def home(request):
 def customer_app(request):
     return render(request, 'marketing/customer_app.html')
 
+def support(request):
+    return render(request, 'marketing/support.html')
+
 
 def test_buttons(request):
     return render(request, 'test_buttons.html')

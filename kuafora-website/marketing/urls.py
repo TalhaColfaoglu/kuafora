@@ -4,6 +4,7 @@ from . import views
 urlpatterns = [
     path('', views.home, name='home'),
     path('musteri-uygulamasi/', views.customer_app, name='customer_app'),
+    path('destek/', views.support, name='support'),
     path('test-buttons/', views.test_buttons, name='test_buttons'),
     # Legal pages (main app)
     path('yasal/kullanici-sozlesmesi/', views.legal_terms, name='legal_terms'),
