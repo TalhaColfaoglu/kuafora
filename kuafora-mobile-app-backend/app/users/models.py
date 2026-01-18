@@ -12,6 +12,8 @@ from django.core.files.base import ContentFile
 import os
 from django.utils import timezone
 
+from app.core.crypto import encrypt_text, decrypt_text, normalize_phone, phone_hash, phone_last4, mask_phone
+
 
 def user_profile_image_upload_to(instance: "User", filename: str) -> str:
     # Keep per-user folder to avoid collisions across users
@@ -126,7 +128,15 @@ class User(AbstractBaseUser, PermissionsMixin):
     email = models.EmailField(unique=True)
     email_verified = models.BooleanField(default=False)
     email_verified_at = models.DateTimeField(null=True, blank=True)
+    # New registrations must verify email before using authenticated features.
+    # Legacy accounts keep this False (no forced verification).
+    requires_email_verification = models.BooleanField(default=False)
+    # DEPRECATED plaintext phone field (kept for backwards compatibility with old migrations).
+    # We no longer store plaintext here; it will be cleared on save and migrated to encrypted fields.
     phone = models.CharField(max_length=20, blank=True)
+    phone_encrypted = models.TextField(blank=True, default="")
+    phone_hash = models.CharField(max_length=64, blank=True, null=True, unique=True, db_index=True)
+    phone_last4 = models.CharField(max_length=4, blank=True, default="")
     gender = models.CharField(max_length=6, choices=Gender.choices, blank=True)
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
@@ -139,7 +149,43 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     objects = UserManager()
 
+    def set_phone(self, raw: str) -> None:
+        n = normalize_phone(raw)
+        if not n:
+            self.phone_encrypted = ""
+            self.phone_hash = None
+            self.phone_last4 = ""
+            self.phone = ""
+            return
+        self.phone_encrypted = encrypt_text(n)
+        self.phone_hash = phone_hash(n)
+        self.phone_last4 = phone_last4(n)
+        # Never keep plaintext in DB
+        self.phone = ""
+
+    def get_phone_plain(self) -> str:
+        # Internal use only (avoid returning this in API responses).
+        return decrypt_text(self.phone_encrypted)
+
+    @property
+    def phone_masked(self) -> str:
+        # Safe for UI/admin logs.
+        if self.phone_last4:
+            return mask_phone(self.phone_last4)
+        # If old records still have plaintext phone and not migrated yet:
+        if self.phone:
+            return mask_phone(self.phone)
+        return ""
+
     def save(self, *args, **kwargs):
+        # If any code sets plaintext phone, immediately migrate it into encrypted fields.
+        if self.phone and self.phone.strip():
+            # Only move it if encrypted is empty; otherwise keep latest encrypted and wipe plaintext.
+            if not self.phone_encrypted:
+                self.set_phone(self.phone)
+            else:
+                self.phone = ""
+
         # Check if image has changed
         is_new_image = False
         if self.pk:

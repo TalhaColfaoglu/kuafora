@@ -48,11 +48,12 @@ class RegisterView(generics.CreateAPIView):
 
     def perform_create(self, serializer):
         user = serializer.save()
-        # Always mark as unverified for first-time verification.
-        if getattr(user, "email_verified", False):
-            user.email_verified = False
-            user.email_verified_at = None
-            user.save(update_fields=["email_verified", "email_verified_at", "updated_at"])
+        # New registrations must verify email (but we don't block login).
+        # Mark as requiring verification. Legacy users are not affected.
+        user.email_verified = False
+        user.email_verified_at = None
+        user.requires_email_verification = True
+        user.save(update_fields=["email_verified", "email_verified_at", "requires_email_verification", "updated_at"])
         # Send OTP code (best-effort)
         try:
             _send_email_verification_code(user, request=self.request)
@@ -118,6 +119,7 @@ class LoginView(generics.GenericAPIView):
             "access": str(refresh.access_token),
             "refresh": str(refresh),
             "email_verified": bool(getattr(user, "email_verified", False)),
+            "requires_email_verification": bool(getattr(user, "requires_email_verification", False)),
         })
 
 
@@ -374,7 +376,12 @@ class VerifyEmailCodeView(generics.GenericAPIView):
         ev.save(update_fields=["consumed_at"])
         user.email_verified = True
         user.email_verified_at = timezone.now()
-        user.save(update_fields=["email_verified", "email_verified_at", "updated_at"])
+        # After successful verification, lift the gate.
+        if getattr(user, "requires_email_verification", False):
+            user.requires_email_verification = False
+            user.save(update_fields=["email_verified", "email_verified_at", "requires_email_verification", "updated_at"])
+        else:
+            user.save(update_fields=["email_verified", "email_verified_at", "updated_at"])
         return Response({"detail": "E-posta doğrulandı."})
 
 
@@ -459,7 +466,11 @@ class ConfirmEmailView(generics.GenericAPIView):
         if not getattr(user, "email_verified", False):
             user.email_verified = True
             user.email_verified_at = timezone.now()
-            user.save(update_fields=["email_verified", "email_verified_at", "updated_at"])
+            if getattr(user, "requires_email_verification", False):
+                user.requires_email_verification = False
+                user.save(update_fields=["email_verified", "email_verified_at", "requires_email_verification", "updated_at"])
+            else:
+                user.save(update_fields=["email_verified", "email_verified_at", "updated_at"])
 
         return _html("E-posta doğrulandı", "<span class='ok'>E-postanız doğrulandı.</span> Artık uygulamaya geri dönebilirsiniz.")
 
@@ -737,7 +748,9 @@ class CheckPhoneView(generics.GenericAPIView):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         phone = serializer.validated_data["phone"]
-        exists = User.objects.filter(phone=phone).exists()
+        from app.core.crypto import phone_hash
+        h = phone_hash(phone)
+        exists = bool(h) and User.objects.filter(phone_hash=h).exists()
         return Response({"exists": exists})
 
 

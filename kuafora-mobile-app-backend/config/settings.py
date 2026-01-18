@@ -18,6 +18,9 @@ environ.Env.read_env(env_file=os.path.join(BASE_DIR, env_file_name))
 # DEBUG must be controlled via env; never force-enable in prod
 DEBUG = env("DEBUG", default=False)
 SECRET_KEY = env("SECRET_KEY", default="change-me")
+# Required for encrypting sensitive fields (e.g., phone numbers) at rest.
+# Must be a Fernet key (urlsafe base64-encoded 32-byte key).
+PHONE_ENCRYPTION_KEY = env("PHONE_ENCRYPTION_KEY", default="")
 # Extend ALLOWED_HOSTS with safe defaults to avoid DisallowedHost in EC2 and container
 _allowed = set(env.list("ALLOWED_HOSTS", default=[]))
 _allowed.update({"*", "0.0.0.0", "localhost", "127.0.0.1", ".compute.amazonaws.com"})
@@ -347,7 +350,7 @@ AUTH_USER_MODEL = "users.User"
 
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
-        "rest_framework_simplejwt.authentication.JWTAuthentication",
+        "app.users.authentication.JWTAuthenticationWithEmailGate",
     ),
     "DEFAULT_PERMISSION_CLASSES": (
         "rest_framework.permissions.AllowAny",

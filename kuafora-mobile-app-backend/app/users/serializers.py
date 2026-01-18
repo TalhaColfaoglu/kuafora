@@ -21,8 +21,20 @@ class RegisterSerializer(serializers.ModelSerializer):
         validate_password(value)
         return value
 
+    def validate_phone(self, value: str) -> str:
+        # Enforce "one account per phone" without storing plaintext.
+        phone = (value or "").strip()
+        if not phone:
+            return phone
+        from app.core.crypto import phone_hash, normalize_phone
+        h = phone_hash(phone)
+        if h and User.objects.filter(phone_hash=h).exists():
+            raise serializers.ValidationError("Bu telefon numarası ile zaten bir hesap var.")
+        return normalize_phone(phone)
+
     def create(self, validated_data):
         password = validated_data.pop("password")
+        phone = validated_data.pop("phone", "")
         first = validated_data.pop("first_name", "").strip()
         last = validated_data.pop("last_name", "").strip()
         def _normalize(n: str) -> str:
@@ -36,6 +48,8 @@ class RegisterSerializer(serializers.ModelSerializer):
             validated_data["full_name"] = _normalize(validated_data.get("full_name", ""))
         user = User.objects.create_user(**validated_data)
         user.set_password(password)
+        if phone:
+            user.set_phone(phone)
         user.save()
         return user
 
@@ -88,6 +102,8 @@ class UserSerializer(serializers.ModelSerializer):
     image_url = serializers.SerializerMethodField()
     image_thumb_url = serializers.SerializerMethodField()
     ban_status = serializers.SerializerMethodField()
+    requires_email_verification = serializers.BooleanField(read_only=True)
+    phone = serializers.SerializerMethodField()
 
     class Meta:
         model = User
@@ -96,6 +112,7 @@ class UserSerializer(serializers.ModelSerializer):
             "email",
             "email_verified",
             "email_verified_at",
+            "requires_email_verification",
             "full_name",
             "phone",
             "gender",
@@ -106,6 +123,11 @@ class UserSerializer(serializers.ModelSerializer):
             "ban_status",
         )
         read_only_fields = ("id", "email_verified", "email_verified_at", "image", "image_thumb", "image_url", "image_thumb_url")
+
+    @extend_schema_field(serializers.CharField(allow_null=True))
+    def get_phone(self, obj):
+        # Never expose plaintext phone numbers via API.
+        return obj.phone_masked or None
     
     @extend_schema_field(serializers.CharField(allow_null=True))
     def get_image_url(self, obj):

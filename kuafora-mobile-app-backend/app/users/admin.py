@@ -16,7 +16,7 @@ class UserAdmin(BaseUserAdmin, ModelAdmin):
     
     fieldsets = (
         (None, {"fields": ("email", "password")}),
-        ("Kişisel Bilgiler", {"fields": ("full_name", "gender", "phone", "image")} ),
+        ("Kişisel Bilgiler", {"fields": ("full_name", "gender", "phone_masked", "image")} ),
         (
             "Yetkiler",
             {"fields": ("is_active", "is_staff", "is_superuser", "groups", "user_permissions")},
@@ -26,7 +26,7 @@ class UserAdmin(BaseUserAdmin, ModelAdmin):
     add_fieldsets = (
         (None, {"classes": ("wide",), "fields": ("email", "full_name", "gender", "password1", "password2")} ),
     )
-    readonly_fields = ("created_at", "updated_at")
+    readonly_fields = ("created_at", "updated_at", "phone_masked")
     filter_horizontal = ("groups", "user_permissions")
     list_filter = ("is_staff", "is_superuser", "is_active", "gender")
     actions = ["ban_users", "unban_users"]
