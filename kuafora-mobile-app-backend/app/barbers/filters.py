@@ -1,6 +1,7 @@
 from django_filters import rest_framework as filters
 from django.utils import timezone
-from django.db.models import Q
+from django.db.models import Q, F, Value
+from django.db.models.functions import Lower, Replace
 from .models import Barbershop, ShopCategory
 
 
@@ -20,7 +21,65 @@ class BarbershopFilter(filters.FilterSet):
         fields = ("q", "city", "district", "gender", "categories", "is_open")
 
     def filter_q(self, queryset, name, value):
-        return queryset.filter(name__icontains=value)
+        """
+        Robust search:
+        - Turkish character tolerant: i/ı, s/ş, g/ğ, u/ü, o/ö, c/ç
+        - Tokenized search across: name, city, district, category name, service name
+        - Supports "istanbul kadikoy berber" style queries.
+        """
+        raw = (value or "").strip()
+        if not raw:
+            return queryset
+
+        def normalize_tr(s: str) -> str:
+            s = (s or "").strip().lower()
+            # Remove Turkish-specific chars to ASCII equivalents
+            s = (
+                s.replace("ı", "i")
+                .replace("ş", "s")
+                .replace("ğ", "g")
+                .replace("ü", "u")
+                .replace("ö", "o")
+                .replace("ç", "c")
+            )
+            # keep only single spaces
+            s = " ".join(s.split())
+            return s
+
+        def norm_db(field_name: str):
+            expr = Lower(F(field_name))
+            expr = Replace(expr, Value("ı"), Value("i"))
+            expr = Replace(expr, Value("ş"), Value("s"))
+            expr = Replace(expr, Value("ğ"), Value("g"))
+            expr = Replace(expr, Value("ü"), Value("u"))
+            expr = Replace(expr, Value("ö"), Value("o"))
+            expr = Replace(expr, Value("ç"), Value("c"))
+            return expr
+
+        q_norm = normalize_tr(raw)
+        tokens = [t for t in q_norm.split(" ") if t]
+        if not tokens:
+            return queryset
+
+        qs = queryset.annotate(
+            _n_name=norm_db("name"),
+            _n_city=norm_db("city"),
+            _n_district=norm_db("district"),
+            _n_category=norm_db("categories__name"),
+            _n_service=norm_db("services__name"),
+        )
+
+        # Each token must match at least one of the searchable fields (AND across tokens).
+        for t in tokens:
+            qs = qs.filter(
+                Q(_n_name__contains=t)
+                | Q(_n_city__contains=t)
+                | Q(_n_district__contains=t)
+                | Q(_n_category__contains=t)
+                | Q(_n_service__contains=t)
+            )
+
+        return qs.distinct()
 
     def filter_gender(self, queryset, name, value):
         """
