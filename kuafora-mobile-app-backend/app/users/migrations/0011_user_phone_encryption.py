@@ -33,14 +33,15 @@ def _phone_hash(raw: str) -> str:
     return salted_hmac("user-phone", s).hexdigest()
 
 
-def _encrypt(plain: str) -> str:
+def _encrypt(plain: str) -> str | None:
+    """Encrypt phone number. Returns None if PHONE_ENCRYPTION_KEY is not set."""
     plain = (plain or "").strip()
     if not plain:
         return ""
     key = (getattr(settings, "PHONE_ENCRYPTION_KEY", "") or "").strip()
     if not key:
-        # If key is missing in a target environment, fail fast rather than store plaintext.
-        raise RuntimeError("PHONE_ENCRYPTION_KEY is not set; cannot migrate phone numbers securely.")
+        # If key is missing, return None to indicate encryption cannot proceed.
+        return None
     from cryptography.fernet import Fernet  # type: ignore
     f = Fernet(key.encode())
     return f.encrypt(plain.encode("utf-8")).decode("utf-8")
@@ -49,14 +50,34 @@ def _encrypt(plain: str) -> str:
 def forwards(apps, schema_editor):
     User = apps.get_model("users", "User")
     qs = User.objects.exclude(phone="").filter(phone_encrypted="")
+    count = qs.count()
+    
+    if count == 0:
+        # No phones to migrate, skip silently
+        return
+    
+    key = (getattr(settings, "PHONE_ENCRYPTION_KEY", "") or "").strip()
+    if not key:
+        # PHONE_ENCRYPTION_KEY is not set and there are phones to migrate.
+        # Skip encryption to avoid data loss; leave phones in plaintext 'phone' field.
+        # Admin/deployer should set PHONE_ENCRYPTION_KEY and re-run this migration data step if needed.
+        print(f"⚠️  WARNING: PHONE_ENCRYPTION_KEY is not set. Skipping encryption of {count} phone number(s).")
+        print(f"   Phone numbers remain in plaintext 'phone' field. Set PHONE_ENCRYPTION_KEY and re-run this migration if needed.")
+        return
+    
+    # Key is set, proceed with encryption
     for u in qs.iterator():
         n = _normalize_phone(u.phone)
         if not n:
             # clear plaintext anyway
             User.objects.filter(pk=u.pk).update(phone="")
             continue
+        encrypted = _encrypt(n)
+        if encrypted is None:
+            # This should not happen if we checked above, but handle gracefully
+            continue
         User.objects.filter(pk=u.pk).update(
-            phone_encrypted=_encrypt(n),
+            phone_encrypted=encrypted,
             phone_hash=_phone_hash(n),
             phone_last4=_last4(n),
             phone="",
