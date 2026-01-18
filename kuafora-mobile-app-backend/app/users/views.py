@@ -117,6 +117,7 @@ class LoginView(generics.GenericAPIView):
         return Response({
             "access": str(refresh.access_token),
             "refresh": str(refresh),
+            "email_verified": bool(getattr(user, "email_verified", False)),
         })
 
 

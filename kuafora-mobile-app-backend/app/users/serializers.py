@@ -65,8 +65,9 @@ class LoginSerializer(serializers.Serializer):
         if not user_obj.check_password(password):
             raise serializers.ValidationError({"detail": "Şifre yanlış.", "reason": "wrong_password"})
 
-        if not getattr(user_obj, "email_verified", False):
-            raise serializers.ValidationError({"detail": "E-posta doğrulanmadı.", "reason": "email_not_verified"})
+        # NOTE:
+        # We do NOT block login by email verification. Otherwise users get stuck (403) and the app appears broken.
+        # Email verification can be enforced later for specific sensitive actions if needed.
 
         # Re-run authenticate to keep backend compatibility / future-proofing.
         user = authenticate(request=self.context.get("request"), email=email, password=password)
