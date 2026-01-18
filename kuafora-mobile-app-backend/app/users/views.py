@@ -73,18 +73,25 @@ class LoginView(generics.GenericAPIView):
 
             # If serializer raised structured error, pass it through.
             if isinstance(msgs, dict) and ("detail" in msgs or "reason" in msgs):
-                reason = str(msgs.get("reason", "") or "")
+                def _first_str(v) -> str:
+                    # DRF often wraps values as [ErrorDetail(...)]
+                    if isinstance(v, list) and v:
+                        return str(v[0])
+                    return str(v or "")
+
+                reason = _first_str(msgs.get("reason", ""))
+                detail = _first_str(msgs.get("detail", ""))
                 # Map known reasons to proper status codes
                 if reason == "banned":
-                    return Response({"detail": msgs.get("detail", ""), "reason": reason}, status=status.HTTP_403_FORBIDDEN)
+                    return Response({"detail": detail, "reason": reason}, status=status.HTTP_403_FORBIDDEN)
                 if reason == "email_not_verified":
-                    return Response({"detail": msgs.get("detail", ""), "reason": reason}, status=status.HTTP_403_FORBIDDEN)
+                    return Response({"detail": detail, "reason": reason}, status=status.HTTP_403_FORBIDDEN)
                 if reason in {"wrong_password", "user_not_found", "invalid_credentials"}:
-                    return Response({"detail": msgs.get("detail", ""), "reason": reason}, status=status.HTTP_401_UNAUTHORIZED)
+                    return Response({"detail": detail, "reason": reason}, status=status.HTTP_401_UNAUTHORIZED)
                 if reason == "missing_fields":
-                    return Response({"detail": msgs.get("detail", ""), "reason": reason}, status=status.HTTP_400_BAD_REQUEST)
+                    return Response({"detail": detail, "reason": reason}, status=status.HTTP_400_BAD_REQUEST)
                 # Default fallback for structured errors
-                return Response({"detail": msgs.get("detail", ""), "reason": reason}, status=status.HTTP_400_BAD_REQUEST)
+                return Response({"detail": detail, "reason": reason}, status=status.HTTP_400_BAD_REQUEST)
 
             # Legacy fallback: turn any validation error into a plain text detail
             text = ""
