@@ -82,6 +82,7 @@ INSTALLED_APPS = [
     "app.notifications",
     "app.subscriptions",
     "app.search",
+    "app.support",
 ]
 
 MIDDLEWARE = [
@@ -246,6 +247,11 @@ UNFOLD = {
                         "icon": "notifications",
                         "link": reverse_lazy("admin:notifications_notification_changelist"),
                     },
+                    {
+                        "title": _("Destek Talepleri"),
+                        "icon": "support_agent",
+                        "link": reverse_lazy("admin:support_supportrequest_changelist"),
+                    },
                 ],
             },
             {
@@ -363,6 +369,8 @@ REST_FRAMEWORK = {
         "auth_check_email": "12/min",
         "auth_forgot_password": "5/min",
         "auth_verify_email": "5/min",
+        # Support / feedback
+        "support_create": "6/min",
     },
 }
 
