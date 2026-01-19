@@ -234,7 +234,11 @@ class SubscriptionViewSet(viewsets.ModelViewSet):
             if coupon.discount_type == 'lifetime':
                 subscription.status = 'lifetime'
             elif coupon.discount_type == 'free_months':
-                days = 30 * int(coupon.discount_value or 0)
+                # İlk 200 kod için 365 gün ekle
+                if coupon.current_uses < 200:
+                    days = 365
+                else:
+                    days = 30 * int(coupon.discount_value or 0)
                 # Aktif abonelikte dönem sonunu, trial'da trial bitişini uzat
                 if subscription.status in ['active', 'grace_period'] and subscription.current_period_end:
                     subscription.current_period_end = subscription.current_period_end + timedelta(days=days)
@@ -390,8 +394,12 @@ class SubscriptionViewSet(viewsets.ModelViewSet):
             if coupon.discount_type == 'lifetime':
                 subscription.status = 'lifetime'
             elif coupon.discount_type == 'free_months':
+                # İlk 200 kod için 365 gün ekle
+                if coupon.current_uses < 200:
+                    days = 365
+                else:
+                    days = 30 * int(coupon.discount_value or 0)
                 # Trial veya aktif dönem süresini uzat
-                days = 30 * int(coupon.discount_value or 0)
                 if subscription.status in ['active', 'grace_period'] and subscription.current_period_end:
                     subscription.current_period_end = subscription.current_period_end + timedelta(days=days)
                 else:

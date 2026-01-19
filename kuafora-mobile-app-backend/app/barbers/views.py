@@ -1182,6 +1182,7 @@ class PartnerBarbershopViewSet(viewsets.ModelViewSet):
             "city",
             "district",
             "gender",
+            "google_maps_link",
             # Social
             "instagram",
             "facebook",
@@ -1296,9 +1297,21 @@ class PartnerBarbershopViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=["get"], url_path="my", permission_classes=[permissions.IsAuthenticated])
     def my_shops(self, request):
         """Kullanıcının personel olduğu (admin veya normal) tüm dükkanlar"""
-        qs = Barbershop.objects.filter(staff__user=request.user).distinct()
-        serializer = self.get_serializer(qs, many=True)
-        return Response(serializer.data)
+        import traceback
+        import logging
+        logger = logging.getLogger(__name__)
+        
+        try:
+            qs = Barbershop.objects.filter(staff__user=request.user).distinct()
+            serializer = self.get_serializer(qs, many=True)
+            return Response(serializer.data)
+        except Exception as e:
+            logger.error(f"[PartnerBarbershopViewSet.my_shops ERROR] {str(e)}")
+            logger.error(traceback.format_exc())
+            return Response(
+                {'detail': f'Dükkanlar yüklenirken hata oluştu: {str(e)}'}, 
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
     @action(detail=True, methods=["post"], url_path="images")
     def upload_image(self, request, pk=None):

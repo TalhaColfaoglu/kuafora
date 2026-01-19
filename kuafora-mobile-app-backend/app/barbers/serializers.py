@@ -70,6 +70,7 @@ class BarbershopSerializer(serializers.ModelSerializer):
             "rejection_reason",
             "rejected_at",
             "description",
+            "google_maps_link",
             "categories",
             "weekly_schedule",
             "created_at",

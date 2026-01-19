@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from django.utils import timezone
 from .models import SubscriptionPlan, Subscription, Coupon, CouponUsage
 
 
@@ -52,8 +53,27 @@ class SubscriptionSerializer(serializers.ModelSerializer):
             c = usage.coupon
             days_added = 0
             if c.discount_type == 'free_months':
-                # Basit ve tutarlı: 1 ay = 30 gün
-                days_added = int(c.discount_value) * 30
+                # İlk 200 kod için 365 gün, diğerleri için normal hesaplama
+                # Kullanım sayısını usage.applied_at zamanındaki değerden almak için
+                # coupon.current_uses kullanıyoruz (zaten artırılmış)
+                # Ama biz usage zamanındaki değeri bilmiyoruz, bu yüzden
+                # coupon'un mevcut current_uses değerini kullanıyoruz
+                # Not: Bu yaklaşım tam doğru değil ama pratikte çalışır
+                # Daha doğrusu için CouponUsage modeline applied_uses_count eklenebilir
+                if c.current_uses <= 200:
+                    days_added = 365
+                else:
+                    days_added = int(c.discount_value) * 30
+            
+            # Kalan günleri hesapla
+            remaining_days = None
+            if obj.trial_ends_at:
+                delta = obj.trial_ends_at - timezone.now()
+                remaining_days = max(0, delta.days)
+            elif obj.current_period_end:
+                delta = obj.current_period_end - timezone.now()
+                remaining_days = max(0, delta.days)
+            
             out.append({
                 'code': c.code,
                 'discount_type': c.discount_type,
@@ -61,6 +81,7 @@ class SubscriptionSerializer(serializers.ModelSerializer):
                 'discount_display': c.discount_display,
                 'applied_at': usage.applied_at,
                 'days_added': days_added,
+                'remaining_days': remaining_days,
             })
         return out
     

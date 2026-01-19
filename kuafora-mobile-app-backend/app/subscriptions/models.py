@@ -150,7 +150,33 @@ class Subscription(models.Model):
     @property
     def is_active_subscription(self):
         """Abonelik aktif mi? (Ana uygulamada görünürlük için)"""
-        return self.status in ['trial', 'active', 'lifetime', 'grace_period']
+        # Lifetime her zaman aktif
+        if self.status == 'lifetime':
+            return True
+        
+        # Diğer durumlar için gün kontrolü yap
+        if self.status in ['trial', 'active', 'grace_period']:
+            # Trial bitiş tarihini kontrol et
+            if self.trial_ends_at:
+                if timezone.now() >= self.trial_ends_at:
+                    # Günler sıfırlandı, pasif yap
+                    if self.status != 'suspended':
+                        self.status = 'suspended'
+                        self.save(update_fields=['status'])
+                    return False
+            
+            # Aktif dönem bitiş tarihini kontrol et
+            if self.current_period_end:
+                if timezone.now() >= self.current_period_end:
+                    # Günler sıfırlandı, pasif yap
+                    if self.status not in ['suspended', 'cancelled']:
+                        self.status = 'suspended'
+                        self.save(update_fields=['status'])
+                    return False
+            
+            return True
+        
+        return False
     
     @property
     def days_until_trial_ends(self):
