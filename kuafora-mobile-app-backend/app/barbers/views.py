@@ -1210,53 +1210,62 @@ class PartnerBarbershopViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
 
     def perform_create(self, serializer):
-        barbershop = serializer.save(is_verified=True)
-        # Ensure creator is admin staff of this barbershop
         from .models import Staff
         from django.contrib.auth import get_user_model
         from django.db import transaction
-        user = self.request.user
-        Staff.objects.get_or_create(barbershop=barbershop, user=user, defaults={"email": getattr(user, 'email', ''), "is_admin": True})
+        from django.utils import timezone
+        from datetime import timedelta
         
-        # Otomatik olarak 3 aylık trial subscription oluştur (eğer yoksa)
-        try:
-            from app.subscriptions.models import Subscription, SubscriptionPlan
-            if not Subscription.objects.filter(barbershop=barbershop).exists():
-                # Plan seçimi: booking_system'e göre
-                booking_type = getattr(barbershop, 'booking_system', 'info_system')
-                if booking_type == 'kuafora_booking':
-                    plan = SubscriptionPlan.objects.filter(slug='randevu', is_active=True).first()
-                else:
-                    plan = SubscriptionPlan.objects.filter(slug='bilgi', is_active=True).first()
-                
-                if not plan:
-                    plan = SubscriptionPlan.objects.filter(is_active=True).first()
-                
-                if plan:
-                    subscription = Subscription.objects.create(
-                        barbershop=barbershop,
-                        plan=plan,
-                        status='trial',
-                        trial_ends_at=timezone.now() + timedelta(days=90)
-                    )
-                    # İlk 200 kuaför: ILK200 kuponu varsa otomatik uygula (quota doluysa otomatik atlar)
-                    try:
-                        from app.subscriptions.models import Coupon, CouponUsage
-                        coupon = Coupon.objects.filter(code='ILK200', is_active=True).first()
-                        if coupon and coupon.is_valid:
-                            subscription.coupon = coupon
-                            subscription.coupon_applied_at = timezone.now()
-                            subscription.status = 'lifetime'
-                            subscription.save(update_fields=['coupon', 'coupon_applied_at', 'status'])
-                            _, created = CouponUsage.objects.get_or_create(coupon=coupon, subscription=subscription)
-                            if created:
-                                coupon.current_uses += 1
-                                coupon.save()
-                    except Exception:
-                        pass
-        except Exception:
-            # Subscription oluşturma hatası kritik değil, sessizce geç
-            pass
+        user = self.request.user
+        
+        with transaction.atomic():
+            barbershop = serializer.save(is_verified=True)
+            # Ensure creator is admin staff of this barbershop
+            Staff.objects.get_or_create(
+                barbershop=barbershop, 
+                user=user, 
+                defaults={"email": getattr(user, 'email', ''), "is_admin": True}
+            )
+            
+            # Otomatik olarak 3 aylık trial subscription oluştur (eğer yoksa)
+            try:
+                from app.subscriptions.models import Subscription, SubscriptionPlan
+                if not Subscription.objects.filter(barbershop=barbershop).exists():
+                    # Plan seçimi: system_type'a göre
+                    system_type = getattr(barbershop, 'system_type', 'info')
+                    if system_type == 'booking':
+                        plan = SubscriptionPlan.objects.filter(slug='randevu', is_active=True).first()
+                    else:
+                        plan = SubscriptionPlan.objects.filter(slug='bilgi', is_active=True).first()
+                    
+                    if not plan:
+                        plan = SubscriptionPlan.objects.filter(is_active=True).first()
+                    
+                    if plan:
+                        subscription = Subscription.objects.create(
+                            barbershop=barbershop,
+                            plan=plan,
+                            status='trial',
+                            trial_ends_at=timezone.now() + timedelta(days=90)
+                        )
+                        # İlk 200 kuaför: ILK200 kuponu varsa otomatik uygula (quota doluysa otomatik atlar)
+                        try:
+                            from app.subscriptions.models import Coupon, CouponUsage
+                            coupon = Coupon.objects.filter(code='ILK200', is_active=True).first()
+                            if coupon and coupon.is_valid:
+                                subscription.coupon = coupon
+                                subscription.coupon_applied_at = timezone.now()
+                                subscription.status = 'lifetime'
+                                subscription.save(update_fields=['coupon', 'coupon_applied_at', 'status'])
+                                _, created = CouponUsage.objects.get_or_create(coupon=coupon, subscription=subscription)
+                                if created:
+                                    coupon.current_uses += 1
+                                    coupon.save()
+                        except Exception:
+                            pass
+            except Exception:
+                # Subscription oluşturma hatası kritik değil, sessizce geç
+                pass
 
     @action(detail=False, methods=["get"], url_path="my", permission_classes=[permissions.IsAuthenticated])
     def my_shops(self, request):
