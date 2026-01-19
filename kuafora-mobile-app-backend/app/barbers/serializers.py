@@ -123,6 +123,19 @@ class BarbershopSerializer(serializers.ModelSerializer):
             phone_val = ''
         attrs['phone_number'] = phone_val
         
+        # Latitude ve longitude string'den float'a çevir
+        if 'latitude' in attrs and attrs['latitude'] is not None:
+            try:
+                attrs['latitude'] = float(attrs['latitude'])
+            except (ValueError, TypeError):
+                attrs['latitude'] = None
+        
+        if 'longitude' in attrs and attrs['longitude'] is not None:
+            try:
+                attrs['longitude'] = float(attrs['longitude'])
+            except (ValueError, TypeError):
+                attrs['longitude'] = None
+        
         # External booking validation
         system_type = attrs.get('system_type')
         external_booking = attrs.get('external_booking', {})

@@ -1209,63 +1209,89 @@ class PartnerBarbershopViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(instance)
         return Response(serializer.data)
 
+    def create(self, request, *args, **kwargs):
+        """Override create to handle exceptions properly"""
+        import traceback
+        import logging
+        logger = logging.getLogger(__name__)
+        
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            self.perform_create(serializer)
+            headers = self.get_success_headers(serializer.data)
+            return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+        except Exception as e:
+            logger.error(f"[PartnerBarbershopViewSet CREATE ERROR] {str(e)}")
+            logger.error(traceback.format_exc())
+            return Response(
+                {'detail': f'Barbershop oluşturulurken hata oluştu: {str(e)}'}, 
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+    
     def perform_create(self, serializer):
         from .models import Staff
         from django.contrib.auth import get_user_model
         from django.db import transaction
         from django.utils import timezone
         from datetime import timedelta
+        import logging
+        logger = logging.getLogger(__name__)
         
         user = self.request.user
         
-        with transaction.atomic():
-            barbershop = serializer.save(is_verified=True)
-            # Ensure creator is admin staff of this barbershop
-            Staff.objects.get_or_create(
-                barbershop=barbershop, 
-                user=user, 
-                defaults={"email": getattr(user, 'email', ''), "is_admin": True}
-            )
-            
-            # Otomatik olarak 3 aylık trial subscription oluştur (eğer yoksa)
-            try:
-                from app.subscriptions.models import Subscription, SubscriptionPlan
-                if not Subscription.objects.filter(barbershop=barbershop).exists():
-                    # Plan seçimi: system_type'a göre
-                    system_type = getattr(barbershop, 'system_type', 'info')
-                    if system_type == 'booking':
-                        plan = SubscriptionPlan.objects.filter(slug='randevu', is_active=True).first()
-                    else:
-                        plan = SubscriptionPlan.objects.filter(slug='bilgi', is_active=True).first()
-                    
-                    if not plan:
-                        plan = SubscriptionPlan.objects.filter(is_active=True).first()
-                    
-                    if plan:
-                        subscription = Subscription.objects.create(
-                            barbershop=barbershop,
-                            plan=plan,
-                            status='trial',
-                            trial_ends_at=timezone.now() + timedelta(days=90)
-                        )
-                        # İlk 200 kuaför: ILK200 kuponu varsa otomatik uygula (quota doluysa otomatik atlar)
-                        try:
-                            from app.subscriptions.models import Coupon, CouponUsage
-                            coupon = Coupon.objects.filter(code='ILK200', is_active=True).first()
-                            if coupon and coupon.is_valid:
-                                subscription.coupon = coupon
-                                subscription.coupon_applied_at = timezone.now()
-                                subscription.status = 'lifetime'
-                                subscription.save(update_fields=['coupon', 'coupon_applied_at', 'status'])
-                                _, created = CouponUsage.objects.get_or_create(coupon=coupon, subscription=subscription)
-                                if created:
-                                    coupon.current_uses += 1
-                                    coupon.save()
-                        except Exception:
-                            pass
-            except Exception:
-                # Subscription oluşturma hatası kritik değil, sessizce geç
-                pass
+        try:
+            with transaction.atomic():
+                barbershop = serializer.save(is_verified=True)
+                # Ensure creator is admin staff of this barbershop
+                Staff.objects.get_or_create(
+                    barbershop=barbershop, 
+                    user=user, 
+                    defaults={"email": getattr(user, 'email', ''), "is_admin": True}
+                )
+                
+                # Otomatik olarak 3 aylık trial subscription oluştur (eğer yoksa)
+                try:
+                    from app.subscriptions.models import Subscription, SubscriptionPlan
+                    if not Subscription.objects.filter(barbershop=barbershop).exists():
+                        # Plan seçimi: system_type'a göre
+                        system_type = getattr(barbershop, 'system_type', 'info')
+                        if system_type == 'booking':
+                            plan = SubscriptionPlan.objects.filter(slug='randevu', is_active=True).first()
+                        else:
+                            plan = SubscriptionPlan.objects.filter(slug='bilgi', is_active=True).first()
+                        
+                        if not plan:
+                            plan = SubscriptionPlan.objects.filter(is_active=True).first()
+                        
+                        if plan:
+                            subscription = Subscription.objects.create(
+                                barbershop=barbershop,
+                                plan=plan,
+                                status='trial',
+                                trial_ends_at=timezone.now() + timedelta(days=90)
+                            )
+                            # İlk 200 kuaför: ILK200 kuponu varsa otomatik uygula (quota doluysa otomatik atlar)
+                            try:
+                                from app.subscriptions.models import Coupon, CouponUsage
+                                coupon = Coupon.objects.filter(code='ILK200', is_active=True).first()
+                                if coupon and coupon.is_valid:
+                                    subscription.coupon = coupon
+                                    subscription.coupon_applied_at = timezone.now()
+                                    subscription.status = 'lifetime'
+                                    subscription.save(update_fields=['coupon', 'coupon_applied_at', 'status'])
+                                    _, created = CouponUsage.objects.get_or_create(coupon=coupon, subscription=subscription)
+                                    if created:
+                                        coupon.current_uses += 1
+                                        coupon.save()
+                            except Exception as coupon_err:
+                                logger.warning(f"[PartnerBarbershopViewSet] Coupon uygulanamadı: {str(coupon_err)}")
+                except Exception as sub_err:
+                    # Subscription oluşturma hatası kritik değil, sessizce geç
+                    logger.warning(f"[PartnerBarbershopViewSet] Subscription oluşturulamadı: {str(sub_err)}")
+        except Exception as e:
+            logger.error(f"[PartnerBarbershopViewSet PERFORM_CREATE ERROR] {str(e)}")
+            raise
 
     @action(detail=False, methods=["get"], url_path="my", permission_classes=[permissions.IsAuthenticated])
     def my_shops(self, request):
