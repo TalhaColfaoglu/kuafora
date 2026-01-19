@@ -150,6 +150,7 @@ class BarbershopAdmin(ModelAdmin):
         # Reddetme işlemini yap
         updated = queryset.update(
             is_approved=False,
+            is_verified=False,  # Reddedildiğinde verified de False yapılmalı ki frontend'de gösterilebilsin
             rejection_reason=reason,
             rejected_at=timezone.now()
         )

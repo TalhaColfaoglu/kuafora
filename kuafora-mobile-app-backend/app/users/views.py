@@ -54,11 +54,14 @@ class RegisterView(generics.CreateAPIView):
         user.email_verified_at = None
         user.requires_email_verification = True
         user.save(update_fields=["email_verified", "email_verified_at", "requires_email_verification", "updated_at"])
-        # Send OTP code (best-effort)
+        # Send OTP code (best-effort, don't fail registration if email fails)
         try:
             _send_email_verification_code(user, request=self.request)
         except Exception as e:
+            import traceback
             print(f"[EMAIL][VERIFY_CODE][REGISTER] failed: {e}")
+            traceback.print_exc()
+            # Don't raise - registration should succeed even if email fails
 
 
 class LoginView(generics.GenericAPIView):
@@ -391,6 +394,7 @@ def _hash_email_code(*, user_id: str, code: str) -> str:
 
 
 def _send_email_verification_code(user, request=None) -> None:
+    """Send email verification OTP code. Raises exception on failure."""
     # Delete previous active codes
     EmailVerificationCode.objects.filter(user=user, consumed_at__isnull=True).delete()
 
@@ -408,10 +412,15 @@ def _send_email_verification_code(user, request=None) -> None:
         "Bu isteği siz yapmadıysanız bu e-postayı yok sayabilirsiniz.\n\n"
         "Kuafora"
     )
+    
+    from_email = getattr(settings, "DEFAULT_FROM_EMAIL", None)
+    if not from_email:
+        raise ValueError("DEFAULT_FROM_EMAIL is not configured in settings")
+    
     send_mail(
         subject,
         body,
-        getattr(settings, "DEFAULT_FROM_EMAIL", None),
+        from_email,
         [user.email],
         fail_silently=False,
     )
