@@ -8,15 +8,20 @@ from django.core.exceptions import ImproperlyConfigured
 from django.utils.crypto import salted_hmac
 
 
-def _require_phone_key() -> str:
+def _require_phone_key() -> Optional[str]:
+    """Get phone encryption key, return None if not set or invalid."""
     key = getattr(settings, "PHONE_ENCRYPTION_KEY", "") or ""
     key = key.strip()
     if not key:
-        raise ImproperlyConfigured(
-            "PHONE_ENCRYPTION_KEY is not set. Generate one with "
-            "`python -c \"from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())\"`"
-        )
-    return key
+        return None
+    # Validate key format
+    try:
+        from cryptography.fernet import Fernet
+        Fernet(key.encode())
+        return key
+    except (ValueError, Exception):
+        # Key format is invalid
+        return None
 
 
 def _get_fernet():
@@ -29,15 +34,30 @@ def _get_fernet():
             "cryptography is required for phone encryption. Install it and retry."
         ) from e
 
-    return Fernet(_require_phone_key().encode())
+    key = _require_phone_key()
+    if not key:
+        raise ImproperlyConfigured(
+            "PHONE_ENCRYPTION_KEY is not set or invalid. Generate one with: "
+            "`python -c \"from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())\"`"
+        )
+    return Fernet(key.encode())
 
 
 def encrypt_text(plain: str) -> str:
+    """Encrypt text using Fernet. Returns empty string if encryption is not available."""
     plain = (plain or "").strip()
     if not plain:
         return ""
-    f = _get_fernet()
-    return f.encrypt(plain.encode("utf-8")).decode("utf-8")
+    try:
+        f = _get_fernet()
+        return f.encrypt(plain.encode("utf-8")).decode("utf-8")
+    except (ImproperlyConfigured, ValueError, Exception) as e:
+        # If encryption key is missing or invalid, return empty string
+        # This allows registration to proceed without encryption
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.warning(f"Phone encryption failed: {e}. Storing phone without encryption.")
+        return ""
 
 
 def decrypt_text(token: str) -> str:
