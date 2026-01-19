@@ -31,6 +31,7 @@ class BarbershopAdmin(ModelAdmin):
         "name",
         "gender_badge",
         "location_display",
+        "approval_badge",
         "verification_badge",
         "rating_display",
         "favorites_count",
@@ -39,19 +40,21 @@ class BarbershopAdmin(ModelAdmin):
         "created_at",
     )
     list_display_links = ("id", "name")
-    list_filter = ("gender", "city", "district", "is_verified", "subscription__status")
+    list_filter = ("gender", "city", "district", "is_verified", "is_approved", "subscription__status")
     search_fields = ("name", "city", "district", "address")
     date_hierarchy = "created_at"
     list_select_related = ("subscription",)
     inlines = [BarbershopImageInline]
-    actions = ["verify_barbershops", "unverify_barbershops"]
-    readonly_fields = ("rating_avg", "total_reviews", "favorites_count", "created_at", "updated_at")
+    actions = ["verify_barbershops", "unverify_barbershops", "approve_barbershops", "reject_barbershops"]
+    readonly_fields = ("rating_avg", "total_reviews", "favorites_count", "created_at", "updated_at", "main_image_preview", "images_preview", "google_maps_link_display")
 
     fieldsets = (
-        ("Temel", {"fields": ("name", "gender", "system_type", "is_verified")}),
-        ("Konum", {"fields": ("city", "district", "address", "latitude", "longitude")}),
+        ("Temel", {"fields": ("name", "gender", "system_type", "is_verified", "is_approved")}),
+        ("Onay Durumu", {"fields": ("rejection_reason", "rejected_at"), "classes": ("collapse",)}),
+        ("Konum", {"fields": ("city", "district", "address", "latitude", "longitude", "google_maps_link", "google_maps_link_display")}),
         ("İletişim", {"fields": ("phone", "instagram", "facebook", "twitter", "whatsapp"), "classes": ("collapse",)}),
-        ("Görseller", {"fields": ("main_image",), "classes": ("collapse",)}),
+        ("Görseller", {"fields": ("main_image", "main_image_preview", "images_preview"), "classes": ("collapse",)}),
+        ("Açıklama", {"fields": ("description",)}),
         ("İstatistik", {"fields": ("rating_avg", "total_reviews", "favorites_count"), "classes": ("collapse",)}),
         ("Sistem", {"fields": ("created_at", "updated_at"), "classes": ("collapse",)}),
     )
@@ -79,6 +82,12 @@ class BarbershopAdmin(ModelAdmin):
     def location_display(self, obj):
         return f"{obj.district}, {obj.city}"
     location_display.short_description = "Konum"
+
+    def approval_badge(self, obj):
+        if obj.is_approved:
+            return format_html('<span class="text-green-600 font-bold">✓ Onaylandı</span>')
+        return format_html('<span class="text-red-600 font-bold">✗ Onay Bekliyor</span>')
+    approval_badge.short_description = "Admin Onayı"
 
     def verification_badge(self, obj):
         if obj.is_verified:
@@ -109,6 +118,72 @@ class BarbershopAdmin(ModelAdmin):
     def unverify_barbershops(self, request, queryset):
         updated = queryset.update(is_verified=False)
         self.message_user(request, f"{updated} kuaför yayından kaldırıldı (banlandı).")
+
+    @action(description="Seçilen kuaförleri ONAYLA (Ana uygulamada görünür yap)")
+    def approve_barbershops(self, request, queryset):
+        updated = queryset.update(
+            is_approved=True,
+            rejection_reason='',  # Onaylandığında reddetme nedeni temizlenir
+            rejected_at=None
+        )
+        self.message_user(request, f"{updated} kuaför onaylandı ve ana uygulamada görünür hale getirildi.")
+
+    @action(description="Seçilen kuaförleri REDDET (Ana uygulamadan kaldır)")
+    def reject_barbershops(self, request, queryset):
+        from django.utils import timezone
+        from django.contrib import messages
+        from django.shortcuts import render, redirect
+        
+        # Admin'den reddetme nedeni al (POST'tan)
+        reason = request.POST.get('rejection_reason', '').strip()
+        
+        # Eğer POST'ta reason yoksa, form göster
+        if 'apply' not in request.POST or not reason:
+            context = {
+                'barbershops': queryset,
+                'action_checkbox_name': '_selected_action',
+                'opts': self.model._meta,
+                'title': 'Kuaförleri Reddet',
+            }
+            return render(request, 'admin/barbers/barbershop/reject_form.html', context)
+        
+        # Reddetme işlemini yap
+        updated = queryset.update(
+            is_approved=False,
+            rejection_reason=reason,
+            rejected_at=timezone.now()
+        )
+        self.message_user(request, f"{updated} kuaför reddedildi ve ana uygulamadan kaldırıldı.", messages.SUCCESS)
+        return None
+
+    def main_image_preview(self, obj):
+        if obj.main_image:
+            return format_html(
+                f'<img src="{obj.main_image.url}" style="max-width: 300px; max-height: 300px; border-radius: 8px; margin: 10px 0;" />'
+            )
+        return format_html('<span class="text-gray-400">Görsel yok</span>')
+    main_image_preview.short_description = "Ana Görsel Önizleme"
+
+    def images_preview(self, obj):
+        images = obj.images.all()[:5]  # İlk 5 görseli göster
+        if not images:
+            return format_html('<span class="text-gray-400">Ek görsel yok</span>')
+        html = '<div style="display: flex; flex-wrap: wrap; gap: 10px; margin: 10px 0;">'
+        for img in images:
+            html += f'<img src="{img.image.url}" style="max-width: 150px; max-height: 150px; border-radius: 8px;" />'
+        html += '</div>'
+        if obj.images.count() > 5:
+            html += f'<p style="margin-top: 10px; color: #666;">Toplam {obj.images.count()} görsel</p>'
+        return format_html(html)
+    images_preview.short_description = "Ek Görseller"
+
+    def google_maps_link_display(self, obj):
+        if obj.google_maps_link:
+            return format_html(
+                f'<a href="{obj.google_maps_link}" target="_blank" style="color: #3b82f6; text-decoration: underline;">{obj.google_maps_link}</a>'
+            )
+        return format_html('<span class="text-gray-400">Google Maps linki girilmemiş</span>')
+    google_maps_link_display.short_description = "Google Maps Linki"
 
 
 @admin.register(Staff)

@@ -158,6 +158,7 @@ class BarbershopViewSet(viewsets.ReadOnlyModelViewSet):
             qs = qs.filter(
                 subscription__status__in=['trial', 'active', 'lifetime', 'grace_period'],
                 is_verified=True,  # Banlı kuaförleri filtrele
+                is_approved=True,  # Admin onayı - sadece onaylanmış kuaförler ana uygulamada görünür
                 name__isnull=False  # İsimsiz kuaförleri filtrele
             ).exclude(name='')  # Boş string isimleri de filtrele
         
@@ -235,6 +236,7 @@ class BarbershopViewSet(viewsets.ReadOnlyModelViewSet):
                 qs.filter(
                     subscription__status__in=["trial", "active", "lifetime", "grace_period"],
                     is_verified=True,
+                    is_approved=True,  # Admin onayı - sadece onaylanmış kuaförler ana uygulamada görünür
                     name__isnull=False,
                 )
                 .exclude(name="")
@@ -998,6 +1000,7 @@ class LastViewedViewSet(mixins.ListModelMixin, mixins.CreateModelMixin, viewsets
             .filter(
                 user=self.request.user,
                 barbershop__is_verified=True,
+                barbershop__is_approved=True,  # Admin onayı - sadece onaylanmış kuaförler ana uygulamada görünür
                 barbershop__name__isnull=False,
                 barbershop__subscription__status__in=active_status,
             )
@@ -1076,7 +1079,7 @@ class TrackViewApi(generics.GenericAPIView):
         barbershop = (
             Barbershop.objects
             .select_related("subscription")
-            .filter(id=barbershop_id, is_verified=True, name__isnull=False)
+            .filter(id=barbershop_id, is_verified=True, is_approved=True, name__isnull=False)
             .exclude(name='')
             .first()
         )
@@ -1702,6 +1705,7 @@ class FavoriteListView(generics.ListAPIView):
                 favorited_by__user=self.request.user,
                 name__isnull=False,  # İsimsiz kuaförleri filtrele
                 is_verified=True,  # Banlı kuaförleri filtrele
+                is_approved=True,  # Admin onayı - sadece onaylanmış kuaförler ana uygulamada görünür
                 subscription__status__in=['trial', 'active', 'lifetime', 'grace_period']  # Aktif aboneliği olanları göster
             )
             .exclude(name='')  # Boş string isimleri de filtrele
@@ -2466,6 +2470,8 @@ class PartnerStaffWorkingHoursViewSet(viewsets.ModelViewSet):
                 is_closed = item.get('is_closed', False)
                 open_t = parse_time(item.get('open'))
                 close_t = parse_time(item.get('close'))
+                break_start_t = parse_time(item.get('break_start_time') or item.get('break_start'))
+                break_end_t = parse_time(item.get('break_end_time') or item.get('break_end'))
                 
                 StaffWorkingHours.objects.create(
                     staff=staff,
@@ -2473,6 +2479,8 @@ class PartnerStaffWorkingHoursViewSet(viewsets.ModelViewSet):
                     is_closed=is_closed,
                     start_time=open_t,
                     end_time=close_t,
+                    break_start_time=break_start_t,
+                    break_end_time=break_end_t,
                     valid_from=effective_date,
                     valid_until=None
                 )

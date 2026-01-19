@@ -29,7 +29,8 @@ class HomeDashboardApi(APIView):
         shops_qs = Barbershop.objects.filter(
             subscription__status__in=['trial', 'active', 'lifetime', 'grace_period'],
             name__isnull=False,
-            is_verified=True  # Banlı kuaförleri filtrele
+            is_verified=True,  # Banlı kuaförleri filtrele
+            is_approved=True  # Admin onayı - sadece onaylanmış kuaförler ana uygulamada görünür
         ).exclude(name='')
 
         if city:

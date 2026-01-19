@@ -66,6 +66,9 @@ class BarbershopSerializer(serializers.ModelSerializer):
             "main_image_thumb",
             "images",
             "is_verified",
+            "is_approved",
+            "rejection_reason",
+            "rejected_at",
             "description",
             "categories",
             "weekly_schedule",
@@ -80,7 +83,7 @@ class BarbershopSerializer(serializers.ModelSerializer):
             "instagram", "facebook", "twitter", "whatsapp",
             "features",
         )
-        read_only_fields = ("rating_avg", "total_reviews", "views_weekly", "favorites_count", "created_at", "updated_at", "main_image_thumb")
+        read_only_fields = ("rating_avg", "total_reviews", "views_weekly", "favorites_count", "created_at", "updated_at", "main_image_thumb", "is_approved", "rejection_reason", "rejected_at")
         extra_kwargs = {
             # Alias kullandığımız için phone_number'ı zorunlu yapma; 'phone' ile beslenecek
             'phone_number': {'required': False, 'allow_blank': True},

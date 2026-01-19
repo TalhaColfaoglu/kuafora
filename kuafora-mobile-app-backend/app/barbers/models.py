@@ -88,6 +88,10 @@ class Barbershop(models.Model):
     latitude = models.FloatField(null=True, blank=True)
     longitude = models.FloatField(null=True, blank=True)
     is_verified = models.BooleanField(default=False)
+    is_approved = models.BooleanField(default=False, help_text="Admin onayı - onaylanmadan ana uygulamada görünmez")
+    rejection_reason = models.TextField(blank=True, null=True, help_text="Reddetme nedeni (admin tarafından doldurulur)")
+    rejected_at = models.DateTimeField(blank=True, null=True, help_text="Reddetme tarihi")
+    google_maps_link = models.URLField(max_length=500, blank=True, null=True, help_text="Google Maps konum linki")
     description = models.TextField(blank=True)
     categories = models.ManyToManyField(ShopCategory, blank=True, related_name="barbershops")
     system_type = models.CharField(
