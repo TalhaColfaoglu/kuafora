@@ -46,9 +46,32 @@ class RegisterView(generics.CreateAPIView):
     serializer_class = RegisterSerializer
     throttle_scope = "auth_register"
 
+    def create(self, request, *args, **kwargs):
+        """Override create to handle exceptions properly"""
+        import traceback
+        import logging
+        logger = logging.getLogger(__name__)
+        
+        serializer = self.get_serializer(data=request.data)
+        try:
+            serializer.is_valid(raise_exception=True)
+            self.perform_create(serializer)
+            headers = self.get_success_headers(serializer.data)
+            return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+        except ValidationError as e:
+            # Validation errors should be returned as 400
+            return Response(e.detail, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            logger.error(f"[RegisterView CREATE ERROR] {str(e)}")
+            logger.error(traceback.format_exc())
+            return Response(
+                {'detail': f'Kayıt sırasında bir hata oluştu: {str(e)}'}, 
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
     def perform_create(self, serializer):
         user = serializer.save()
-        # New registrations must verify email (but we don't block login).
+        # New registrations must verify email before login
         # Mark as requiring verification. Legacy users are not affected.
         user.email_verified = False
         user.email_verified_at = None
@@ -59,9 +82,12 @@ class RegisterView(generics.CreateAPIView):
             _send_email_verification_code(user, request=self.request)
         except Exception as e:
             import traceback
-            print(f"[EMAIL][VERIFY_CODE][REGISTER] failed: {e}")
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.warning(f"[EMAIL][VERIFY_CODE][REGISTER] failed: {e}")
             traceback.print_exc()
             # Don't raise - registration should succeed even if email fails
+            # User can request a new code later
 
 
 class LoginView(generics.GenericAPIView):
