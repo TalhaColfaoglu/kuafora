@@ -24,8 +24,7 @@ COPY requirements.txt /app/
 
 # pip install'i optimize et - timeout ve retry ekle
 RUN pip install --upgrade pip setuptools wheel \
-    && pip install --timeout=100 --retries=3 --no-cache-dir -r requirements.txt \
-    && pip install --timeout=100 --retries=3 --no-cache-dir gunicorn==22.0.0
+    && pip install --timeout=100 --retries=3 --no-cache-dir -r requirements.txt
 
 # Kod dosyalarını kopyala
 COPY . /app/

@@ -5,3 +5,9 @@ env/website.env
 # Local certs
 nginx/certbot/
 
+*.env
+env/*.env
+kuafora-mobile-app-backend/.env*
+*.env
+env/*.env
+kuafora-mobile-app-backend/.env*
