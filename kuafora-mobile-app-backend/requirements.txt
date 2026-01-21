@@ -32,3 +32,6 @@ django-unfold==0.37.0
 # Crypto (field-level encryption for sensitive data like phone numbers)
 cryptography>=43.0.1
 
+# Monitoring (system metrics and health checks)
+psutil==5.9.8
+

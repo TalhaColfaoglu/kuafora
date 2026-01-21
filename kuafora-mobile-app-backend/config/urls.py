@@ -8,9 +8,7 @@ from app.users.views import ResolveUserView
 from app.subscriptions.views import MySubscriptionApi, StartTrialApi, SubscriptionViewSet
 from django.http import JsonResponse, FileResponse
 from pathlib import Path
-
-def health(request):
-    return JsonResponse({"status": "ok"})
+from app.core.views import health_check, health_simple, metrics
 
 def schema_static(request):
     # Önce statik YAML şemayı sunmayı dene; yoksa dinamik üretime düş
@@ -86,7 +84,10 @@ urlpatterns = [
     path("api/", include(("app.search.urls", "search"))),
     path("api/", include(("app.support.urls", "support"))),
     path("api/users/resolve/", ResolveUserView.as_view(), name="resolve-user"),
-    path("health/", health),
+    # Monitoring endpoints
+    path("health/", health_simple, name="health-simple"),  # Simple health check (for load balancers)
+    path("api/health/", health_check, name="health-check"),  # Comprehensive health check
+    path("api/metrics/", metrics, name="metrics"),  # System and application metrics
 ]
 
 # Serve media files locally when using local storage (DEBUG or when S3 is not configured)
