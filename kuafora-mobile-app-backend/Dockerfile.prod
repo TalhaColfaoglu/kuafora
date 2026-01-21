@@ -29,7 +29,7 @@ RUN pip install --upgrade pip setuptools wheel \
 # Kod dosyalarını kopyala
 COPY . /app/
 
-RUN mkdir -p /app/staticfiles /app/media
+RUN mkdir -p /app/staticfiles /app/media /app/logs
 
 COPY entrypoint.prod.sh /app/entrypoint.prod.sh
 COPY cron_entrypoint.sh /app/cron_entrypoint.sh
