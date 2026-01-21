@@ -1,7 +1,9 @@
 from django.contrib import admin
 from django.utils import timezone
 from django.utils.html import format_html
-from django.db.models import Count
+from django.db.models import Count, Q, Case, When, BooleanField, Exists, OuterRef
+from django.db import models
+from django.contrib.admin import SimpleListFilter
 from unfold.admin import ModelAdmin, TabularInline
 from unfold.decorators import action
 from .models import (
@@ -18,6 +20,67 @@ from .models import (
 )
 
 
+class HasGoogleMapsFilter(SimpleListFilter):
+    title = "Google Maps Linki"
+    parameter_name = "has_google_maps"
+    
+    def lookups(self, request, model_admin):
+        return (
+            ("yes", "Link Var"),
+            ("no", "Link Yok"),
+        )
+    
+    def queryset(self, request, queryset):
+        if self.value() == "yes":
+            return queryset.filter(google_maps_link__isnull=False).exclude(google_maps_link="")
+        if self.value() == "no":
+            return queryset.filter(Q(google_maps_link__isnull=True) | Q(google_maps_link=""))
+
+
+class HasImagesFilter(SimpleListFilter):
+    title = "Görsel Durumu"
+    parameter_name = "has_images"
+    
+    def lookups(self, request, model_admin):
+        return (
+            ("yes", "Görsel Var"),
+            ("no", "Görsel Yok"),
+        )
+    
+    def queryset(self, request, queryset):
+        if self.value() == "yes":
+            return queryset.filter(main_image__isnull=False)
+        if self.value() == "no":
+            return queryset.filter(main_image__isnull=True)
+
+
+class HasSocialMediaFilter(SimpleListFilter):
+    title = "Sosyal Medya"
+    parameter_name = "has_social_media"
+    
+    def lookups(self, request, model_admin):
+        return (
+            ("yes", "Link Var"),
+            ("no", "Link Yok"),
+        )
+    
+    def queryset(self, request, queryset):
+        if self.value() == "yes":
+            return queryset.filter(
+                Q(instagram__isnull=False, instagram__gt="") |
+                Q(facebook__isnull=False, facebook__gt="") |
+                Q(twitter__isnull=False, twitter__gt="") |
+                Q(whatsapp__isnull=False, whatsapp__gt="")
+            )
+        if self.value() == "no":
+            return queryset.filter(
+                Q(instagram__isnull=True) | Q(instagram=""),
+                Q(facebook__isnull=True) | Q(facebook=""),
+                Q(twitter__isnull=True) | Q(twitter=""),
+                Q(whatsapp__isnull=True) | Q(whatsapp="")
+            )
+
+
 class BarbershopImageInline(TabularInline):
     model = BarbershopImage
     extra = 1
@@ -28,44 +91,177 @@ class BarbershopImageInline(TabularInline):
 class BarbershopAdmin(ModelAdmin):
     list_display = (
         "id",
+        "thumbnail_preview",
         "name",
         "gender_badge",
-        "location_display",
+        "full_address_display",
+        "phone_display",
         "approval_badge",
         "verification_badge",
+        "google_maps_status",
+        "images_count",
         "rating_display",
         "favorites_count",
         "views_count",
         "subscription_status",
         "created_at",
     )
-    list_display_links = ("id", "name")
-    list_filter = ("gender", "city", "district", "is_verified", "is_approved", "subscription__status")
-    search_fields = ("name", "city", "district", "address")
+    list_display_links = ("id", "name", "thumbnail_preview")
+    list_filter = (
+        "gender", 
+        "city", 
+        "district", 
+        "is_verified", 
+        "is_approved", 
+        "subscription__status",
+        "system_type",
+        HasGoogleMapsFilter,
+        HasImagesFilter,
+        HasSocialMediaFilter,
+    )
+    search_fields = ("name", "city", "district", "address", "phone_number", "description")
     date_hierarchy = "created_at"
     list_select_related = ("subscription",)
+    list_per_page = 50
     inlines = [BarbershopImageInline]
     actions = ["verify_barbershops", "unverify_barbershops", "approve_barbershops", "reject_barbershops"]
-    readonly_fields = ("rating_avg", "total_reviews", "favorites_count", "created_at", "updated_at", "main_image_preview", "images_preview", "google_maps_link_display")
+    readonly_fields = (
+        "rating_avg", 
+        "total_reviews", 
+        "favorites_count", 
+        "created_at", 
+        "updated_at", 
+        "main_image_preview", 
+        "images_preview", 
+        "google_maps_link_display",
+        "address_full_display",
+        "contact_info_display",
+        "social_media_display",
+        "stats_display",
+        "categories_display",
+    )
 
     fieldsets = (
-        ("Temel", {"fields": ("name", "gender", "system_type", "is_verified", "is_approved")}),
-        ("Onay Durumu", {"fields": ("rejection_reason", "rejected_at"), "classes": ("collapse",)}),
-        ("Konum", {"fields": ("city", "district", "address", "latitude", "longitude", "google_maps_link", "google_maps_link_display")}),
-        ("İletişim", {"fields": ("phone", "instagram", "facebook", "twitter", "whatsapp"), "classes": ("collapse",)}),
-        ("Görseller", {"fields": ("main_image", "main_image_preview", "images_preview"), "classes": ("collapse",)}),
-        ("Açıklama", {"fields": ("description",)}),
-        ("İstatistik", {"fields": ("rating_avg", "total_reviews", "favorites_count"), "classes": ("collapse",)}),
-        ("Sistem", {"fields": ("created_at", "updated_at"), "classes": ("collapse",)}),
+        ("📋 Temel Bilgiler", {
+            "fields": ("name", "gender", "system_type", "is_verified", "is_approved"),
+            "classes": ("wide",)
+        }),
+        ("📍 Konum Bilgileri", {
+            "fields": ("address_full_display", "city", "district", "address", "latitude", "longitude", "google_maps_link", "google_maps_link_display"),
+            "classes": ("wide",)
+        }),
+        ("📞 İletişim Bilgileri", {
+            "fields": ("contact_info_display", "phone_number"),
+            "classes": ("collapse",)
+        }),
+        ("📱 Sosyal Medya", {
+            "fields": ("social_media_display", "instagram", "facebook", "twitter", "whatsapp"),
+            "classes": ("collapse",)
+        }),
+        ("🖼️ Görseller", {
+            "fields": ("main_image", "main_image_preview", "images_preview"),
+            "classes": ("wide",)
+        }),
+        ("📝 Açıklama", {
+            "fields": ("description",),
+            "classes": ("wide",)
+        }),
+        ("🏷️ Kategoriler", {
+            "fields": ("categories_display", "categories"),
+            "classes": ("collapse",)
+        }),
+        ("📊 İstatistikler", {
+            "fields": ("stats_display", "rating_avg", "total_reviews", "favorites_count", "views_weekly"),
+            "classes": ("collapse",)
+        }),
+        ("❌ Reddetme Bilgileri", {
+            "fields": ("rejection_reason", "rejected_at"),
+            "classes": ("collapse",)
+        }),
+        ("⚙️ Sistem", {
+            "fields": ("created_at", "updated_at"),
+            "classes": ("collapse",)
+        }),
     )
 
     def get_queryset(self, request):
         qs = super().get_queryset(request)
-        return qs.annotate(_views_count=Count("view_events"))
+        qs = qs.annotate(
+            _views_count=Count("view_events"),
+            _images_count=Count("images"),
+            _has_google_maps=models.Case(
+                models.When(google_maps_link__isnull=False, google_maps_link__gt='', then=True),
+                default=False,
+                output_field=models.BooleanField()
+            ),
+            _has_images=models.Case(
+                models.When(main_image__isnull=False, then=True),
+                default=False,
+                output_field=models.BooleanField()
+            ),
+            _has_social_media=models.Case(
+                models.When(
+                    models.Q(instagram__isnull=False, instagram__gt='') |
+                    models.Q(facebook__isnull=False, facebook__gt='') |
+                    models.Q(twitter__isnull=False, twitter__gt='') |
+                    models.Q(whatsapp__isnull=False, whatsapp__gt=''),
+                    then=True
+                ),
+                default=False,
+                output_field=models.BooleanField()
+            ),
+        ).select_related("subscription").prefetch_related("images", "categories", "staff")
+        return qs
 
     def views_count(self, obj):
         return getattr(obj, "_views_count", 0)
     views_count.short_description = "Görüntülenme"
+    
+    def thumbnail_preview(self, obj):
+        if obj.main_image:
+            return format_html(
+                f'<img src="{obj.main_image.url}" style="width: 60px; height: 60px; object-fit: cover; border-radius: 8px; border: 2px solid #e5e7eb;" />'
+            )
+        return format_html('<span style="display: inline-block; width: 60px; height: 60px; background: #f3f4f6; border-radius: 8px; text-align: center; line-height: 60px; color: #9ca3af; font-size: 24px;">📷</span>')
+    thumbnail_preview.short_description = "Görsel"
+    
+    def full_address_display(self, obj):
+        parts = []
+        if obj.district:
+            parts.append(obj.district)
+        if obj.city:
+            parts.append(obj.city)
+        address_text = ", ".join(parts) if parts else "-"
+        if obj.address:
+            address_text += f"<br><small style='color: #6b7280;'>{obj.address[:50]}{'...' if len(obj.address) > 50 else ''}</small>"
+        return format_html(address_text)
+    full_address_display.short_description = "Adres"
+    
+    def phone_display(self, obj):
+        if obj.phone_number:
+            return format_html(
+                f'<a href="tel:{obj.phone_number}" style="color: #3b82f6; text-decoration: none;">{obj.phone_number}</a>'
+            )
+        return format_html('<span style="color: #9ca3af;">-</span>')
+    phone_display.short_description = "Telefon"
+    
+    def google_maps_status(self, obj):
+        has_link = getattr(obj, "_has_google_maps", False) or (obj.google_maps_link and obj.google_maps_link.strip())
+        if has_link:
+            return format_html(
+                '<span style="color: #10b981;">✓</span> <small style="color: #6b7280;">Link var</small>'
+            )
+        return format_html('<span style="color: #ef4444;">✗</span> <small style="color: #6b7280;">Link yok</small>')
+    google_maps_status.short_description = "Google Maps"
+    
+    def images_count(self, obj):
+        count = getattr(obj, "_images_count", 0)
+        if obj.main_image:
+            count += 1
+        if count > 0:
+            return format_html(f'<span style="color: #3b82f6; font-weight: 600;">{count}</span>')
+        return format_html('<span style="color: #9ca3af;">0</span>')
+    images_count.short_description = "Görsel"
 
     def gender_badge(self, obj):
         colors = {
@@ -160,31 +356,168 @@ class BarbershopAdmin(ModelAdmin):
     def main_image_preview(self, obj):
         if obj.main_image:
             return format_html(
-                f'<img src="{obj.main_image.url}" style="max-width: 300px; max-height: 300px; border-radius: 8px; margin: 10px 0;" />'
+                f'''
+                <div style="margin: 10px 0;">
+                    <img src="{obj.main_image.url}" style="max-width: 400px; max-height: 400px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 10px;" />
+                    <br>
+                    <a href="{obj.main_image.url}" target="_blank" style="color: #3b82f6; text-decoration: none; font-size: 12px;">🔗 Tam boyutu aç</a>
+                </div>
+                '''
             )
-        return format_html('<span class="text-gray-400">Görsel yok</span>')
+        return format_html('<div style="padding: 20px; background: #f3f4f6; border-radius: 8px; color: #9ca3af; text-align: center;">📷 Ana görsel yok</div>')
     main_image_preview.short_description = "Ana Görsel Önizleme"
 
     def images_preview(self, obj):
-        images = obj.images.all()[:5]  # İlk 5 görseli göster
+        images = list(obj.images.all())
+        total_count = len(images)
         if not images:
-            return format_html('<span class="text-gray-400">Ek görsel yok</span>')
-        html = '<div style="display: flex; flex-wrap: wrap; gap: 10px; margin: 10px 0;">'
-        for img in images:
-            html += f'<img src="{img.image.url}" style="max-width: 150px; max-height: 150px; border-radius: 8px;" />'
+            return format_html('<div style="padding: 20px; background: #f3f4f6; border-radius: 8px; color: #9ca3af; text-align: center;">📷 Ek görsel yok</div>')
+        
+        html = f'<div style="margin: 10px 0;"><strong style="color: #374151; margin-bottom: 10px; display: block;">Toplam {total_count} ek görsel:</strong>'
+        html += '<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; margin-top: 10px;">'
+        
+        for img in images[:12]:  # İlk 12 görseli göster
+            html += f'''
+                <div style="position: relative;">
+                    <img src="{img.image.url}" style="width: 100%; height: 150px; object-fit: cover; border-radius: 8px; border: 2px solid #e5e7eb; cursor: pointer;" 
+                         onclick="window.open('{img.image.url}', '_blank')" 
+                         title="Tıklayarak tam boyutu aç" />
+                </div>
+            '''
         html += '</div>'
-        if obj.images.count() > 5:
-            html += f'<p style="margin-top: 10px; color: #666;">Toplam {obj.images.count()} görsel</p>'
+        
+        if total_count > 12:
+            html += f'<p style="margin-top: 12px; color: #6b7280; font-size: 13px;">+ {total_count - 12} görsel daha var</p>'
+        
+        html += '</div>'
         return format_html(html)
     images_preview.short_description = "Ek Görseller"
 
     def google_maps_link_display(self, obj):
-        if obj.google_maps_link:
+        if obj.google_maps_link and obj.google_maps_link.strip():
+            link = obj.google_maps_link.strip()
             return format_html(
-                f'<a href="{obj.google_maps_link}" target="_blank" style="color: #3b82f6; text-decoration: underline;">{obj.google_maps_link}</a>'
+                f'''
+                <div style="margin: 10px 0; padding: 12px; background: #eff6ff; border-radius: 8px; border-left: 4px solid #3b82f6;">
+                    <div style="margin-bottom: 8px;">
+                        <strong style="color: #1e40af;">📍 Google Maps Konumu:</strong>
+                    </div>
+                    <a href="{link}" target="_blank" style="color: #3b82f6; text-decoration: none; word-break: break-all; display: inline-block; margin-top: 4px;">
+                        {link}
+                        <span style="margin-left: 6px;">🔗</span>
+                    </a>
+                    {f'''
+                    <div style="margin-top: 10px; padding: 8px; background: white; border-radius: 6px;">
+                        <small style="color: #6b7280;">Koordinatlar: {obj.latitude or "N/A"}, {obj.longitude or "N/A"}</small>
+                    </div>
+                    ''' if obj.latitude and obj.longitude else ''}
+                </div>
+                '''
             )
-        return format_html('<span class="text-gray-400">Google Maps linki girilmemiş</span>')
+        return format_html(
+            '<div style="padding: 12px; background: #fef2f2; border-radius: 8px; border-left: 4px solid #ef4444; color: #991b1b;">'
+            '⚠️ Google Maps linki girilmemiş'
+            '</div>'
+        )
     google_maps_link_display.short_description = "Google Maps Linki"
+    
+    def address_full_display(self, obj):
+        parts = []
+        if obj.address:
+            parts.append(f'<strong>Adres:</strong> {obj.address}')
+        if obj.district:
+            parts.append(f'<strong>İlçe:</strong> {obj.district}')
+        if obj.city:
+            parts.append(f'<strong>İl:</strong> {obj.city}')
+        if obj.latitude and obj.longitude:
+            parts.append(f'<strong>Koordinatlar:</strong> {obj.latitude}, {obj.longitude}')
+        
+        if parts:
+            return format_html(
+                f'<div style="padding: 12px; background: #f9fafb; border-radius: 8px; line-height: 1.8;">'
+                f'{"<br>".join(parts)}'
+                f'</div>'
+            )
+        return format_html('<span style="color: #9ca3af;">Adres bilgisi girilmemiş</span>')
+    address_full_display.short_description = "Tam Adres Bilgisi"
+    
+    def contact_info_display(self, obj):
+        html = '<div style="padding: 12px; background: #f0fdf4; border-radius: 8px; border-left: 4px solid #10b981;">'
+        if obj.phone_number:
+            html += f'<div style="margin-bottom: 8px;"><strong>📞 Telefon:</strong> <a href="tel:{obj.phone_number}" style="color: #059669; text-decoration: none;">{obj.phone_number}</a></div>'
+        else:
+            html += '<div style="margin-bottom: 8px; color: #9ca3af;">📞 Telefon: Girilmemiş</div>'
+        html += '</div>'
+        return format_html(html)
+    contact_info_display.short_description = "İletişim Bilgileri"
+    
+    def social_media_display(self, obj):
+        links = []
+        if obj.instagram:
+            links.append(f'<a href="https://instagram.com/{obj.instagram.lstrip("@")}" target="_blank" style="color: #e4405f; text-decoration: none; margin-right: 12px;">📷 Instagram: @{obj.instagram.lstrip("@")}</a>')
+        if obj.facebook:
+            links.append(f'<a href="https://facebook.com/{obj.facebook}" target="_blank" style="color: #1877f2; text-decoration: none; margin-right: 12px;">👤 Facebook: {obj.facebook}</a>')
+        if obj.twitter:
+            links.append(f'<a href="https://twitter.com/{obj.twitter.lstrip("@")}" target="_blank" style="color: #1da1f2; text-decoration: none; margin-right: 12px;">🐦 Twitter: @{obj.twitter.lstrip("@")}</a>')
+        if obj.whatsapp:
+            links.append(f'<a href="https://wa.me/{obj.whatsapp.replace("+", "").replace(" ", "").replace("-", "")}" target="_blank" style="color: #25d366; text-decoration: none; margin-right: 12px;">💬 WhatsApp: {obj.whatsapp}</a>')
+        
+        if links:
+            return format_html(
+                f'<div style="padding: 12px; background: #fef3c7; border-radius: 8px; border-left: 4px solid #f59e0b;">'
+                f'{"<br>".join(links)}'
+                f'</div>'
+            )
+        return format_html('<div style="padding: 12px; background: #f3f4f6; border-radius: 8px; color: #9ca3af;">Sosyal medya linki girilmemiş</div>')
+    social_media_display.short_description = "Sosyal Medya Linkleri"
+    
+    def stats_display(self, obj):
+        staff_count = obj.staff.count() if hasattr(obj, 'staff') else 0
+        services_count = obj.services.count() if hasattr(obj, 'services') else 0
+        
+        return format_html(
+            f'''
+            <div style="padding: 16px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 12px; color: white; margin: 10px 0;">
+                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px;">
+                    <div>
+                        <div style="font-size: 24px; font-weight: bold;">⭐ {obj.rating_avg:.1f if obj.rating_avg else "0.0"}</div>
+                        <div style="font-size: 12px; opacity: 0.9;">{obj.total_reviews} yorum</div>
+                    </div>
+                    <div>
+                        <div style="font-size: 24px; font-weight: bold;">❤️ {obj.favorites_count}</div>
+                        <div style="font-size: 12px; opacity: 0.9;">Favori</div>
+                    </div>
+                    <div>
+                        <div style="font-size: 24px; font-weight: bold;">👁️ {getattr(obj, "_views_count", 0)}</div>
+                        <div style="font-size: 12px; opacity: 0.9;">Görüntülenme</div>
+                    </div>
+                    <div>
+                        <div style="font-size: 24px; font-weight: bold;">👥 {staff_count}</div>
+                        <div style="font-size: 12px; opacity: 0.9;">Personel</div>
+                    </div>
+                    <div>
+                        <div style="font-size: 24px; font-weight: bold;">✂️ {services_count}</div>
+                        <div style="font-size: 12px; opacity: 0.9;">Hizmet</div>
+                    </div>
+                    <div>
+                        <div style="font-size: 24px; font-weight: bold;">📷 {getattr(obj, "_images_count", 0) + (1 if obj.main_image else 0)}</div>
+                        <div style="font-size: 12px; opacity: 0.9;">Görsel</div>
+                    </div>
+                </div>
+            </div>
+            '''
+        )
+    stats_display.short_description = "İstatistikler"
+    
+    def categories_display(self, obj):
+        categories = obj.categories.all() if hasattr(obj, 'categories') else []
+        if categories:
+            category_names = ", ".join([cat.name for cat in categories])
+            return format_html(
+                f'<div style="padding: 8px; background: #ede9fe; border-radius: 6px; color: #6d28d9; font-weight: 500;">{category_names}</div>'
+            )
+        return format_html('<span style="color: #9ca3af;">Kategori seçilmemiş</span>')
+    categories_display.short_description = "Seçili Kategoriler"
 
 
 @admin.register(Staff)

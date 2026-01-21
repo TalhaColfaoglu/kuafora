@@ -134,6 +134,41 @@ services:
       - backend
     entrypoint: ["python","manage.py","process_notifications"]
 
+  backup:
+    image: alpine:latest
+    container_name: kuafora_backup
+    restart: unless-stopped
+    volumes:
+      - postgres_data:/var/lib/postgresql/data:ro
+      - postgres_data_dev:/var/lib/postgresql/data_dev:ro
+      - backend_media:/app/media:ro
+      - backend_media_dev:/app/media_dev:ro
+      - website_media:/app/website_media:ro
+      - ./backup:/backup_scripts:ro
+      - backup_data:/backups
+    networks: [kuafora_net]
+    depends_on:
+      - db
+      - db_dev
+    env_file:
+      - ./env/db.env
+    environment:
+      - BACKEND_PASSWORD=${BACKEND_PASSWORD:-lNkMJJGsdbbe8CZ3hu0DuHpFyRoKAeWG0kkDiNNb20}
+      - PGPASSWORD=${BACKEND_PASSWORD:-lNkMJJGsdbbe8CZ3hu0DuHpFyRoKAeWG0kkDiNNb20}
+    # Her gün saat 02:00'de backup al (cron format: dakika saat gün ay hafta)
+    command: >
+      sh -c "
+        apk add --no-cache postgresql-client bash &&
+        chmod +x /backup_scripts/docker-backup.sh &&
+        echo '0 2 * * * /backup_scripts/docker-backup.sh >> /backups/backup.log 2>&1' > /etc/crontabs/root &&
+        crond -f -l 2
+      "
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
   nginx:
     image: nginx:alpine
     container_name: kuafora_nginx
@@ -191,5 +226,6 @@ volumes:
   backend_media_dev:
   website_static:
   website_media:
+  backup_data:
 
 

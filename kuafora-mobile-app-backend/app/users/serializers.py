@@ -6,6 +6,7 @@ from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 from .models import User, UserAddress
 from django.db.models import F
+from app.core.validators import validate_no_sql_injection, validate_no_xss
 
 
 class RegisterSerializer(serializers.ModelSerializer):
@@ -165,6 +166,9 @@ class UserUpdateSerializer(serializers.ModelSerializer):
         value = (value or "").strip()
         if not value:
             return value
+        # Security: Validate against XSS and SQL injection
+        validate_no_xss(value)
+        validate_no_sql_injection(value)
         return " ".join([p[:1].upper() + p[1:].lower() if p else "" for p in value.split()]).strip()
 
 class ChangePasswordSerializer(serializers.Serializer):

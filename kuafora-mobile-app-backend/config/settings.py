@@ -91,13 +91,33 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
+    "app.core.middleware.RequestSizeLimitMiddleware",  # Request size limiting
+    "app.core.middleware.AuditLoggingMiddleware",  # Security audit logging
+    "app.core.middleware.IPWhitelistMiddleware",  # Optional IP whitelist for admin
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "app.core.middleware.SecurityHeadersMiddleware",  # Additional security headers
 ]
+
+# Security Headers - Production'da zorunlu
+if not DEBUG:
+    SECURE_SSL_REDIRECT = True
+    SECURE_HSTS_SECONDS = 31536000  # 1 year
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+    SECURE_BROWSER_XSS_FILTER = True
+    X_FRAME_OPTIONS = 'DENY'
+    SECURE_REFERRER_POLICY = 'strict-origin-when-cross-origin'
+else:
+    # Development'ta daha esnek ayarlar
+    SECURE_SSL_REDIRECT = False
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+    X_FRAME_OPTIONS = 'SAMEORIGIN'
 
 ROOT_URLCONF = "config.urls"
 
@@ -300,8 +320,19 @@ DATABASES = {
         "PASSWORD": env("POSTGRES_PASSWORD", default="makas"),
         "HOST": env("POSTGRES_HOST", default="db"),
         "PORT": env("POSTGRES_PORT", default="5432"),
+        # Security: Connection options
+        "OPTIONS": {
+            "connect_timeout": 10,
+            "options": "-c statement_timeout=30000",  # 30 second query timeout
+        },
+        # Security: Connection pooling
+        "CONN_MAX_AGE": 600,  # 10 minutes
     }
 }
+
+# Optional: IP whitelist for admin panel (set in production .env)
+# Format: ADMIN_IP_WHITELIST=1.2.3.4,5.6.7.8
+ADMIN_IP_WHITELIST = env.list("ADMIN_IP_WHITELIST", default=[])
 
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
@@ -366,15 +397,19 @@ REST_FRAMEWORK = {
         "rest_framework.throttling.ScopedRateThrottle",
     ),
     "DEFAULT_THROTTLE_RATES": {
-        # Auth endpoints
-        "auth_login": "10/min",
-        "auth_register": "6/min",
-        "auth_check_email": "12/min",
-        "auth_forgot_password": "5/min",
+        # Auth endpoints - stricter limits to prevent brute force
+        "auth_login": "5/min",  # Reduced from 10/min
+        "auth_register": "3/min",  # Reduced from 6/min
+        "auth_check_email": "10/min",  # Reduced from 12/min
+        "auth_forgot_password": "3/min",  # Reduced from 5/min
         "auth_verify_email": "5/min",
         # Support / feedback
         "support_create": "6/min",
+        # General API rate limit
+        "default": "1000/hour",
     },
+    # Security: Don't expose API structure in error messages
+    "EXCEPTION_HANDLER": "app.core.exceptions.custom_exception_handler",
 }
 
 SPECTACULAR_SETTINGS = {
@@ -418,11 +453,44 @@ SIMPLE_JWT = {
     "ROTATE_REFRESH_TOKENS": False,
     "BLACKLIST_AFTER_ROTATION": True,
     "AUTH_HEADER_TYPES": ("Bearer",),
+    # Security: Token signing algorithm
+    "ALGORITHM": "HS256",
+    # Security: Token verification
+    "VERIFYING_KEY": None,
+    "AUDIENCE": None,
+    "ISSUER": None,
+    # Security: Require HTTPS in production for token transmission
+    "AUTH_COOKIE_SECURE": not DEBUG,
+    "AUTH_COOKIE_HTTPONLY": True,
+    "AUTH_COOKIE_SAMESITE": "Lax",
 }
 
 AUTHENTICATION_BACKENDS = (
     "app.users.auth_backend.EmailBackend",
     "django.contrib.auth.backends.ModelBackend",
 )
+
+# Session Security
+SESSION_COOKIE_SECURE = not DEBUG  # HTTPS only in production
+SESSION_COOKIE_HTTPONLY = True  # Prevent JavaScript access
+SESSION_COOKIE_SAMESITE = 'Lax'  # CSRF protection
+SESSION_COOKIE_AGE = 86400 * 30  # 30 days
+SESSION_SAVE_EVERY_REQUEST = False  # Only save on changes
+SESSION_EXPIRE_AT_BROWSER_CLOSE = False  # Persist across browser restarts
+
+# CSRF Security
+CSRF_COOKIE_SECURE = not DEBUG  # HTTPS only in production
+CSRF_COOKIE_HTTPONLY = True
+CSRF_COOKIE_SAMESITE = 'Lax'
+CSRF_FAILURE_VIEW = 'app.core.views.csrf_failure'  # Custom CSRF failure view
+
+# File Upload Security
+FILE_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024  # 10MB
+DATA_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024  # 10MB
+DATA_UPLOAD_MAX_NUMBER_FIELDS = 1000  # Prevent DoS via form fields
+
+# Security: Prevent information disclosure
+SECRET_KEY_FALLBACKS = []  # Don't use fallback keys
+ALLOWED_INCLUDE_ROOTS = []  # Prevent SSI attacks
 
 
