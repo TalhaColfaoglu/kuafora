@@ -295,8 +295,7 @@ class BarbershopViewSet(viewsets.ReadOnlyModelViewSet):
         original_pagination = self.pagination_class
         self.pagination_class = None
         
-        try:
-            staff_id = request.query_params.get('staff_id')
+        staff_id = request.query_params.get('staff_id')
         
         if staff_id:
             staff_services = StaffService.objects.filter(
