@@ -74,6 +74,9 @@
           <div class="phone-mockup animate-float" style="animation-delay: 0s;">
             <div class="phone-mockup-inner">
               <div class="phone-mockup-notch"></div>
+              {% if 'img/screens/home-screen.png'|static_exists %}
+              <img src="{% static 'img/screens/home-screen.png' %}" alt="Kuafora Ana Ekran" class="phone-mockup-screen" loading="lazy">
+              {% else %}
               <div class="absolute inset-0 bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
                 <div class="text-center p-6">
                   <div class="w-20 h-20 bg-primary rounded-3xl flex items-center justify-center mx-auto mb-4 shadow-xl">
@@ -82,6 +85,7 @@
                   <p class="text-muted text-sm">Ana Ekran Görseli</p>
                 </div>
               </div>
+              {% endif %}
       </div>
     </div>
     

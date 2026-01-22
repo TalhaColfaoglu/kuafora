@@ -5,21 +5,52 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{% block title %}Kuafora — Kuaförünü Keşfet{% endblock %}</title>
-    <meta name="description" content="Kuafora, kuaför keşif platformu. Yakınındaki salonları keşfet, karşılaştır ve favorine ekle. Uygulama yakında yayında." />
+    <meta name="description" content="{% block meta_description %}Kuafora, kuaför keşif platformu. Yakınındaki salonları keşfet, karşılaştır ve favorine ekle. Uygulama yakında yayında.{% endblock %}" />
+    
+    <!-- SEO Meta Tags -->
+    <meta name="keywords" content="kuaför, güzellik salonu, kuaför keşif, salon bul, kuaför yorumları, kuaför harita, randevu, kuaför uygulaması" />
+    <meta name="author" content="Kuafora" />
+    <meta name="robots" content="index, follow" />
+    <meta name="language" content="Turkish" />
+    <meta name="geo.region" content="TR" />
+    <meta name="geo.placename" content="Türkiye" />
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://kuafora.com{{ request.path }}" />
+    <meta property="og:title" content="{% block og_title %}{% block title %}Kuafora — Kuaförünü Keşfet{% endblock %}{% endblock %}" />
+    <meta property="og:description" content="{% block og_description %}Kuafora, kuaför keşif platformu. Yakınındaki salonları keşfet, karşılaştır ve favorine ekle.{% endblock %}" />
+    <meta property="og:image" content="{% block og_image %}https://kuafora.com{% static 'img/og-image.jpg' %}{% endblock %}" />
+    <meta property="og:locale" content="tr_TR" />
+    <meta property="og:site_name" content="Kuafora" />
+    
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:url" content="https://kuafora.com{{ request.path }}" />
+    <meta name="twitter:title" content="{% block twitter_title %}{% block title %}Kuafora — Kuaförünü Keşfet{% endblock %}{% endblock %}" />
+    <meta name="twitter:description" content="{% block twitter_description %}Kuafora, kuaför keşif platformu. Yakınındaki salonları keşfet, karşılaştır ve favorine ekle.{% endblock %}" />
+    <meta name="twitter:image" content="{% block twitter_image %}https://kuafora.com{% static 'img/twitter-card.jpg' %}{% endblock %}" />
+    
+    <!-- Canonical URL -->
+    <link rel="canonical" href="https://kuafora.com{{ request.path }}" />
     
     <!-- Favicon - K logo as SVG data URI -->
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23000'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='central' text-anchor='middle' fill='white' font-family='system-ui' font-weight='700' font-size='18'%3EK%3C/text%3E%3C/svg%3E">
+    <link rel="apple-touch-icon" href="{% static 'img/apple-touch-icon.png' %}" />
 
-    <!-- Fonts -->
+    <!-- Fonts - Optimized Loading -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <link href="https://api.fontshare.com/v2/css?f[]=cabinet-grotesk@400,500,700,800&f[]=satoshi@400,500,700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+    <noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
+    <link href="https://api.fontshare.com/v2/css?f[]=cabinet-grotesk@400,500,700,800&f[]=satoshi@400,500,700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+    <noscript><link href="https://api.fontshare.com/v2/css?f[]=cabinet-grotesk@400,500,700,800&f[]=satoshi@400,500,700&display=swap" rel="stylesheet"></noscript>
 
     <!-- Local compiled Tailwind CSS if available -->
-    <link rel="stylesheet" href="{% static 'dist/styles.css' %}">
+    <link rel="stylesheet" href="{% static 'dist/styles.css' %}" media="print" onload="this.media='all'">
+    <noscript><link rel="stylesheet" href="{% static 'dist/styles.css' %}"></noscript>
     
-    <!-- Tailwind CDN config -->
+    <!-- Tailwind CDN config - Fallback -->
     <script>
       tailwind = {
         config: {
@@ -48,8 +79,12 @@
         }
       }
     </script>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.tailwindcss.com" defer></script>
     <link rel="stylesheet" href="{% static 'css/site.css' %}">
+    
+    <!-- Preload Critical Resources -->
+    <link rel="preload" href="{% static 'css/site.css' %}" as="style">
+    <link rel="preload" href="{% static 'js/animate.js' %}" as="script">
 
     <style>
       /* Dynamic Island Navigation */
@@ -319,7 +354,7 @@
     </footer>
 
     {% block scripts %}{% endblock %}
-    <script src="{% static 'js/animate.js' %}"></script>
+    <script src="{% static 'js/animate.js' %}" defer></script>
     <script>
       // Mobile menu toggle
       const mobileMenuBtn = document.getElementById('mobile-menu-btn');
