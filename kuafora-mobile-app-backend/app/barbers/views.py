@@ -427,121 +427,121 @@ class BarbershopViewSet(viewsets.ReadOnlyModelViewSet):
         self.pagination_class = None
         try:
             if request.method == "GET":
-            try:
-                shop = Barbershop.objects.get(id=pk)
-            except Barbershop.DoesNotExist:
-                return Response({"detail": "Barbershop not found"}, status=404)
-
-            code_list = ["MON","TUE","WED","THU","FRI","SAT","SUN"]
-            result = []
-            
-            # Pre-fetch breaks (time_range_closed overrides) for the relevant week
-            # Simplification: For standard weekly display, we just fetch overrides that might represent a "recurring break" 
-            # or specific time blocks. However, standard working hours display usually needs "static" breaks.
-            # If we use overrides for breaks, they are date-specific. 
-            # For now, let's just check if there are any 'time_range_closed' overrides active for 'today' or general (if we had recurring).
-            # But to be consistent with the plan: We will just list time_range_closed overrides for "today" if the requested day matches today,
-            # or maybe just return empty list for breaks in this generic weekly view unless we have a dedicated WeeklyBreak model.
-            # Given the requirement is "gunluk mola", we should probably inject breaks if the requested day is today.
-            # But this endpoint returns a list of 7 days. It's a static schedule.
-            # Let's inject breaks into the response if they exist as recurring Overrides (if we supported them) 
-            # or just keep it simple: this endpoint shows standard hours. 
-            # Wait, the user wants breaks to appear in the app. 
-            # Let's try to find 'time_range_closed' overrides that are active for the current week dates.
-            
-            start_of_week = timezone.now().date() - timedelta(days=timezone.now().date().weekday())
-            week_end = start_of_week + timedelta(days=6)
-            week_breaks = break_windows_by_date(
-                        barbershop=shop,
-                start_date=start_of_week,
-                end_date=week_end,
-                include_staff=True,
-            )
-            
-            for i, code in enumerate(code_list):
-                current_date = start_of_week + timedelta(days=i)
                 try:
-                    # ... existing logic for open/close ...
-                    # Note: We removed the 'today' override check here because this endpoint returns
-                    # the generic weekly schedule. Date-specific overrides are handled by the 
-                    # availability endpoint or by specific date queries.
-                    # Including timezone.localdate() check here caused the shop to appear fully closed
-                    # on all days if 'today' happened to be a holiday.
+                    shop = Barbershop.objects.get(id=pk)
+                except Barbershop.DoesNotExist:
+                    return Response({"detail": "Barbershop not found"}, status=404)
 
-                    staff_hours = StaffWorkingHours.objects.filter(
-                        staff__barbershop=shop, day_of_week=code, is_closed=False,
-                    )
-                    shop_hours = ShopWorkingHours.objects.filter(barbershop=shop, day_of_week=code).first()
+                code_list = ["MON","TUE","WED","THU","FRI","SAT","SUN"]
+                result = []
+                
+                # Pre-fetch breaks (time_range_closed overrides) for the relevant week
+                # Simplification: For standard weekly display, we just fetch overrides that might represent a "recurring break" 
+                # or specific time blocks. However, standard working hours display usually needs "static" breaks.
+                # If we use overrides for breaks, they are date-specific. 
+                # For now, let's just check if there are any 'time_range_closed' overrides active for 'today' or general (if we had recurring).
+                # But to be consistent with the plan: We will just list time_range_closed overrides for "today" if the requested day matches today,
+                # or maybe just return empty list for breaks in this generic weekly view unless we have a dedicated WeeklyBreak model.
+                # Given the requirement is "gunluk mola", we should probably inject breaks if the requested day is today.
+                # But this endpoint returns a list of 7 days. It's a static schedule.
+                # Let's inject breaks into the response if they exist as recurring Overrides (if we supported them) 
+                # or just keep it simple: this endpoint shows standard hours. 
+                # Wait, the user wants breaks to appear in the app. 
+                # Let's try to find 'time_range_closed' overrides that are active for the current week dates.
+                
+                start_of_week = timezone.now().date() - timedelta(days=timezone.now().date().weekday())
+                week_end = start_of_week + timedelta(days=6)
+                week_breaks = break_windows_by_date(
+                            barbershop=shop,
+                    start_date=start_of_week,
+                    end_date=week_end,
+                    include_staff=True,
+                )
+                
+                for i, code in enumerate(code_list):
+                    current_date = start_of_week + timedelta(days=i)
+                    try:
+                        # ... existing logic for open/close ...
+                        # Note: We removed the 'today' override check here because this endpoint returns
+                        # the generic weekly schedule. Date-specific overrides are handled by the 
+                        # availability endpoint or by specific date queries.
+                        # Including timezone.localdate() check here caused the shop to appear fully closed
+                        # on all days if 'today' happened to be a holiday.
 
-                    day_result = {'day_of_week': code, 'start_time': None, 'end_time': None, 'is_closed': True, 'breaks': []}
+                        staff_hours = StaffWorkingHours.objects.filter(
+                            staff__barbershop=shop, day_of_week=code, is_closed=False,
+                        )
+                        shop_hours = ShopWorkingHours.objects.filter(barbershop=shop, day_of_week=code).first()
 
-                    if not staff_hours.exists():
-                        # StaffWorkingHours yoksa, ShopWorkingHours'a bak
-                        if not shop_hours:
-                            pass # defaults to closed
-                        elif shop_hours.is_closed:
-                            pass # defaults to closed
+                        day_result = {'day_of_week': code, 'start_time': None, 'end_time': None, 'is_closed': True, 'breaks': []}
+
+                        if not staff_hours.exists():
+                            # StaffWorkingHours yoksa, ShopWorkingHours'a bak
+                            if not shop_hours:
+                                pass # defaults to closed
+                            elif shop_hours.is_closed:
+                                pass # defaults to closed
+                            else:
+                                # ShopWorkingHours var ve açık, saatleri döndür
+                                day_result.update({'start_time': shop_hours.start_time, 'end_time': shop_hours.end_time, 'is_closed': False})
                         else:
-                            # ShopWorkingHours var ve açık, saatleri döndür
-                            day_result.update({'start_time': shop_hours.start_time, 'end_time': shop_hours.end_time, 'is_closed': False})
-                    else:
-                        candidates_start = [sh.start_time or (shop_hours.start_time if shop_hours else None) for sh in staff_hours]
-                        candidates_end = [sh.end_time or (shop_hours.end_time if shop_hours else None) for sh in staff_hours]
-                        candidates_start = [c for c in candidates_start if c is not None]
-                        candidates_end = [c for c in candidates_end if c is not None]
+                            candidates_start = [sh.start_time or (shop_hours.start_time if shop_hours else None) for sh in staff_hours]
+                            candidates_end = [sh.end_time or (shop_hours.end_time if shop_hours else None) for sh in staff_hours]
+                            candidates_start = [c for c in candidates_start if c is not None]
+                            candidates_end = [c for c in candidates_end if c is not None]
+                            
+                            if candidates_start and candidates_end:
+                                day_result.update({
+                                    'start_time': min(candidates_start),
+                                    'end_time': max(candidates_end),
+                                    'is_closed': False
+                                })
+                            
+                        # Inject breaks (time_range_closed overrides for this specific date)
+                        # Find overrides for this shop that are time_range_closed and cover this date
+                        breaks_qs = Override.objects.filter(
+                            barbershop=shop,
+                            override_scope='time_range_closed',
+                            is_active=True,
+                            start_date__lte=current_date,
+                            end_date__gte=current_date
+                        )
                         
-                        if candidates_start and candidates_end:
-                            day_result.update({
-                                'start_time': min(candidates_start),
-                                'end_time': max(candidates_end),
-                                'is_closed': False
-                            })
+                        day_breaks = [serialize_break_window(br) for br in week_breaks.get(current_date, [])]
+                        for b in breaks_qs:
+                             if b.start_time and b.end_time:
+                                day_breaks.append({
+                                    'start': b.start_time,
+                                    'end': b.end_time,
+                                    'label': b.reason or 'Özel Durum',
+                                    'scope': 'override',
+                                    'staff_id': None,
+                                    'staff_name': None,
+                                })
                         
-                    # Inject breaks (time_range_closed overrides for this specific date)
-                    # Find overrides for this shop that are time_range_closed and cover this date
-                    breaks_qs = Override.objects.filter(
-                        barbershop=shop,
-                        override_scope='time_range_closed',
-                        is_active=True,
-                        start_date__lte=current_date,
-                        end_date__gte=current_date
-                    )
-                    
-                    day_breaks = [serialize_break_window(br) for br in week_breaks.get(current_date, [])]
-                    for b in breaks_qs:
-                         if b.start_time and b.end_time:
-                            day_breaks.append({
-                                'start': b.start_time,
-                                'end': b.end_time,
-                                'label': b.reason or 'Özel Durum',
-                                'scope': 'override',
-                                'staff_id': None,
-                                'staff_name': None,
-                            })
-                    
-                    day_result['breaks'] = day_breaks
-                    result.append(day_result)
+                        day_result['breaks'] = day_breaks
+                        result.append(day_result)
 
-                except Exception:
-                    # Fallback: at least return closed state (no 500)
-                    result.append({'day_of_week': code,'start_time': None,'end_time': None,'is_closed': True, 'breaks': []})
-            
-            # stringify times
-            def _fmt(t):
-                try:
-                    return t.strftime('%H:%M') if t else None
-                except Exception:
-                    return None
-            
-            for it in result:
-                it['start_time'] = _fmt(it.get('start_time'))
-                it['end_time'] = _fmt(it.get('end_time'))
-                # fmt breaks
-                for b in it.get('breaks', []):
-                    b['start'] = _fmt(b['start'])
-                    b['end'] = _fmt(b['end'])
+                    except Exception:
+                        # Fallback: at least return closed state (no 500)
+                        result.append({'day_of_week': code,'start_time': None,'end_time': None,'is_closed': True, 'breaks': []})
+                
+                # stringify times
+                def _fmt(t):
+                    try:
+                        return t.strftime('%H:%M') if t else None
+                    except Exception:
+                        return None
+                
+                for it in result:
+                    it['start_time'] = _fmt(it.get('start_time'))
+                    it['end_time'] = _fmt(it.get('end_time'))
+                    # fmt breaks
+                    for b in it.get('breaks', []):
+                        b['start'] = _fmt(b['start'])
+                        b['end'] = _fmt(b['end'])
 
-            return Response(result)
+                return Response(result)
 
         # PUT (normalize "week" payload)
         if not request.user or not request.user.is_authenticated:
