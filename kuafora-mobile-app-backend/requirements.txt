@@ -35,3 +35,6 @@ cryptography>=43.0.1
 # Monitoring (system metrics and health checks)
 psutil==5.9.8
 
+# AWS CloudWatch Logs
+watchtower==3.0.0
+

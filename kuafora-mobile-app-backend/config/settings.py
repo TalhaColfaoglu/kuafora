@@ -392,6 +392,9 @@ REST_FRAMEWORK = {
         "rest_framework.filters.SearchFilter",
         "rest_framework.filters.OrderingFilter",
     ),
+    # Pagination - Limit results to prevent large responses
+    "DEFAULT_PAGINATION_CLASS": "app.core.pagination.StandardPageNumberPagination",
+    "PAGE_SIZE": 20,  # Default page size
     # Abuse protection (second layer after Nginx): scope-based throttling
     "DEFAULT_THROTTLE_CLASSES": (
         "rest_framework.throttling.ScopedRateThrottle",
@@ -442,6 +445,47 @@ if EMAIL_HOST and EMAIL_HOST_USER and EMAIL_HOST_PASSWORD:
 else:
     # Dev-safe fallback (shows emails in logs/console)
     EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend" if DEBUG else "django.core.mail.backends.dummy.EmailBackend"
+
+# -----------------------------------------------------------------------------
+# AWS CloudWatch Logs Configuration
+# -----------------------------------------------------------------------------
+AWS_CLOUDWATCH_ENABLED = env.bool('AWS_CLOUDWATCH_ENABLED', default=False)
+AWS_CLOUDWATCH_LOG_GROUP_NAME = env('AWS_CLOUDWATCH_LOG_GROUP_NAME', default='kuafora-backend')
+AWS_CLOUDWATCH_STREAM_NAME = env('AWS_CLOUDWATCH_STREAM_NAME', default='api')
+AWS_CLOUDWATCH_REGION_NAME = env('AWS_CLOUDWATCH_REGION_NAME', default='eu-central-1')
+
+# CloudWatch için AWS credentials
+cloudwatch_logs_client = None
+if AWS_CLOUDWATCH_ENABLED:
+    try:
+        import boto3
+        from botocore.exceptions import ClientError
+        
+        AWS_ACCESS_KEY_ID_CW = env('AWS_ACCESS_KEY_ID', default=None)
+        AWS_SECRET_ACCESS_KEY_CW = env('AWS_SECRET_ACCESS_KEY', default=None)
+        
+        if AWS_ACCESS_KEY_ID_CW and AWS_SECRET_ACCESS_KEY_CW:
+            cloudwatch_logs_client = boto3.client(
+                'logs',
+                region_name=AWS_CLOUDWATCH_REGION_NAME,
+                aws_access_key_id=AWS_ACCESS_KEY_ID_CW,
+                aws_secret_access_key=AWS_SECRET_ACCESS_KEY_CW
+            )
+            # Log group'u oluştur (yoksa)
+            try:
+                cloudwatch_logs_client.create_log_group(logGroupName=AWS_CLOUDWATCH_LOG_GROUP_NAME)
+            except ClientError as e:
+                if e.response['Error']['Code'] != 'ResourceAlreadyExistsException':
+                    print(f"CloudWatch log group oluşturma hatası: {e}")
+        else:
+            print("CloudWatch için AWS credentials bulunamadı, CloudWatch devre dışı")
+            AWS_CLOUDWATCH_ENABLED = False
+    except ImportError:
+        print("boto3 veya watchtower yüklü değil, CloudWatch devre dışı")
+        AWS_CLOUDWATCH_ENABLED = False
+    except Exception as e:
+        print(f"CloudWatch yapılandırma hatası: {e}")
+        AWS_CLOUDWATCH_ENABLED = False
 
 from datetime import timedelta
 
@@ -506,6 +550,9 @@ LOGGING = {
             'format': '{levelname} {message}',
             'style': '{',
         },
+        'json': {
+            'format': '{"timestamp": "%(asctime)s", "level": "%(levelname)s", "logger": "%(name)s", "message": "%(message)s", "module": "%(module)s", "function": "%(funcName)s", "line": %(lineno)d}',
+        },
     },
     'handlers': {
         'file': {
@@ -531,30 +578,49 @@ LOGGING = {
             'class': 'logging.StreamHandler',
             'formatter': 'simple',
         },
+        # CloudWatch Logs Handler
+        'cloudwatch': {
+            'class': 'watchtower.CloudWatchLogHandler',
+            'log_group': AWS_CLOUDWATCH_LOG_GROUP_NAME,
+            'stream_name': AWS_CLOUDWATCH_STREAM_NAME,
+            'use_queues': True,  # Performans için queue kullan
+            'send_interval': 5,  # 5 saniyede bir gönder
+            'max_batch_size': 100,  # Maksimum batch size
+            'boto3_client': cloudwatch_logs_client,
+            'formatter': 'json',  # JSON formatında gönder
+        } if AWS_CLOUDWATCH_ENABLED and cloudwatch_logs_client else {
+            'class': 'logging.NullHandler',  # Devre dışıysa hiçbir şey yapma
+        },
     },
     'root': {
-        'handlers': ['console', 'file'],
+        'handlers': ['console', 'file'] + (['cloudwatch'] if AWS_CLOUDWATCH_ENABLED and cloudwatch_logs_client else []),
         'level': 'INFO',
     },
     'loggers': {
         'django': {
-            'handlers': ['file', 'error_file', 'console'],
+            'handlers': ['file', 'error_file', 'console'] + (['cloudwatch'] if AWS_CLOUDWATCH_ENABLED and cloudwatch_logs_client else []),
             'level': 'INFO',
             'propagate': False,
         },
         'django.request': {
-            'handlers': ['error_file', 'console'],
+            'handlers': ['error_file', 'console'] + (['cloudwatch'] if AWS_CLOUDWATCH_ENABLED and cloudwatch_logs_client else []),
             'level': 'ERROR',
             'propagate': False,
         },
         'django.security': {
-            'handlers': ['error_file', 'console'],
+            'handlers': ['error_file', 'console'] + (['cloudwatch'] if AWS_CLOUDWATCH_ENABLED and cloudwatch_logs_client else []),
             'level': 'ERROR',
             'propagate': False,
         },
         'app': {
-            'handlers': ['file', 'console'],
+            'handlers': ['file', 'console'] + (['cloudwatch'] if AWS_CLOUDWATCH_ENABLED and cloudwatch_logs_client else []),
             'level': 'INFO',
+            'propagate': False,
+        },
+        # Security audit logs için özel logger
+        'app.core.middleware': {
+            'handlers': ['file', 'error_file', 'console'] + (['cloudwatch'] if AWS_CLOUDWATCH_ENABLED and cloudwatch_logs_client else []),
+            'level': 'WARNING',  # Sadece önemli güvenlik olayları
             'propagate': False,
         },
     },

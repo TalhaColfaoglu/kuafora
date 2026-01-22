@@ -227,58 +227,76 @@ class BarbershopViewSet(viewsets.ReadOnlyModelViewSet):
         - Şehir içinde ilçede hiç kuaför yoksa o ilçe dönmez.
         Not: Bu endpoint, BarbershopViewSet'in ana listeleme mantığıyla aynı "listelenebilir" kriterlerini uygular
         (aktif subscription + is_verified + isim dolu). Böylece UI'da sadece seçilebilir seçenekler görünür.
+        Pagination disabled: Returns a dictionary, not a list.
         """
-        qs = Barbershop.objects.all()
+        # Disable pagination for this action (returns dict, not list)
+        original_pagination = self.pagination_class
+        self.pagination_class = None
+        
+        try:
+            qs = Barbershop.objects.all()
 
-        include_inactive = request.query_params.get("include_inactive", "").lower() == "true"
-        if not include_inactive:
-            qs = (
-                qs.filter(
-                    subscription__status__in=["trial", "active", "lifetime", "grace_period"],
-                    is_verified=True,
-                    is_approved=True,  # Admin onayı - sadece onaylanmış kuaförler ana uygulamada görünür
-                    name__isnull=False,
+            include_inactive = request.query_params.get("include_inactive", "").lower() == "true"
+            if not include_inactive:
+                qs = (
+                    qs.filter(
+                        subscription__status__in=["trial", "active", "lifetime", "grace_period"],
+                        is_verified=True,
+                        is_approved=True,  # Admin onayı - sadece onaylanmış kuaförler ana uygulamada görünür
+                        name__isnull=False,
+                    )
+                    .exclude(name="")
                 )
-                .exclude(name="")
+
+            # Kullanıcı girişliyse, ana listede uygulanan cinsiyet kuralı ile uyumlu olsun
+            user = request.user
+            if getattr(user, "is_authenticated", False):
+                if getattr(user, "gender", None) == "male":
+                    qs = qs.filter(Q(gender="male") | Q(gender="unisex"))
+                elif getattr(user, "gender", None) == "female":
+                    qs = qs.filter(Q(gender="female") | Q(gender="unisex"))
+
+            # Trim ile baş/son boşluklardan arındırıp unique al
+            pairs = (
+                qs.annotate(city_t=Trim("city"), district_t=Trim("district"))
+                .exclude(city_t__isnull=True)
+                .exclude(district_t__isnull=True)
+                .exclude(city_t="")
+                .exclude(district_t="")
+                .values("city_t", "district_t")
+                .distinct()
+                .order_by("city_t", "district_t")
             )
 
-        # Kullanıcı girişliyse, ana listede uygulanan cinsiyet kuralı ile uyumlu olsun
-        user = request.user
-        if getattr(user, "is_authenticated", False):
-            if getattr(user, "gender", None) == "male":
-                qs = qs.filter(Q(gender="male") | Q(gender="unisex"))
-            elif getattr(user, "gender", None) == "female":
-                qs = qs.filter(Q(gender="female") | Q(gender="unisex"))
+            out: dict[str, list[str]] = {}
+            for it in pairs:
+                city = it.get("city_t") or ""
+                district = it.get("district_t") or ""
+                if not city or not district:
+                    continue
+                out.setdefault(city, []).append(district)
 
-        # Trim ile baş/son boşluklardan arındırıp unique al
-        pairs = (
-            qs.annotate(city_t=Trim("city"), district_t=Trim("district"))
-            .exclude(city_t__isnull=True)
-            .exclude(district_t__isnull=True)
-            .exclude(city_t="")
-            .exclude(district_t="")
-            .values("city_t", "district_t")
-            .distinct()
-            .order_by("city_t", "district_t")
-        )
+            # İlçeleri tekilleştirip deterministik sırala
+            for city in list(out.keys()):
+                out[city] = sorted(set(out[city]))
 
-        out: dict[str, list[str]] = {}
-        for it in pairs:
-            city = it.get("city_t") or ""
-            district = it.get("district_t") or ""
-            if not city or not district:
-                continue
-            out.setdefault(city, []).append(district)
-
-        # İlçeleri tekilleştirip deterministik sırala
-        for city in list(out.keys()):
-            out[city] = sorted(set(out[city]))
-
-        return Response(out)
+            return Response(out)
+        finally:
+            # Restore pagination for other actions
+            self.pagination_class = original_pagination
 
     @action(detail=True, methods=["get"], url_path="services")
     def services(self, request, pk=None):
-        staff_id = request.query_params.get('staff_id')
+        """
+        Get services for a barbershop.
+        Pagination disabled: Returns a small list of services for a single shop.
+        """
+        # Disable pagination for this action (returns small list for single shop)
+        original_pagination = self.pagination_class
+        self.pagination_class = None
+        
+        try:
+            staff_id = request.query_params.get('staff_id')
         
         if staff_id:
             staff_services = StaffService.objects.filter(
@@ -303,9 +321,12 @@ class BarbershopViewSet(viewsets.ReadOnlyModelViewSet):
                 })
             return Response(data)
 
-        services = Service.objects.filter(barbershop_id=pk, is_active=True)
-        serializer = ServiceSerializer(services, many=True)
-        return Response(serializer.data)
+            services = Service.objects.filter(barbershop_id=pk, is_active=True)
+            serializer = ServiceSerializer(services, many=True)
+            return Response(serializer.data)
+        finally:
+            # Restore pagination for other actions
+            self.pagination_class = original_pagination
 
     @action(detail=False, methods=["post"], url_path="today-toggle", permission_classes=[permissions.IsAuthenticated])
     def today_toggle(self, request):
@@ -350,33 +371,47 @@ class BarbershopViewSet(viewsets.ReadOnlyModelViewSet):
 
     @action(detail=True, methods=["get"], url_path="staff")
     def staff(self, request, pk=None):
-        staff = Staff.objects.filter(barbershop_id=pk)
-        serializer = StaffSerializer(staff, many=True)
-        return Response(serializer.data)
+        # Disable pagination for this action (returns small list for single shop)
+        original_pagination = self.pagination_class
+        self.pagination_class = None
+        try:
+            staff = Staff.objects.filter(barbershop_id=pk)
+            serializer = StaffSerializer(staff, many=True)
+            return Response(serializer.data)
+        finally:
+            self.pagination_class = original_pagination
 
     @action(detail=True, methods=["get"], url_path="services-tree")
     def services_tree(self, request, pk=None):
         """
         Get barbershop's categories and services in tree structure.
         Accessible to authenticated staff of this barbershop.
+        Pagination disabled: Returns a tree structure, not a list.
         """
-        barbershop = self.get_object()
-        
-        categories = ServiceCategory.objects.filter(
-            barbershop=barbershop
-        ).prefetch_related(
+        # Disable pagination for this action (returns tree structure)
+        original_pagination = self.pagination_class
+        self.pagination_class = None
+        try:
+            barbershop = self.get_object()
+            
+            categories = ServiceCategory.objects.filter(
+                barbershop=barbershop
+            ).prefetch_related(
             Prefetch('services', queryset=Service.objects.filter(is_active=True))
         ).order_by('name')
         
-        result = []
-        for category in categories:
-            result.append({
-                'id': category.id,
-                'name': category.name,
-                'services': ServiceSerializer(category.services.all(), many=True).data
-            })
-        
-        return Response(result)
+            result = []
+            for category in categories:
+                result.append({
+                    'id': category.id,
+                    'name': category.name,
+                    'services': ServiceSerializer(category.services.all(), many=True).data
+                })
+            
+            return Response(result)
+        finally:
+            # Restore pagination for other actions
+            self.pagination_class = original_pagination
 
     @action(detail=True, methods=["get", "put"], url_path="working-hours")
     def working_hours(self, request, pk=None):
@@ -385,8 +420,13 @@ class BarbershopViewSet(viewsets.ReadOnlyModelViewSet):
              - Öncelik: Global override > Staff override > StaffWorkingHours > ShopWorkingHours
              - Daha kısıtlayıcı olan kazanır.
         PUT: Admin kullanıcı için mağazanın çalışma saatlerini günceller (legacy, korunur).
+        Pagination disabled: Returns exactly 7 days (one week).
         """
-        if request.method == "GET":
+        # Disable pagination for this action (returns fixed 7-day structure)
+        original_pagination = self.pagination_class
+        self.pagination_class = None
+        try:
+            if request.method == "GET":
             try:
                 shop = Barbershop.objects.get(id=pk)
             except Barbershop.DoesNotExist:
@@ -554,17 +594,20 @@ class BarbershopViewSet(viewsets.ReadOnlyModelViewSet):
         if errors:
             return Response({"detail": "invalid_payload", "errors": errors}, status=400)
 
-        # Replace ShopWorkingHours for this shop
-        ShopWorkingHours.objects.filter(barbershop_id=pk).delete()
-        for it in normalized:
-            ShopWorkingHours.objects.create(
-                barbershop_id=pk,
-                day_of_week=it["day"],
-                is_closed=it["is_closed"],
-                start_time=it["open"],
-                end_time=it["close"],
-            )
-        return Response({"detail": "Updated"})
+            # Replace ShopWorkingHours for this shop
+            ShopWorkingHours.objects.filter(barbershop_id=pk).delete()
+            for it in normalized:
+                ShopWorkingHours.objects.create(
+                    barbershop_id=pk,
+                    day_of_week=it["day"],
+                    is_closed=it["is_closed"],
+                    start_time=it["open"],
+                    end_time=it["close"],
+                )
+            return Response({"detail": "Updated"})
+        finally:
+            # Restore pagination for other actions
+            self.pagination_class = original_pagination
 
     @action(detail=True, methods=["get", "post"], url_path="reviews")
     def reviews(self, request, pk=None):
