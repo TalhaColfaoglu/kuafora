@@ -42,8 +42,26 @@ def process_image(image_field, thumb_field=None, max_size=(1080, 1080), thumb_si
             image_field.save(filename, ContentFile(buffer.getvalue()), save=False)
         
         # 2. Generate Thumbnail if field provided
+        # Thumbnail'i ortadan kare crop yaparak oluştur (baskılamadan)
         if thumb_field:
             thumb_copy = img.copy()
+            
+            # Görselin ortasından kare bir kısmı kes (baskılamadan)
+            # Yatay görsel: yüksekliğe göre kare, Dikey görsel: genişliğe göre kare
+            width, height = thumb_copy.size
+            if width > height:
+                # Yatay görsel: yüksekliğe göre kare kes
+                left = (width - height) // 2
+                right = left + height
+                thumb_copy = thumb_copy.crop((left, 0, right, height))
+            elif height > width:
+                # Dikey görsel: genişliğe göre kare kes
+                top = (height - width) // 2
+                bottom = top + width
+                thumb_copy = thumb_copy.crop((0, top, width, bottom))
+            # Zaten kare ise değişiklik yok
+            
+            # Şimdi kare görseli istenen boyuta küçült (aspect ratio korunur çünkü zaten kare)
             thumb_copy.thumbnail(thumb_size, Image.Resampling.LANCZOS)
             
             thumb_buffer = BytesIO()

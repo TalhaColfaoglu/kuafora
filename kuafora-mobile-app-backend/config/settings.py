@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import logging
 from pathlib import Path
 
 import environ
@@ -456,6 +457,8 @@ AWS_CLOUDWATCH_REGION_NAME = env('AWS_CLOUDWATCH_REGION_NAME', default='eu-centr
 
 # CloudWatch için AWS credentials
 cloudwatch_logs_client = None
+cloudwatch_handler_config = None
+
 if AWS_CLOUDWATCH_ENABLED:
     try:
         import boto3
@@ -465,26 +468,87 @@ if AWS_CLOUDWATCH_ENABLED:
         AWS_SECRET_ACCESS_KEY_CW = env('AWS_SECRET_ACCESS_KEY', default=None)
         
         if AWS_ACCESS_KEY_ID_CW and AWS_SECRET_ACCESS_KEY_CW:
-            cloudwatch_logs_client = boto3.client(
-                'logs',
-                region_name=AWS_CLOUDWATCH_REGION_NAME,
-                aws_access_key_id=AWS_ACCESS_KEY_ID_CW,
-                aws_secret_access_key=AWS_SECRET_ACCESS_KEY_CW
-            )
-            # Log group'u oluştur (yoksa)
             try:
-                cloudwatch_logs_client.create_log_group(logGroupName=AWS_CLOUDWATCH_LOG_GROUP_NAME)
-            except ClientError as e:
-                if e.response['Error']['Code'] != 'ResourceAlreadyExistsException':
-                    print(f"CloudWatch log group oluşturma hatası: {e}")
+                cloudwatch_logs_client = boto3.client(
+                    'logs',
+                    region_name=AWS_CLOUDWATCH_REGION_NAME,
+                    aws_access_key_id=AWS_ACCESS_KEY_ID_CW,
+                    aws_secret_access_key=AWS_SECRET_ACCESS_KEY_CW
+                )
+                # Log group'un var olup olmadığını kontrol et (oluşturma, sadece kontrol)
+                try:
+                    cloudwatch_logs_client.describe_log_groups(logGroupNamePrefix=AWS_CLOUDWATCH_LOG_GROUP_NAME)
+                except ClientError as e:
+                    # İzin hatası varsa, log group'u manuel oluşturulması gerektiğini belirt
+                    if e.response['Error']['Code'] == 'AccessDeniedException':
+                        print(f"⚠️  CloudWatch: IAM izinleri eksik. Log group'u manuel oluşturun veya IAM izinlerini ekleyin.")
+                        print(f"⚠️  CloudWatch devre dışı bırakılıyor. IAM izinleri eklendikten sonra tekrar aktif edin.")
+                        AWS_CLOUDWATCH_ENABLED = False
+                        cloudwatch_logs_client = None
+                    else:
+                        raise
+                
+                # Handler config oluştur (log group oluşturmayı watchtower'a bırakma)
+                if cloudwatch_logs_client:
+                    # Watchtower'ın log group oluşturmasını engellemek için önce var mı kontrol et
+                    try:
+                        # Log group'un var olup olmadığını kontrol et
+                        response = cloudwatch_logs_client.describe_log_groups(
+                            logGroupNamePrefix=AWS_CLOUDWATCH_LOG_GROUP_NAME,
+                            limit=1
+                        )
+                        log_group_exists = any(
+                            lg['logGroupName'] == AWS_CLOUDWATCH_LOG_GROUP_NAME 
+                            for lg in response.get('logGroups', [])
+                        )
+                        
+                        if not log_group_exists:
+                            # Log group yoksa oluşturmayı dene (izin varsa)
+                            try:
+                                cloudwatch_logs_client.create_log_group(logGroupName=AWS_CLOUDWATCH_LOG_GROUP_NAME)
+                                print(f"✅ CloudWatch log group oluşturuldu: {AWS_CLOUDWATCH_LOG_GROUP_NAME}")
+                            except ClientError as e:
+                                if e.response['Error']['Code'] == 'AccessDeniedException':
+                                    print(f"⚠️  CloudWatch: Log group oluşturma izni yok. Log group'u manuel oluşturun: {AWS_CLOUDWATCH_LOG_GROUP_NAME}")
+                                    print(f"⚠️  CloudWatch devre dışı bırakılıyor. IAM izinleri eklendikten sonra tekrar aktif edin.")
+                                    AWS_CLOUDWATCH_ENABLED = False
+                                    cloudwatch_logs_client = None
+                                else:
+                                    raise
+                    except ClientError as e:
+                        if e.response['Error']['Code'] == 'AccessDeniedException':
+                            print(f"⚠️  CloudWatch: IAM izinleri eksik. Log group'u manuel oluşturun veya IAM izinlerini ekleyin.")
+                            print(f"⚠️  CloudWatch devre dışı bırakılıyor.")
+                            AWS_CLOUDWATCH_ENABLED = False
+                            cloudwatch_logs_client = None
+                        else:
+                            raise
+                    
+                    # Handler config oluştur (sadece client varsa)
+                    if cloudwatch_logs_client:
+                        cloudwatch_handler_config = {
+                            'class': 'watchtower.CloudWatchLogHandler',
+                            'log_group': AWS_CLOUDWATCH_LOG_GROUP_NAME,
+                            'stream_name': AWS_CLOUDWATCH_STREAM_NAME,
+                            'use_queues': True,
+                            'send_interval': 5,
+                            'max_batch_size': 100,
+                            'boto3_client': cloudwatch_logs_client,
+                            'formatter': 'json',
+                        }
+            except Exception as e:
+                print(f"⚠️  CloudWatch client oluşturma hatası: {e}")
+                print(f"⚠️  CloudWatch devre dışı bırakılıyor.")
+                AWS_CLOUDWATCH_ENABLED = False
+                cloudwatch_logs_client = None
         else:
-            print("CloudWatch için AWS credentials bulunamadı, CloudWatch devre dışı")
+            print("⚠️  CloudWatch için AWS credentials bulunamadı, CloudWatch devre dışı")
             AWS_CLOUDWATCH_ENABLED = False
     except ImportError:
-        print("boto3 veya watchtower yüklü değil, CloudWatch devre dışı")
+        print("⚠️  boto3 veya watchtower yüklü değil, CloudWatch devre dışı")
         AWS_CLOUDWATCH_ENABLED = False
     except Exception as e:
-        print(f"CloudWatch yapılandırma hatası: {e}")
+        print(f"⚠️  CloudWatch yapılandırma hatası: {e}")
         AWS_CLOUDWATCH_ENABLED = False
 
 from datetime import timedelta
@@ -537,6 +601,27 @@ DATA_UPLOAD_MAX_NUMBER_FIELDS = 1000  # Prevent DoS via form fields
 SECRET_KEY_FALLBACKS = []  # Don't use fallback keys
 ALLOWED_INCLUDE_ROOTS = []  # Prevent SSI attacks
 
+# CloudWatch Handler Factory (graceful fail için)
+def _create_cloudwatch_handler():
+    """CloudWatch handler'ı oluştur, hata olursa NullHandler döndür"""
+    try:
+        import watchtower
+        handler = watchtower.CloudWatchLogHandler(
+            log_group=AWS_CLOUDWATCH_LOG_GROUP_NAME,
+            stream_name=AWS_CLOUDWATCH_STREAM_NAME,
+            use_queues=True,
+            send_interval=5,
+            max_batch_size=100,
+            boto3_client=cloudwatch_logs_client,
+        )
+        handler.setFormatter(logging.Formatter('{"timestamp": "%(asctime)s", "level": "%(levelname)s", "logger": "%(name)s", "message": "%(message)s", "module": "%(module)s", "function": "%(funcName)s", "line": %(lineno)d}'))
+        return handler
+    except Exception as e:
+        import logging as logging_module
+        print(f"⚠️  CloudWatch handler oluşturulamadı: {e}")
+        print(f"⚠️  NullHandler kullanılıyor (CloudWatch devre dışı)")
+        return logging_module.NullHandler()
+
 # Logging Configuration with Rotation
 LOGGING = {
     'version': 1,
@@ -579,16 +664,10 @@ LOGGING = {
             'formatter': 'simple',
         },
         # CloudWatch Logs Handler
+        # Handler oluşturulurken hata olursa graceful fail yap
         'cloudwatch': {
-            'class': 'watchtower.CloudWatchLogHandler',
-            'log_group': AWS_CLOUDWATCH_LOG_GROUP_NAME,
-            'stream_name': AWS_CLOUDWATCH_STREAM_NAME,
-            'use_queues': True,  # Performans için queue kullan
-            'send_interval': 5,  # 5 saniyede bir gönder
-            'max_batch_size': 100,  # Maksimum batch size
-            'boto3_client': cloudwatch_logs_client,
-            'formatter': 'json',  # JSON formatında gönder
-        } if AWS_CLOUDWATCH_ENABLED and cloudwatch_logs_client else {
+            '()': 'config.settings._create_cloudwatch_handler',  # Custom factory function
+        } if (AWS_CLOUDWATCH_ENABLED and cloudwatch_handler_config and cloudwatch_logs_client) else {
             'class': 'logging.NullHandler',  # Devre dışıysa hiçbir şey yapma
         },
     },
