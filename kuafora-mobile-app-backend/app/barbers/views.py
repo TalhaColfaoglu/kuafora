@@ -543,68 +543,69 @@ class BarbershopViewSet(viewsets.ReadOnlyModelViewSet):
 
                 return Response(result)
 
-        # PUT (normalize "week" payload)
-        if not request.user or not request.user.is_authenticated:
-            return Response({"detail": "Authentication required"}, status=status.HTTP_401_UNAUTHORIZED)
+            elif request.method == "PUT":
+                # PUT (normalize "week" payload)
+                if not request.user or not request.user.is_authenticated:
+                    return Response({"detail": "Authentication required"}, status=status.HTTP_401_UNAUTHORIZED)
 
-        admin_staff = Staff.objects.filter(barbershop_id=pk, user=request.user, is_admin=True).first()
-        if not admin_staff:
-            return Response({"detail": "Not allowed"}, status=status.HTTP_403_FORBIDDEN)
+                admin_staff = Staff.objects.filter(barbershop_id=pk, user=request.user, is_admin=True).first()
+                if not admin_staff:
+                    return Response({"detail": "Not allowed"}, status=status.HTTP_403_FORBIDDEN)
 
-        body = request.data or {}
-        week = body.get("week")
-        if not isinstance(week, list) or len(week) != 7:
-            return Response({"detail": "invalid_payload", "errors": {"week": "7 items required (MON..SUN)"}}, status=400)
+                body = request.data or {}
+                week = body.get("week")
+                if not isinstance(week, list) or len(week) != 7:
+                    return Response({"detail": "invalid_payload", "errors": {"week": "7 items required (MON..SUN)"}}, status=400)
 
-        def parse_hhmm(s: str):
-            try:
-                hh, mm = str(s).split(":")
-                return timezone.datetime(2000, 1, 1, int(hh), int(mm)).time()
-            except Exception:
-                return None
+                def parse_hhmm(s: str):
+                    try:
+                        hh, mm = str(s).split(":")
+                        return timezone.datetime(2000, 1, 1, int(hh), int(mm)).time()
+                    except Exception:
+                        return None
 
-        valid_days = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"]
-        errors = {}
-        normalized = []
-        zero_time = timezone.datetime(2000, 1, 1, 0, 0).time()
-        for item in week:
-            day = (item.get("day") or "").upper()
-            is_closed = bool(item.get("is_closed", False))
-            open_s = item.get("open")
-            close_s = item.get("close")
-            if day not in valid_days:
-                errors[day or "?"] = "invalid_day"
-                continue
-            if is_closed:
-                # DB şemamızda start_time/end_time NOT NULL olduğu için kapalı günlerde
-                # 00:00 / 00:00 yazarız. is_closed=True olduğu için UI bu saatleri göstermeyecek.
-                normalized.append({"day": day, "is_closed": True, "open": zero_time, "close": zero_time})
-                continue
-            # is_closed=False ise mutlaka open ve close olmalı
-            if open_s is None or close_s is None:
-                errors[day] = "invalid_time"
-                continue
-            st = parse_hhmm(open_s)
-            et = parse_hhmm(close_s)
-            if not st or not et:
-                errors[day] = "invalid_time"
-                continue
-            normalized.append({"day": day, "is_closed": False, "open": st, "close": et})
+                valid_days = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"]
+                errors = {}
+                normalized = []
+                zero_time = timezone.datetime(2000, 1, 1, 0, 0).time()
+                for item in week:
+                    day = (item.get("day") or "").upper()
+                    is_closed = bool(item.get("is_closed", False))
+                    open_s = item.get("open")
+                    close_s = item.get("close")
+                    if day not in valid_days:
+                        errors[day or "?"] = "invalid_day"
+                        continue
+                    if is_closed:
+                        # DB şemamızda start_time/end_time NOT NULL olduğu için kapalı günlerde
+                        # 00:00 / 00:00 yazarız. is_closed=True olduğu için UI bu saatleri göstermeyecek.
+                        normalized.append({"day": day, "is_closed": True, "open": zero_time, "close": zero_time})
+                        continue
+                    # is_closed=False ise mutlaka open ve close olmalı
+                    if open_s is None or close_s is None:
+                        errors[day] = "invalid_time"
+                        continue
+                    st = parse_hhmm(open_s)
+                    et = parse_hhmm(close_s)
+                    if not st or not et:
+                        errors[day] = "invalid_time"
+                        continue
+                    normalized.append({"day": day, "is_closed": False, "open": st, "close": et})
 
-        if errors:
-            return Response({"detail": "invalid_payload", "errors": errors}, status=400)
+                if errors:
+                    return Response({"detail": "invalid_payload", "errors": errors}, status=400)
 
-            # Replace ShopWorkingHours for this shop
-            ShopWorkingHours.objects.filter(barbershop_id=pk).delete()
-            for it in normalized:
-                ShopWorkingHours.objects.create(
-                    barbershop_id=pk,
-                    day_of_week=it["day"],
-                    is_closed=it["is_closed"],
-                    start_time=it["open"],
-                    end_time=it["close"],
-                )
-            return Response({"detail": "Updated"})
+                # Replace ShopWorkingHours for this shop
+                ShopWorkingHours.objects.filter(barbershop_id=pk).delete()
+                for it in normalized:
+                    ShopWorkingHours.objects.create(
+                        barbershop_id=pk,
+                        day_of_week=it["day"],
+                        is_closed=it["is_closed"],
+                        start_time=it["open"],
+                        end_time=it["close"],
+                    )
+                return Response({"detail": "Updated"})
         finally:
             # Restore pagination for other actions
             self.pagination_class = original_pagination
