@@ -536,6 +536,7 @@ if AWS_CLOUDWATCH_ENABLED:
                             'boto3_client': cloudwatch_logs_client,
                             'formatter': 'json',
                         }
+                        print(f"✅ CloudWatch yapılandırması başarılı: {AWS_CLOUDWATCH_LOG_GROUP_NAME}/{AWS_CLOUDWATCH_STREAM_NAME}")
             except Exception as e:
                 print(f"⚠️  CloudWatch client oluşturma hatası: {e}")
                 print(f"⚠️  CloudWatch devre dışı bırakılıyor.")
@@ -604,6 +605,14 @@ ALLOWED_INCLUDE_ROOTS = []  # Prevent SSI attacks
 # CloudWatch Handler Factory (graceful fail için)
 def _create_cloudwatch_handler():
     """CloudWatch handler'ı oluştur, hata olursa NullHandler döndür"""
+    # Global değişkenleri kullan
+    global cloudwatch_logs_client, AWS_CLOUDWATCH_LOG_GROUP_NAME, AWS_CLOUDWATCH_STREAM_NAME
+    
+    # Client yoksa NullHandler döndür
+    if not cloudwatch_logs_client:
+        import logging as logging_module
+        return logging_module.NullHandler()
+    
     try:
         import watchtower
         handler = watchtower.CloudWatchLogHandler(
@@ -615,6 +624,7 @@ def _create_cloudwatch_handler():
             boto3_client=cloudwatch_logs_client,
         )
         handler.setFormatter(logging.Formatter('{"timestamp": "%(asctime)s", "level": "%(levelname)s", "logger": "%(name)s", "message": "%(message)s", "module": "%(module)s", "function": "%(funcName)s", "line": %(lineno)d}'))
+        print(f"✅ CloudWatch handler başarıyla oluşturuldu: {AWS_CLOUDWATCH_LOG_GROUP_NAME}/{AWS_CLOUDWATCH_STREAM_NAME}")
         return handler
     except Exception as e:
         import logging as logging_module
@@ -667,14 +677,14 @@ LOGGING = {
         # Handler oluşturulurken hata olursa graceful fail yap
         'cloudwatch': {
             '()': 'config.settings._create_cloudwatch_handler',  # Custom factory function
-        } if (AWS_CLOUDWATCH_ENABLED and cloudwatch_handler_config and cloudwatch_logs_client) else {
+        } if AWS_CLOUDWATCH_ENABLED else {
             'class': 'logging.NullHandler',  # Devre dışıysa hiçbir şey yapma
         },
     },
-    'root': {
-        'handlers': ['console', 'file'] + (['cloudwatch'] if AWS_CLOUDWATCH_ENABLED and cloudwatch_logs_client else []),
-        'level': 'INFO',
-    },
+        'root': {
+            'handlers': ['console', 'file'] + (['cloudwatch'] if AWS_CLOUDWATCH_ENABLED else []),
+            'level': 'INFO',
+        },
     'loggers': {
         'django': {
             'handlers': ['file', 'error_file', 'console'] + (['cloudwatch'] if AWS_CLOUDWATCH_ENABLED and cloudwatch_logs_client else []),
