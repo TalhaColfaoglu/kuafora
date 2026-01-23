@@ -162,10 +162,15 @@ UNFOLD = {
         "show_all_applications": True,
         "navigation": [
             {
-                "title": _("Rehber"),
+                "title": _("Dashboard & Rehber"),
                 "separator": True,
                 "collapsible": False,
                 "items": [
+                    {
+                        "title": _("📊 Dashboard"),
+                        "icon": "dashboard",
+                        "link": reverse_lazy("admin-dashboard"),
+                    },
                     {
                         "title": _("Admin Rehberi (Nasıl kullanılır?)"),
                         "icon": "help",
@@ -362,7 +367,8 @@ AWS_S3_REGION_NAME = env("AWS_S3_REGION_NAME", default="eu-central-1")
 AWS_S3_CUSTOM_DOMAIN = "d1uiu5mb5i1uph.cloudfront.net"
 AWS_DEFAULT_ACL = None
 AWS_S3_OBJECT_PARAMETERS = {
-    "CacheControl": "max-age=86400",
+    "CacheControl": "max-age=31536000",  # 1 yıl cache - CloudFront ile optimize edilmiş
+    "ContentDisposition": "inline",  # Tarayıcıda açılabilir
 }
 
 # Use S3 for media files only if AWS credentials are configured
@@ -454,6 +460,9 @@ AWS_CLOUDWATCH_ENABLED = env.bool('AWS_CLOUDWATCH_ENABLED', default=False)
 AWS_CLOUDWATCH_LOG_GROUP_NAME = env('AWS_CLOUDWATCH_LOG_GROUP_NAME', default='kuafora-backend')
 AWS_CLOUDWATCH_STREAM_NAME = env('AWS_CLOUDWATCH_STREAM_NAME', default='api')
 AWS_CLOUDWATCH_REGION_NAME = env('AWS_CLOUDWATCH_REGION_NAME', default='eu-central-1')
+# CloudWatch Log Retention (gün cinsinden) - AWS Console'da da ayarlanmalı
+# 7, 14, 30, 60, 90, 120, 150, 180, 365, 400, 545, 731, 1827, 3653
+AWS_CLOUDWATCH_LOG_RETENTION_DAYS = env.int('AWS_CLOUDWATCH_LOG_RETENTION_DAYS', default=14)
 
 # CloudWatch için AWS credentials
 cloudwatch_logs_client = None
@@ -505,8 +514,12 @@ if AWS_CLOUDWATCH_ENABLED:
                         if not log_group_exists:
                             # Log group yoksa oluşturmayı dene (izin varsa)
                             try:
-                                cloudwatch_logs_client.create_log_group(logGroupName=AWS_CLOUDWATCH_LOG_GROUP_NAME)
-                                print(f"✅ CloudWatch log group oluşturuldu: {AWS_CLOUDWATCH_LOG_GROUP_NAME}")
+                                cloudwatch_logs_client.create_log_group(
+                                    logGroupName=AWS_CLOUDWATCH_LOG_GROUP_NAME,
+                                    # Retention ayarını da ekle (maliyet optimizasyonu)
+                                    retentionInDays=AWS_CLOUDWATCH_LOG_RETENTION_DAYS
+                                )
+                                print(f"✅ CloudWatch log group oluşturuldu: {AWS_CLOUDWATCH_LOG_GROUP_NAME} (retention: {AWS_CLOUDWATCH_LOG_RETENTION_DAYS} gün)")
                             except ClientError as e:
                                 if e.response['Error']['Code'] == 'AccessDeniedException':
                                     print(f"⚠️  CloudWatch: Log group oluşturma izni yok. Log group'u manuel oluşturun: {AWS_CLOUDWATCH_LOG_GROUP_NAME}")
@@ -515,6 +528,18 @@ if AWS_CLOUDWATCH_ENABLED:
                                     cloudwatch_logs_client = None
                                 else:
                                     raise
+                        else:
+                            # Log group varsa retention ayarını güncelle (maliyet optimizasyonu)
+                            try:
+                                cloudwatch_logs_client.put_retention_policy(
+                                    logGroupName=AWS_CLOUDWATCH_LOG_GROUP_NAME,
+                                    retentionInDays=AWS_CLOUDWATCH_LOG_RETENTION_DAYS
+                                )
+                                print(f"✅ CloudWatch log retention güncellendi: {AWS_CLOUDWATCH_LOG_RETENTION_DAYS} gün")
+                            except ClientError as e:
+                                if e.response['Error']['Code'] == 'AccessDeniedException':
+                                    print(f"⚠️  CloudWatch: Retention policy güncelleme izni yok. AWS Console'dan manuel ayarlayın.")
+                                # Retention hatası kritik değil, devam et
                     except ClientError as e:
                         if e.response['Error']['Code'] == 'AccessDeniedException':
                             print(f"⚠️  CloudWatch: IAM izinleri eksik. Log group'u manuel oluşturun veya IAM izinlerini ekleyin.")
@@ -623,8 +648,10 @@ def _create_cloudwatch_handler():
             max_batch_size=100,
             boto3_client=cloudwatch_logs_client,
         )
+        # CloudWatch'a sadece WARNING ve ERROR seviyesindeki logları gönder (maliyet optimizasyonu)
+        handler.setLevel(logging.WARNING)
         handler.setFormatter(logging.Formatter('{"timestamp": "%(asctime)s", "level": "%(levelname)s", "logger": "%(name)s", "message": "%(message)s", "module": "%(module)s", "function": "%(funcName)s", "line": %(lineno)d}'))
-        print(f"✅ CloudWatch handler başarıyla oluşturuldu: {AWS_CLOUDWATCH_LOG_GROUP_NAME}/{AWS_CLOUDWATCH_STREAM_NAME}")
+        print(f"✅ CloudWatch handler başarıyla oluşturuldu: {AWS_CLOUDWATCH_LOG_GROUP_NAME}/{AWS_CLOUDWATCH_STREAM_NAME} (sadece WARNING+ seviyesi)")
         return handler
     except Exception as e:
         import logging as logging_module
@@ -687,6 +714,7 @@ LOGGING = {
         },
     'loggers': {
         'django': {
+            # Django logları CloudWatch'a sadece ERROR seviyesinde gider (maliyet optimizasyonu)
             'handlers': ['file', 'error_file', 'console'] + (['cloudwatch'] if AWS_CLOUDWATCH_ENABLED and cloudwatch_logs_client else []),
             'level': 'INFO',
             'propagate': False,
@@ -702,8 +730,10 @@ LOGGING = {
             'propagate': False,
         },
         'app': {
+            # CloudWatch handler'ı WARNING seviyesinde filtreliyor (maliyet optimizasyonu)
+            # INFO ve DEBUG logları sadece dosya ve console'a gider
             'handlers': ['file', 'console'] + (['cloudwatch'] if AWS_CLOUDWATCH_ENABLED and cloudwatch_logs_client else []),
-            'level': 'INFO',
+            'level': 'INFO',  # Dosya ve console için INFO
             'propagate': False,
         },
         # Security audit logs için özel logger

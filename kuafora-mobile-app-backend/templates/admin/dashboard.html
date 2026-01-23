@@ -1,0 +1,845 @@
+{% extends "admin/base_site.html" %}
+{% load i18n static %}
+
+{% block extrastyle %}
+{{ block.super }}
+<style>
+    * {
+        box-sizing: border-box;
+    }
+    
+    body {
+        background: #F9FAFB;
+    }
+    
+    .dashboard-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 16px;
+        padding: 32px;
+        margin-bottom: 32px;
+        color: white;
+        box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
+    }
+    
+    .dashboard-header h1 {
+        font-size: 32px;
+        font-weight: 800;
+        margin: 0 0 8px 0;
+        color: white;
+        text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .dashboard-header p {
+        font-size: 16px;
+        margin: 0;
+        opacity: 0.95;
+    }
+    
+    .dashboard-stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 24px;
+        margin-bottom: 32px;
+    }
+    
+    .stat-card {
+        background: white;
+        border-radius: 16px;
+        padding: 24px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.06);
+        border-left: 5px solid #3B82F6;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .stat-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        right: 0;
+        width: 100px;
+        height: 100px;
+        background: radial-gradient(circle, rgba(59, 130, 246, 0.1) 0%, transparent 70%);
+        border-radius: 50%;
+        transform: translate(30px, -30px);
+    }
+    
+    .stat-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 10px 25px rgba(0,0,0,0.15), 0 4px 10px rgba(0,0,0,0.1);
+    }
+    
+    .stat-card-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 16px;
+    }
+    
+    .stat-card-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 24px;
+        font-weight: 600;
+    }
+    
+    .stat-card h3 {
+        margin: 0;
+        font-size: 14px;
+        color: #6B7280;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .stat-card .stat-value {
+        font-size: 36px;
+        font-weight: 800;
+        color: #1F2937;
+        margin: 8px 0;
+        line-height: 1.2;
+    }
+    
+    .stat-card .stat-percentage {
+        font-size: 14px;
+        color: #6B7280;
+        margin-top: 8px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    
+    .stat-card .stat-subtitle {
+        font-size: 12px;
+        color: #9CA3AF;
+        margin-top: 8px;
+        line-height: 1.4;
+    }
+    
+    .stat-card.success {
+        border-left-color: #10B981;
+    }
+    .stat-card.success .stat-card-icon {
+        background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+        color: white;
+    }
+    
+    .stat-card.warning {
+        border-left-color: #F59E0B;
+    }
+    .stat-card.warning .stat-card-icon {
+        background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%);
+        color: white;
+    }
+    
+    .stat-card.danger {
+        border-left-color: #EF4444;
+    }
+    .stat-card.danger .stat-card-icon {
+        background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%);
+        color: white;
+    }
+    
+    .stat-card.info {
+        border-left-color: #3B82F6;
+    }
+    .stat-card.info .stat-card-icon {
+        background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%);
+        color: white;
+    }
+    
+    .stat-card.purple {
+        border-left-color: #8B5CF6;
+    }
+    .stat-card.purple .stat-card-icon {
+        background: linear-gradient(135deg, #8B5CF6 0%, #7C3AED 100%);
+        color: white;
+    }
+    
+    .chart-container {
+        background: white;
+        border-radius: 16px;
+        padding: 28px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.06);
+        margin-top: 24px;
+        transition: box-shadow 0.3s;
+    }
+    
+    .chart-container:hover {
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1), 0 2px 4px rgba(0,0,0,0.06);
+    }
+    
+    .chart-title {
+        font-size: 20px;
+        font-weight: 700;
+        margin-bottom: 24px;
+        color: #1F2937;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+    
+    .chart-title::before {
+        content: '';
+        width: 4px;
+        height: 24px;
+        background: linear-gradient(135deg, #3B82F6 0%, #8B5CF6 100%);
+        border-radius: 2px;
+    }
+    
+    .chart-bars {
+        display: flex;
+        align-items: flex-end;
+        gap: 12px;
+        height: 240px;
+        padding: 24px 0;
+        overflow-x: auto;
+    }
+    
+    .chart-bar {
+        flex: 1;
+        min-width: 40px;
+        background: linear-gradient(to top, #3B82F6, #60A5FA, #93C5FD);
+        border-radius: 8px 8px 0 0;
+        min-height: 10px;
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-end;
+        align-items: center;
+        padding-bottom: 8px;
+        transition: all 0.3s;
+        cursor: pointer;
+    }
+    
+    .chart-bar:hover {
+        opacity: 0.9;
+        transform: scaleY(1.05);
+    }
+    
+    .chart-bar-label {
+        font-size: 11px;
+        color: #6B7280;
+        margin-top: 8px;
+        text-align: center;
+        font-weight: 500;
+        white-space: nowrap;
+    }
+    
+    .chart-bar-value {
+        font-size: 12px;
+        font-weight: 700;
+        color: white;
+        margin-bottom: 4px;
+        text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+    }
+    
+    .section-title {
+        font-size: 24px;
+        font-weight: 800;
+        margin: 48px 0 24px 0;
+        color: #1F2937;
+        padding-bottom: 12px;
+        border-bottom: 3px solid #E5E7EB;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+    
+    .info-note {
+        background: linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%);
+        border-left: 5px solid #F59E0B;
+        padding: 20px;
+        border-radius: 12px;
+        margin: 24px 0;
+        font-size: 14px;
+        color: #92400E;
+        box-shadow: 0 2px 4px rgba(245, 158, 11, 0.1);
+    }
+    
+    .trend-indicator {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        font-size: 13px;
+        font-weight: 700;
+        padding: 4px 8px;
+        border-radius: 6px;
+    }
+    
+    .trend-up {
+        color: #10B981;
+        background: rgba(16, 185, 129, 0.1);
+    }
+    
+    .trend-down {
+        color: #EF4444;
+        background: rgba(239, 68, 68, 0.1);
+    }
+    
+    .trend-neutral {
+        color: #6B7280;
+        background: rgba(107, 114, 128, 0.1);
+    }
+    
+    .distribution-list, .top-users-list {
+        background: white;
+        border-radius: 16px;
+        padding: 24px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.06);
+        margin-top: 24px;
+    }
+    
+    .distribution-item, .user-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 16px 0;
+        border-bottom: 1px solid #E5E7EB;
+        transition: background 0.2s;
+    }
+    
+    .distribution-item:hover, .user-item:hover {
+        background: #F9FAFB;
+        margin: 0 -24px;
+        padding-left: 24px;
+        padding-right: 24px;
+        border-radius: 8px;
+    }
+    
+    .distribution-item:last-child, .user-item:last-child {
+        border-bottom: none;
+    }
+    
+    .distribution-label {
+        font-size: 15px;
+        color: #374151;
+        font-weight: 500;
+    }
+    
+    .distribution-value {
+        font-size: 18px;
+        font-weight: 700;
+        color: #1F2937;
+    }
+    
+    .user-info {
+        flex: 1;
+    }
+    
+    .user-email {
+        font-size: 15px;
+        font-weight: 600;
+        color: #1F2937;
+    }
+    
+    .user-name {
+        font-size: 13px;
+        color: #6B7280;
+        margin-top: 4px;
+    }
+    
+    .user-meta {
+        font-size: 12px;
+        color: #9CA3AF;
+        margin-top: 6px;
+        display: flex;
+        gap: 12px;
+    }
+    
+    .metric-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 12px;
+        border-radius: 8px;
+        font-size: 12px;
+        font-weight: 600;
+    }
+    
+    .badge-success {
+        background: rgba(16, 185, 129, 0.1);
+        color: #059669;
+    }
+    
+    .badge-warning {
+        background: rgba(245, 158, 11, 0.1);
+        color: #D97706;
+    }
+    
+    .badge-danger {
+        background: rgba(239, 68, 68, 0.1);
+        color: #DC2626;
+    }
+    
+    .badge-info {
+        background: rgba(59, 130, 246, 0.1);
+        color: #2563EB;
+    }
+    
+    @media (max-width: 768px) {
+        .dashboard-stats {
+            grid-template-columns: 1fr;
+        }
+        .chart-bars {
+            gap: 6px;
+        }
+        .chart-bar {
+            min-width: 30px;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-header">
+    <h1>📊 Kuafora Analytics Dashboard</h1>
+    <p>Kullanıcı aktiviteleri, büyüme metrikleri ve sistem istatistikleri</p>
+</div>
+
+<div class="info-note">
+    <strong>ℹ️ Not:</strong> Veri kullanımı ve uygulama açılma sayısı gibi detaylı metrikler için gelecekte bir tracking sistemi eklenecektir. Şu an gösterilen metrikler <code>last_login</code> verisine dayanmaktadır.
+</div>
+
+<h2 class="section-title">
+    <span>👥</span>
+    <span>Kullanıcı İstatistikleri</span>
+</h2>
+<div class="dashboard-stats">
+    <div class="stat-card info">
+        <div class="stat-card-header">
+            <h3>Toplam Kullanıcı</h3>
+            <div class="stat-card-icon">👤</div>
+        </div>
+        <p class="stat-value">{{ stats.users.total|floatformat:0 }}</p>
+    </div>
+    
+    <div class="stat-card success">
+        <div class="stat-card-header">
+            <h3>Aktif Kullanıcı</h3>
+            <div class="stat-card-icon">✓</div>
+        </div>
+        <p class="stat-value">{{ stats.users.active|floatformat:0 }}</p>
+        <div class="stat-percentage">{% widthratio stats.users.active stats.users.total 100 %}%</div>
+    </div>
+    
+    <div class="stat-card danger">
+        <div class="stat-card-header">
+            <h3>Banlı Kullanıcı</h3>
+            <div class="stat-card-icon">🚫</div>
+        </div>
+        <p class="stat-value">{{ stats.users.banned|floatformat:0 }}</p>
+        <div class="stat-percentage">{% widthratio stats.users.banned stats.users.total 100 %}%</div>
+    </div>
+</div>
+
+<h2 class="section-title">
+    <span>📈</span>
+    <span>Aktif Kullanıcı Metrikleri (Mobil Uygulama)</span>
+</h2>
+<div class="dashboard-stats">
+    <div class="stat-card success">
+        <div class="stat-card-header">
+            <h3>Günlük Aktif (DAU)</h3>
+            <div class="stat-card-icon">📱</div>
+        </div>
+        <p class="stat-value">{{ stats.users.daily_active|floatformat:0 }}</p>
+        <div class="stat-percentage">
+            <span>{{ stats.users.daily_active_percentage|floatformat:1 }}%</span>
+            {% if stats.users.daily_active_growth != 0 %}
+            <span class="trend-indicator {% if stats.users.daily_active_growth > 0 %}trend-up{% elif stats.users.daily_active_growth < 0 %}trend-down{% else %}trend-neutral{% endif %}">
+                {% if stats.users.daily_active_growth > 0 %}↑{% elif stats.users.daily_active_growth < 0 %}↓{% else %}→{% endif %}
+                {{ stats.users.daily_active_growth|floatformat:1 }}%
+            </span>
+            {% endif %}
+        </div>
+        <div class="stat-subtitle">Son 24 saatte giriş yapan kullanıcılar</div>
+    </div>
+    
+    <div class="stat-card success">
+        <div class="stat-card-header">
+            <h3>Haftalık Aktif (WAU)</h3>
+            <div class="stat-card-icon">📅</div>
+        </div>
+        <p class="stat-value">{{ stats.users.weekly_active|floatformat:0 }}</p>
+        <div class="stat-percentage">{{ stats.users.weekly_active_percentage|floatformat:1 }}%</div>
+        <div class="stat-subtitle">Son 7 günde giriş yapan kullanıcılar</div>
+    </div>
+    
+    <div class="stat-card success">
+        <div class="stat-card-header">
+            <h3>Aylık Aktif (MAU)</h3>
+            <div class="stat-card-icon">📊</div>
+        </div>
+        <p class="stat-value">{{ stats.users.monthly_active|floatformat:0 }}</p>
+        <div class="stat-percentage">{{ stats.users.monthly_active_percentage|floatformat:1 }}%</div>
+        <div class="stat-subtitle">Son 30 günde giriş yapan kullanıcılar</div>
+    </div>
+    
+    <div class="stat-card purple">
+        <div class="stat-card-header">
+            <h3>Yıllık Aktif (YAU)</h3>
+            <div class="stat-card-icon">🗓️</div>
+        </div>
+        <p class="stat-value">{{ stats.users.yearly_active|floatformat:0 }}</p>
+        <div class="stat-percentage">{{ stats.users.yearly_active_percentage|floatformat:1 }}%</div>
+        <div class="stat-subtitle">Son 365 günde giriş yapan kullanıcılar</div>
+    </div>
+</div>
+
+<h2 class="section-title">
+    <span>⚠️</span>
+    <span>Pasif Kullanıcı Metrikleri</span>
+</h2>
+<div class="dashboard-stats">
+    <div class="stat-card warning">
+        <div class="stat-card-header">
+            <h3>Son 1 Ayda Girmeyen</h3>
+            <div class="stat-card-icon">⏰</div>
+        </div>
+        <p class="stat-value">{{ stats.users.inactive_last_month|floatformat:0 }}</p>
+        <div class="stat-percentage">{{ stats.users.inactive_percentage|floatformat:1 }}%</div>
+        <div class="stat-subtitle">Son 30 günde giriş yapmayan aktif kullanıcılar</div>
+    </div>
+    
+    <div class="stat-card danger">
+        <div class="stat-card-header">
+            <h3>Hiç Giriş Yapmamış</h3>
+            <div class="stat-card-icon">❌</div>
+        </div>
+        <p class="stat-value">{{ stats.users.never_logged_in|floatformat:0 }}</p>
+        <div class="stat-percentage">{{ stats.users.never_logged_percentage|floatformat:1 }}%</div>
+        <div class="stat-subtitle">Kayıt oldu ama hiç giriş yapmadı</div>
+    </div>
+</div>
+
+<h2 class="section-title">
+    <span>📊</span>
+    <span>Büyüme & Tutma Metrikleri</span>
+</h2>
+<div class="dashboard-stats">
+    <div class="stat-card success">
+        <div class="stat-card-header">
+            <h3>Retention Rate</h3>
+            <div class="stat-card-icon">💎</div>
+        </div>
+        <p class="stat-value">{{ stats.users.week_retention_rate|floatformat:1 }}%</p>
+        <div class="stat-subtitle">Bu hafta kayıt olanların aktif kalma oranı</div>
+    </div>
+    
+    <div class="stat-card info">
+        <div class="stat-card-header">
+            <h3>Conversion Rate</h3>
+            <div class="stat-card-icon">🔄</div>
+        </div>
+        <p class="stat-value">{{ stats.users.conversion_rate|floatformat:1 }}%</p>
+        <div class="stat-subtitle">Kayıt olanların aktif kullanıcıya dönüşme oranı</div>
+    </div>
+    
+    <div class="stat-card danger">
+        <div class="stat-card-header">
+            <h3>Churn Rate</h3>
+            <div class="stat-card-icon">📉</div>
+        </div>
+        <p class="stat-value">{{ stats.users.churn_rate|floatformat:1 }}%</p>
+        <div class="stat-subtitle">Son 30 günde kayıt olup son 7 günde giriş yapmayanlar</div>
+    </div>
+</div>
+
+<h2 class="section-title">
+    <span>💬</span>
+    <span>Kullanıcı Etkileşim Metrikleri</span>
+</h2>
+<div class="dashboard-stats">
+    <div class="stat-card info">
+        <div class="stat-card-header">
+            <h3>Toplam Favori</h3>
+            <div class="stat-card-icon">⭐</div>
+        </div>
+        <p class="stat-value">{{ stats.users.total_favorites|floatformat:0 }}</p>
+    </div>
+    
+    <div class="stat-card info">
+        <div class="stat-card-header">
+            <h3>Toplam Yorum</h3>
+            <div class="stat-card-icon">💬</div>
+        </div>
+        <p class="stat-value">{{ stats.users.total_reviews|floatformat:0 }}</p>
+    </div>
+    
+    <div class="stat-card success">
+        <div class="stat-card-header">
+            <h3>Favori Ekleyen</h3>
+            <div class="stat-card-icon">👥</div>
+        </div>
+        <p class="stat-value">{{ stats.users.users_with_favorites|floatformat:0 }}</p>
+        <div class="stat-percentage">{% widthratio stats.users.users_with_favorites stats.users.total 100 %}%</div>
+    </div>
+    
+    <div class="stat-card success">
+        <div class="stat-card-header">
+            <h3>Yorum Yapan</h3>
+            <div class="stat-card-icon">✍️</div>
+        </div>
+        <p class="stat-value">{{ stats.users.users_with_reviews|floatformat:0 }}</p>
+        <div class="stat-percentage">{% widthratio stats.users.users_with_reviews stats.users.total 100 %}%</div>
+    </div>
+    
+    <div class="stat-card">
+        <div class="stat-card-header">
+            <h3>Ort. Favori/Kullanıcı</h3>
+            <div class="stat-card-icon">📊</div>
+        </div>
+        <p class="stat-value">{{ stats.users.avg_favorites_per_user|floatformat:1 }}</p>
+    </div>
+    
+    <div class="stat-card">
+        <div class="stat-card-header">
+            <h3>Ort. Yorum/Kullanıcı</h3>
+            <div class="stat-card-icon">📊</div>
+        </div>
+        <p class="stat-value">{{ stats.users.avg_reviews_per_user|floatformat:1 }}</p>
+    </div>
+</div>
+
+<div class="chart-container">
+    <h3 class="chart-title">Son 30 Günlük Aktif Kullanıcı Trendi</h3>
+    <div class="chart-bars">
+        {% for item in stats.daily_active_chart %}
+        <div class="chart-bar" style="height: {% if stats.max_daily_active > 0 %}{% widthratio item.count stats.max_daily_active 100 %}{% else %}0{% endif %}%;" title="{{ item.date }}: {{ item.count }} kullanıcı">
+            {% if item.count > 0 %}
+            <span class="chart-bar-value">{{ item.count }}</span>
+            {% endif %}
+            <span class="chart-bar-label">{{ item.date }}</span>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<h2 class="section-title">
+    <span>📝</span>
+    <span>Kayıt İstatistikleri</span>
+</h2>
+<div class="dashboard-stats">
+    <div class="stat-card warning">
+        <div class="stat-card-header">
+            <h3>Bugün Kayıt</h3>
+            <div class="stat-card-icon">📅</div>
+        </div>
+        <p class="stat-value">{{ stats.users.today_registrations|floatformat:0 }}</p>
+    </div>
+    
+    <div class="stat-card">
+        <div class="stat-card-header">
+            <h3>Bu Hafta Kayıt</h3>
+            <div class="stat-card-icon">📆</div>
+        </div>
+        <p class="stat-value">{{ stats.users.week_registrations|floatformat:0 }}</p>
+        {% if stats.users.week_growth_rate != 0 %}
+        <div class="stat-percentage">
+            <span class="trend-indicator {% if stats.users.week_growth_rate > 0 %}trend-up{% elif stats.users.week_growth_rate < 0 %}trend-down{% else %}trend-neutral{% endif %}">
+                {% if stats.users.week_growth_rate > 0 %}↑{% elif stats.users.week_growth_rate < 0 %}↓{% else %}→{% endif %}
+                {{ stats.users.week_growth_rate|floatformat:1 }}%
+            </span>
+        </div>
+        {% endif %}
+        <div class="stat-subtitle">Önceki haftaya göre</div>
+    </div>
+    
+    <div class="stat-card">
+        <div class="stat-card-header">
+            <h3>Bu Ay Kayıt</h3>
+            <div class="stat-card-icon">🗓️</div>
+        </div>
+        <p class="stat-value">{{ stats.users.month_registrations|floatformat:0 }}</p>
+        {% if stats.users.month_growth_rate != 0 %}
+        <div class="stat-percentage">
+            <span class="trend-indicator {% if stats.users.month_growth_rate > 0 %}trend-up{% elif stats.users.month_growth_rate < 0 %}trend-down{% else %}trend-neutral{% endif %}">
+                {% if stats.users.month_growth_rate > 0 %}↑{% elif stats.users.month_growth_rate < 0 %}↓{% else %}→{% endif %}
+                {{ stats.users.month_growth_rate|floatformat:1 }}%
+            </span>
+        </div>
+        {% endif %}
+        <div class="stat-subtitle">Önceki aya göre</div>
+    </div>
+    
+    <div class="stat-card success">
+        <div class="stat-card-header">
+            <h3>Email Doğrulanmış</h3>
+            <div class="stat-card-icon">✓</div>
+        </div>
+        <p class="stat-value">{{ stats.users.verified|floatformat:0 }}</p>
+        <div class="stat-percentage">{% widthratio stats.users.verified stats.users.total 100 %}%</div>
+    </div>
+    
+    <div class="stat-card warning">
+        <div class="stat-card-header">
+            <h3>Email Doğrulanmamış</h3>
+            <div class="stat-card-icon">⚠️</div>
+        </div>
+        <p class="stat-value">{{ stats.users.unverified|floatformat:0 }}</p>
+        <div class="stat-percentage">{% widthratio stats.users.unverified stats.users.total 100 %}%</div>
+    </div>
+</div>
+
+<div class="chart-container">
+    <h3 class="chart-title">Son 7 Günlük Kayıt Grafiği</h3>
+    <div class="chart-bars">
+        {% for item in stats.registration_chart %}
+        <div class="chart-bar" style="height: {% if stats.max_registration_count > 0 %}{% widthratio item.count stats.max_registration_count 100 %}{% else %}0{% endif %}%;" title="{{ item.date }}: {{ item.count }} kayıt">
+            {% if item.count > 0 %}
+            <span class="chart-bar-value">{{ item.count }}</span>
+            {% endif %}
+            <span class="chart-bar-label">{{ item.date }}</span>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<div class="chart-container">
+    <h3 class="chart-title">Son 4 Haftalık Aktif Kullanıcı Trendi</h3>
+    <div class="chart-bars">
+        {% for item in stats.users.weekly_active_trend %}
+        <div class="chart-bar" style="height: {% if stats.users.max_weekly_active > 0 %}{% widthratio item.count stats.users.max_weekly_active 100 %}{% else %}0{% endif %}%;" title="{{ item.week }}: {{ item.count }} kullanıcı">
+            {% if item.count > 0 %}
+            <span class="chart-bar-value">{{ item.count }}</span>
+            {% endif %}
+            <span class="chart-bar-label">{{ item.week }}<br><small>{{ item.date_range }}</small></span>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+{% if stats.users.gender_distribution %}
+<h2 class="section-title">
+    <span>👥</span>
+    <span>Cinsiyet Dağılımı</span>
+</h2>
+<div class="distribution-list">
+    {% for gender, count in stats.users.gender_distribution.items %}
+    <div class="distribution-item">
+        <span class="distribution-label">
+            {% if gender == 'male' %}👨 Erkek
+            {% elif gender == 'female' %}👩 Kadın
+            {% else %}❓ Belirtilmemiş
+            {% endif %}
+        </span>
+        <span class="distribution-value">
+            {{ count|floatformat:0 }} <span style="color: #9CA3AF; font-size: 14px;">({% widthratio count stats.users.active 100 %}%)</span>
+        </span>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+{% if stats.users.city_distribution %}
+<h2 class="section-title">
+    <span>📍</span>
+    <span>En Çok Kullanıcı Olan Şehirler (Top 10)</span>
+</h2>
+<div class="distribution-list">
+    {% for item in stats.users.city_distribution %}
+    <div class="distribution-item">
+        <span class="distribution-label">🏙️ {{ item.city }}</span>
+        <span class="distribution-value">{{ item.count|floatformat:0 }} kullanıcı</span>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+{% if stats.users.top_active_users %}
+<h2 class="section-title">
+    <span>⭐</span>
+    <span>En Aktif Kullanıcılar (Son Giriş)</span>
+</h2>
+<div class="top-users-list">
+    {% for user in stats.users.top_active_users %}
+    <div class="user-item">
+        <div class="user-info">
+            <div class="user-email">{{ user.email }}</div>
+            {% if user.full_name %}
+            <div class="user-name">{{ user.full_name }}</div>
+            {% endif %}
+            <div class="user-meta">
+                <span>Son giriş: {{ user.last_login|date:"d.m.Y H:i"|default:"Hiç giriş yapmamış" }}</span>
+                {% if user.created_at %}
+                <span>• Kayıt: {{ user.created_at|date:"d.m.Y" }}</span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<h2 class="section-title">
+    <span>💇</span>
+    <span>Barbershop İstatistikleri</span>
+</h2>
+<div class="dashboard-stats">
+    <div class="stat-card info">
+        <div class="stat-card-header">
+            <h3>Toplam Barbershop</h3>
+            <div class="stat-card-icon">🏪</div>
+        </div>
+        <p class="stat-value">{{ stats.barbershops.total|floatformat:0 }}</p>
+    </div>
+    
+    <div class="stat-card success">
+        <div class="stat-card-header">
+            <h3>Onaylanmış</h3>
+            <div class="stat-card-icon">✓</div>
+        </div>
+        <p class="stat-value">{{ stats.barbershops.approved|floatformat:0 }}</p>
+        <div class="stat-percentage">{% widthratio stats.barbershops.approved stats.barbershops.total 100 %}%</div>
+    </div>
+    
+    <div class="stat-card warning">
+        <div class="stat-card-header">
+            <h3>Bekleyen</h3>
+            <div class="stat-card-icon">⏳</div>
+        </div>
+        <p class="stat-value">{{ stats.barbershops.pending|floatformat:0 }}</p>
+        <div class="stat-percentage">{% widthratio stats.barbershops.pending stats.barbershops.total 100 %}%</div>
+    </div>
+    
+    <div class="stat-card danger">
+        <div class="stat-card-header">
+            <h3>Reddedilen</h3>
+            <div class="stat-card-icon">❌</div>
+        </div>
+        <p class="stat-value">{{ stats.barbershops.rejected|floatformat:0 }}</p>
+        <div class="stat-percentage">{% widthratio stats.barbershops.rejected stats.barbershops.total 100 %}%</div>
+    </div>
+</div>
+
+{% if stats.appointments.total > 0 %}
+<h2 class="section-title">
+    <span>📅</span>
+    <span>Randevu İstatistikleri</span>
+</h2>
+<div class="dashboard-stats">
+    <div class="stat-card info">
+        <div class="stat-card-header">
+            <h3>Toplam Randevu</h3>
+            <div class="stat-card-icon">📋</div>
+        </div>
+        <p class="stat-value">{{ stats.appointments.total|floatformat:0 }}</p>
+    </div>
+    
+    <div class="stat-card success">
+        <div class="stat-card-header">
+            <h3>Bugünkü Randevu</h3>
+            <div class="stat-card-icon">📅</div>
+        </div>
+        <p class="stat-value">{{ stats.appointments.today|floatformat:0 }}</p>
+    </div>
+</div>
+{% endif %}
+
+{% endblock %}

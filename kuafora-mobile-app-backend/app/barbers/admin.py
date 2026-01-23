@@ -219,8 +219,14 @@ class BarbershopAdmin(ModelAdmin):
     
     def thumbnail_preview(self, obj):
         if obj.main_image:
+            # Thumbnail varsa onu kullan, yoksa main_image'ı küçült
+            image_url = obj.main_image_thumb.url if obj.main_image_thumb else obj.main_image.url
             return format_html(
-                f'<img src="{obj.main_image.url}" style="width: 60px; height: 60px; object-fit: cover; border-radius: 8px; border: 2px solid #e5e7eb;" />'
+                f'<a href="{obj.main_image.url}" target="_blank" style="display: inline-block; cursor: pointer;" title="Tıklayarak tam boyutu aç">'
+                f'<img src="{image_url}" style="width: 60px; height: 60px; object-fit: cover; border-radius: 8px; border: 2px solid #e5e7eb; transition: transform 0.2s;" '
+                f'onmouseover="this.style.transform=\'scale(1.1)\'; this.style.boxShadow=\'0 4px 8px rgba(0,0,0,0.2)\';" '
+                f'onmouseout="this.style.transform=\'scale(1)\'; this.style.boxShadow=\'none\';" />'
+                f'</a>'
             )
         return format_html('<span style="display: inline-block; width: 60px; height: 60px; background: #f3f4f6; border-radius: 8px; text-align: center; line-height: 60px; color: #9ca3af; font-size: 24px;">📷</span>')
     thumbnail_preview.short_description = "Görsel"
@@ -355,12 +361,18 @@ class BarbershopAdmin(ModelAdmin):
 
     def main_image_preview(self, obj):
         if obj.main_image:
+            # Thumbnail varsa onu göster, tıklayınca tam boyutlu açılsın
+            thumbnail_url = obj.main_image_thumb.url if obj.main_image_thumb else obj.main_image.url
             return format_html(
                 f'''
                 <div style="margin: 10px 0;">
-                    <img src="{obj.main_image.url}" style="max-width: 400px; max-height: 400px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 10px;" />
+                    <a href="{obj.main_image.url}" target="_blank" style="display: inline-block; cursor: pointer;" title="Tıklayarak tam boyutu aç">
+                        <img src="{thumbnail_url}" style="max-width: 400px; max-height: 400px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 10px; transition: transform 0.2s;" 
+                             onmouseover="this.style.transform='scale(1.02)'; this.style.boxShadow='0 8px 12px rgba(0,0,0,0.15)';" 
+                             onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='0 4px 6px rgba(0,0,0,0.1)';" />
+                    </a>
                     <br>
-                    <a href="{obj.main_image.url}" target="_blank" style="color: #3b82f6; text-decoration: none; font-size: 12px;">🔗 Tam boyutu aç</a>
+                    <a href="{obj.main_image.url}" target="_blank" style="color: #3b82f6; text-decoration: none; font-size: 12px; display: inline-block; margin-top: 8px;">🔗 Tam boyutu aç (yeni sekmede)</a>
                 </div>
                 '''
             )
@@ -377,11 +389,15 @@ class BarbershopAdmin(ModelAdmin):
         html += '<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; margin-top: 10px;">'
         
         for img in images[:12]:  # İlk 12 görseli göster
+            # Thumbnail varsa onu kullan, yoksa main image'ı küçült
+            thumbnail_url = img.image_thumb.url if img.image_thumb else img.image.url
             html += f'''
                 <div style="position: relative;">
-                    <img src="{img.image.url}" style="width: 100%; height: 150px; object-fit: cover; border-radius: 8px; border: 2px solid #e5e7eb; cursor: pointer;" 
-                         onclick="window.open('{img.image.url}', '_blank')" 
-                         title="Tıklayarak tam boyutu aç" />
+                    <a href="{img.image.url}" target="_blank" style="display: block; cursor: pointer;" title="Tıklayarak tam boyutu aç">
+                        <img src="{thumbnail_url}" style="width: 100%; height: 150px; object-fit: cover; border-radius: 8px; border: 2px solid #e5e7eb; transition: transform 0.2s;" 
+                             onmouseover="this.style.transform='scale(1.05)'; this.style.boxShadow='0 4px 8px rgba(0,0,0,0.2)';" 
+                             onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='none';" />
+                    </a>
                 </div>
             '''
         html += '</div>'
