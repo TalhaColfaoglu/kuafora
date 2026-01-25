@@ -9,8 +9,9 @@ django-filter==24.3
 django-cors-headers==4.3.1
 hijri-converter==2.3.1
 
-# For auth token blacklist (logout)
-django-redis==5.4.0
+# For auth token blacklist (logout) and caching
+# Updated to 5.5.0+ for compatibility with newer redis package
+django-redis>=5.5.0
 
 # Testing
 pytest==8.3.2

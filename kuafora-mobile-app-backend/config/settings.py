@@ -348,8 +348,11 @@ CACHES = {
             "SOCKET_TIMEOUT": 5,
             "COMPRESSOR": "django_redis.compressors.zlib.ZlibCompressor",  # Compress large values
             "IGNORE_EXCEPTIONS": True,  # Don't crash if Redis is down
-            # PARSER_CLASS removed - django-redis will use default parser automatically
-            # (HiredisParser and PythonParser not available in newer redis versions)
+            # Fix for django-redis 5.4.0 compatibility with newer redis package
+            # Override connection pool kwargs to avoid parser class issues
+            "CONNECTION_POOL_KWARGS": {
+                "decode_responses": False,  # Don't decode responses (binary mode)
+            },
         },
         "KEY_PREFIX": "kuafora_backend",
         "TIMEOUT": 300,  # Default cache timeout: 5 minutes
