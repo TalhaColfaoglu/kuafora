@@ -151,12 +151,17 @@ class BarbershopViewSet(viewsets.ReadOnlyModelViewSet):
     # Use larger pagination for map views
     pagination_class = None  # Will be set dynamically based on request
 
-    def get_pagination_class(self):
+    def get_pagination_class(self, request=None):
         """Dynamically set pagination based on request type."""
         from app.core.pagination import StandardPageNumberPagination, LargePageNumberPagination
         
+        # Use provided request or fall back to self.request
+        req = request or getattr(self, 'request', None)
+        if not req:
+            return StandardPageNumberPagination
+        
         # For map views, use larger page size
-        if any(param in self.request.query_params for param in ['min_lat', 'max_lat', 'min_lng', 'max_lng']):
+        if any(param in req.query_params for param in ['min_lat', 'max_lat', 'min_lng', 'max_lng']):
             return LargePageNumberPagination
         return StandardPageNumberPagination
 
@@ -243,7 +248,7 @@ class BarbershopViewSet(viewsets.ReadOnlyModelViewSet):
         Cache key includes all query parameters to ensure correct filtering.
         """
         # Set dynamic pagination based on request type
-        self.pagination_class = self.get_pagination_class()
+        self.pagination_class = self.get_pagination_class(request)
         
         # Cache sadece GET istekleri için ve include_inactive yoksa (ana uygulama için)
         include_inactive = request.query_params.get("include_inactive", "").lower() == "true"
