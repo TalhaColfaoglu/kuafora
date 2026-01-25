@@ -163,18 +163,19 @@ class Barbershop(models.Model):
 
     class Meta:
         # Performance: Database indexes for frequently queried fields
+        # Note: Django indexes don't support related fields (subscription__status)
+        # Use select_related('subscription') in queries for related field filtering
         indexes = [
             # Filtering indexes - most common queries
             models.Index(fields=['is_approved', 'is_verified', 'city']),
-            models.Index(fields=['is_approved', 'is_verified', 'subscription__status']),
             # Location-based queries
             models.Index(fields=['city', 'district']),
             models.Index(fields=['latitude', 'longitude']),
             # Sorting and filtering
             models.Index(fields=['-created_at']),  # Newest shops
             models.Index(fields=['-rating_avg']),  # Top rated shops
-            # Subscription status filtering
-            models.Index(fields=['subscription__status', 'is_verified', 'is_approved']),
+            # Combined filtering for approved/verified shops
+            models.Index(fields=['is_verified', 'is_approved', 'city']),
         ]
         ordering = ['-created_at']
 
