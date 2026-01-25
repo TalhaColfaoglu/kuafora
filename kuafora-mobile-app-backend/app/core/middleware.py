@@ -56,27 +56,25 @@ class ETagMiddleware(MiddlewareMixin):
         
         # Generate ETag from response content
         try:
-            # For DRF Response objects, we need to render them first to get content
+            # For DRF Response objects, use response.data
             # For regular Django responses, use response.content
             content_to_hash = None
             
-            # Ensure DRF Response is rendered (if not already)
-            if hasattr(response, 'render') and not response._is_rendered:
-                response.render()
-            
+            # Try to get content from DRF Response
             if hasattr(response, 'data'):
                 # DRF Response - serialize data to JSON string
                 import json
                 try:
-                    # Use rendered content if available, otherwise serialize data
-                    if hasattr(response, 'rendered_content') and response.rendered_content:
-                        content_to_hash = response.rendered_content
-                    else:
-                        content_to_hash = json.dumps(response.data, sort_keys=True).encode('utf-8')
+                    content_to_hash = json.dumps(response.data, sort_keys=True).encode('utf-8')
                 except (TypeError, ValueError):
-                    # If data is not JSON serializable, fall back to content
-                    if hasattr(response, 'content') and response.content:
-                        content_to_hash = response.content
+                    # If data is not JSON serializable, try to get rendered content
+                    try:
+                        if hasattr(response, 'rendered_content') and response.rendered_content:
+                            content_to_hash = response.rendered_content
+                        elif hasattr(response, 'content') and response.content:
+                            content_to_hash = response.content
+                    except Exception:
+                        pass
             elif hasattr(response, 'content') and response.content:
                 # Regular Django response
                 content_to_hash = response.content
@@ -97,6 +95,7 @@ class ETagMiddleware(MiddlewareMixin):
                 if 'Cache-Control' not in response:
                     response['Cache-Control'] = 'public, max-age=300'  # 5 minutes default
         except Exception as e:
+            # Silently fail - don't break the response if ETag generation fails
             logger.debug(f"ETag generation failed: {e}")
         
         return response
