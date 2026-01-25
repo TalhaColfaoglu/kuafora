@@ -4,6 +4,8 @@ from rest_framework import permissions
 from django.utils import timezone
 from datetime import timedelta
 from django.db.models import Q
+from django.core.cache import cache
+import hashlib
 import math
 from .models import Barbershop, ShopCategory
 from .home_serializers import ShopCategorySerializer, BarbershopHomeSerializer
@@ -15,6 +17,20 @@ class HomeDashboardApi(APIView):
     serializer_class = None
 
     def get(self, request):
+        # Cache key oluştur - query parametrelerine göre
+        city = request.query_params.get('city', '')
+        lat = request.query_params.get('lat', '')
+        lng = request.query_params.get('lng', '')
+        radius_km = request.query_params.get('radius_km', '10')
+        
+        # Cache key için hash oluştur
+        cache_params = f"{city}_{lat}_{lng}_{radius_km}"
+        cache_key = f"home_dashboard_{hashlib.md5(cache_params.encode()).hexdigest()}"
+        
+        # Cache'den kontrol et (2 dakika TTL)
+        cached_response = cache.get(cache_key)
+        if cached_response is not None:
+            return Response(cached_response)
         city = request.query_params.get('city')
         lat = request.query_params.get('lat')
         lng = request.query_params.get('lng')
@@ -129,10 +145,15 @@ class HomeDashboardApi(APIView):
                 "image": c.barbershop.main_image.url if c.barbershop.main_image else None
             })
 
-        return Response({
+        response_data = {
             "categories": cat_data,
             "newest_shops": newest_data,
             "top_rated_shops": top_rated_data,
             "campaigns": campaign_data
-        })
+        }
+        
+        # Cache'e kaydet (2 dakika TTL - kategoriler ve kampanyalar sık değişmez)
+        cache.set(cache_key, response_data, 120)  # 2 dakika
+        
+        return Response(response_data)
 

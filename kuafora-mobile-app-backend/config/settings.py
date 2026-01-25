@@ -331,10 +331,35 @@ DATABASES = {
             "connect_timeout": 10,
             "options": "-c statement_timeout=30000",  # 30 second query timeout
         },
-        # Security: Connection pooling
+        # Performance: Connection pooling - reuse connections for 10 minutes
         "CONN_MAX_AGE": 600,  # 10 minutes
     }
 }
+
+# Redis Cache Configuration - High performance caching
+REDIS_URL = env("REDIS_URL", default="redis://redis:6379/1")
+CACHES = {
+    "default": {
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": REDIS_URL,
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+            "SOCKET_CONNECT_TIMEOUT": 5,
+            "SOCKET_TIMEOUT": 5,
+            "COMPRESSOR": "django_redis.compressors.zlib.ZlibCompressor",  # Compress large values
+            "IGNORE_EXCEPTIONS": True,  # Don't crash if Redis is down
+            "PARSER_CLASS": "redis.connection.HiredisParser",  # Faster parser
+        },
+        "KEY_PREFIX": "kuafora_backend",
+        "TIMEOUT": 300,  # Default cache timeout: 5 minutes
+    }
+}
+
+# Session storage - Use Redis for sessions (faster than database)
+SESSION_ENGINE = "django.contrib.sessions.backends.cache"
+SESSION_CACHE_ALIAS = "default"
+SESSION_COOKIE_AGE = 86400  # 24 hours
+SESSION_SAVE_EVERY_REQUEST = False  # Only save when session is modified
 
 # Optional: IP whitelist for admin panel (set in production .env)
 # Format: ADMIN_IP_WHITELIST=1.2.3.4,5.6.7.8

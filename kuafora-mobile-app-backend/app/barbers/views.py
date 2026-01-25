@@ -4,6 +4,10 @@ from typing import List
 
 from django.db.models import Prefetch, Q, Count
 from django.db.models.functions import Trim
+from django.core.cache import cache
+from django.utils.encoding import force_str
+import hashlib
+import json
 from drf_spectacular.utils import extend_schema
 from app.notifications.utils import notify_shop_about_new_review, notify_customer_about_reply
 from rest_framework import viewsets, mixins, permissions, generics, status, serializers as drf_serializers
@@ -218,6 +222,38 @@ class BarbershopViewSet(viewsets.ReadOnlyModelViewSet):
             from .serializers import BarbershopDetailSerializer
             return BarbershopDetailSerializer
         return super().get_serializer_class()
+
+    def list(self, request, *args, **kwargs):
+        """
+        Override list to add caching for frequently accessed barbershop lists.
+        Cache key includes all query parameters to ensure correct filtering.
+        """
+        # Cache sadece GET istekleri için ve include_inactive yoksa (ana uygulama için)
+        include_inactive = request.query_params.get("include_inactive", "").lower() == "true"
+        
+        # Partner uygulaması için cache yapma (include_inactive=true)
+        if include_inactive:
+            return super().list(request, *args, **kwargs)
+        
+        # Cache key oluştur - tüm query parametrelerini dahil et
+        query_params = dict(request.query_params)
+        # Sıralama için normalize et
+        query_str = json.dumps(query_params, sort_keys=True)
+        cache_key = f"barbershop_list_{hashlib.md5(query_str.encode()).hexdigest()}"
+        
+        # Cache'den kontrol et (3 dakika TTL - barbershop listesi sık değişmez)
+        cached_response = cache.get(cache_key)
+        if cached_response is not None:
+            return Response(cached_response)
+        
+        # Normal list işlemini yap
+        response = super().list(request, *args, **kwargs)
+        
+        # Cache'e kaydet (sadece başarılı response'ları)
+        if response.status_code == 200:
+            cache.set(cache_key, response.data, 180)  # 3 dakika
+        
+        return response
 
     @action(detail=False, methods=["get"], url_path="available-locations")
     def available_locations(self, request):
