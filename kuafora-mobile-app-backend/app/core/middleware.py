@@ -56,15 +56,23 @@ class ETagMiddleware(MiddlewareMixin):
         
         # Generate ETag from response content
         try:
-            # For DRF Response objects, use response.data
+            # For DRF Response objects, we need to render them first to get content
             # For regular Django responses, use response.content
             content_to_hash = None
+            
+            # Ensure DRF Response is rendered (if not already)
+            if hasattr(response, 'render') and not response._is_rendered:
+                response.render()
             
             if hasattr(response, 'data'):
                 # DRF Response - serialize data to JSON string
                 import json
                 try:
-                    content_to_hash = json.dumps(response.data, sort_keys=True).encode('utf-8')
+                    # Use rendered content if available, otherwise serialize data
+                    if hasattr(response, 'rendered_content') and response.rendered_content:
+                        content_to_hash = response.rendered_content
+                    else:
+                        content_to_hash = json.dumps(response.data, sort_keys=True).encode('utf-8')
                 except (TypeError, ValueError):
                     # If data is not JSON serializable, fall back to content
                     if hasattr(response, 'content') and response.content:
