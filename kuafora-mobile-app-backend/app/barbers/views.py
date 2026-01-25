@@ -142,7 +142,7 @@ class BarbershopViewSet(viewsets.ReadOnlyModelViewSet):
     """
     queryset = (
         Barbershop.objects.all()
-        .select_related("owner", "subscription")  # Optimize foreign key lookups
+        .select_related("subscription")  # Optimize foreign key lookups (owner field doesn't exist in Barbershop model)
         .prefetch_related("images", "services", "staff", "categories")  # Optimize many-to-many and reverse FK
     )
     serializer_class = BarbershopSerializer
