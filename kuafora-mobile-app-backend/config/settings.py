@@ -348,7 +348,7 @@ CACHES = {
             "SOCKET_TIMEOUT": 5,
             "COMPRESSOR": "django_redis.compressors.zlib.ZlibCompressor",  # Compress large values
             "IGNORE_EXCEPTIONS": True,  # Don't crash if Redis is down
-            "PARSER_CLASS": "redis.connection.HiredisParser",  # Faster parser
+            # PARSER_CLASS removed - HiredisParser not available in newer redis versions
         },
         "KEY_PREFIX": "kuafora_backend",
         "TIMEOUT": 300,  # Default cache timeout: 5 minutes
