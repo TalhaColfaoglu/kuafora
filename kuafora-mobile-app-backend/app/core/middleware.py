@@ -56,14 +56,30 @@ class ETagMiddleware(MiddlewareMixin):
         
         # Generate ETag from response content
         try:
-            # For JSON responses, use content hash
-            if hasattr(response, 'content') and response.content:
-                content_hash = hashlib.md5(response.content).hexdigest()
+            # For DRF Response objects, use response.data
+            # For regular Django responses, use response.content
+            content_to_hash = None
+            
+            if hasattr(response, 'data'):
+                # DRF Response - serialize data to JSON string
+                import json
+                try:
+                    content_to_hash = json.dumps(response.data, sort_keys=True).encode('utf-8')
+                except (TypeError, ValueError):
+                    # If data is not JSON serializable, fall back to content
+                    if hasattr(response, 'content') and response.content:
+                        content_to_hash = response.content
+            elif hasattr(response, 'content') and response.content:
+                # Regular Django response
+                content_to_hash = response.content
+            
+            if content_to_hash:
+                content_hash = hashlib.md5(content_to_hash).hexdigest()
                 etag = f'"{content_hash}"'
                 
                 # Check If-None-Match header
-                if_none_match = request.META.get('HTTP_IF_NONE_MATCH', '')
-                if if_none_match == etag:
+                if_none_match = request.META.get('HTTP_IF_NONE_MATCH', '').strip('"')
+                if if_none_match == content_hash:
                     # Content hasn't changed, return 304 Not Modified
                     return HttpResponseNotModified()
                 
