@@ -51,8 +51,7 @@ def admin_dashboard_view(request):
     
     # Son 1 ay içerisinde uygulamaya girmeyen kullanıcılar
     inactive_last_month = User.objects.filter(
-        Q(last_login__lt=now - timedelta(days=30)) | Q(last_login__isnull=True),
-        is_active=True
+        (Q(last_login__lt=now - timedelta(days=30)) | Q(last_login__isnull=True)) & Q(is_active=True)
     ).count()
     
     # Hiç giriş yapmamış kullanıcılar
@@ -194,9 +193,9 @@ def admin_dashboard_view(request):
     
     # Churn Rate (Ayrılma Oranı) - Son 30 günde kayıt olup son 7 günde giriş yapmayanlar
     churned_users = User.objects.filter(
-        created_at__gte=timezone.make_aware(datetime.combine(month_ago, datetime.min.time())),
-        Q(last_login__lt=now - timedelta(days=7)) | Q(last_login__isnull=True),
-        is_active=True
+        Q(created_at__gte=timezone.make_aware(datetime.combine(month_ago, datetime.min.time()))) &
+        (Q(last_login__lt=now - timedelta(days=7)) | Q(last_login__isnull=True)) &
+        Q(is_active=True)
     ).count()
     churn_rate = calculate_percentage(churned_users, month_registrations) if month_registrations > 0 else 0.0
     
