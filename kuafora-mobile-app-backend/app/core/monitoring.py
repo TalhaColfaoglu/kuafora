@@ -119,11 +119,54 @@ def get_system_metrics() -> Dict[str, Any]:
         return {"error": str(e)}
 
 
+def get_cache_stats() -> Dict[str, Any]:
+    """Get cache statistics (Redis)."""
+    try:
+        if hasattr(cache, 'client'):
+            # Redis cache backend
+            redis_client = cache.client.get_client()
+            info = redis_client.info('stats')
+            
+            # Calculate hit rate
+            hits = info.get('keyspace_hits', 0)
+            misses = info.get('keyspace_misses', 0)
+            total = hits + misses
+            hit_rate = (hits / total * 100) if total > 0 else 0
+            
+            # Memory usage
+            memory_info = redis_client.info('memory')
+            used_memory_mb = memory_info.get('used_memory', 0) / (1024 * 1024)
+            max_memory_mb = memory_info.get('maxmemory', 0) / (1024 * 1024) if memory_info.get('maxmemory', 0) > 0 else 512
+            
+            return {
+                'hits': hits,
+                'misses': misses,
+                'total': total,
+                'hit_rate': round(hit_rate, 2),
+                'used_memory_mb': round(used_memory_mb, 2),
+                'max_memory_mb': round(max_memory_mb, 2),
+                'memory_percent': round((used_memory_mb / max_memory_mb * 100) if max_memory_mb > 0 else 0, 2),
+                'status': 'healthy' if hit_rate > 50 else 'warning',  # <50% hit rate is concerning
+            }
+    except Exception as e:
+        logger.warning(f"Could not get cache stats: {e}")
+    
+    return {
+        'hits': 0,
+        'misses': 0,
+        'total': 0,
+        'hit_rate': 0,
+        'status': 'unknown',
+    }
+
+
 def get_application_metrics() -> Dict[str, Any]:
     """Get application-specific metrics."""
     try:
-        from django.contrib.auth.models import User
+        from django.contrib.auth import get_user_model
         from app.barbers.models import Barbershop
+        
+        User = get_user_model()
         
         metrics = {
             "users": {
@@ -135,6 +178,7 @@ def get_application_metrics() -> Dict[str, Any]:
                 "approved": Barbershop.objects.filter(is_approved=True).count(),
                 "pending": Barbershop.objects.filter(is_approved=False).count(),
             },
+            "cache": get_cache_stats(),
         }
         return metrics
     except Exception as e:

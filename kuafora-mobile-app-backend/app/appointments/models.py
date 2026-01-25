@@ -80,6 +80,12 @@ class Appointment(models.Model):
         indexes = [
             models.Index(fields=["staff", "start_datetime"]),
             models.Index(fields=["shop", "start_datetime"]),
+            # Customer-based queries
+            models.Index(fields=["customer", "-start_datetime"]),
+            # Status and date filtering
+            models.Index(fields=["status", "start_datetime"]),
+            # Date range queries
+            models.Index(fields=["start_datetime", "status"]),
         ]
         constraints = [
             models.UniqueConstraint(

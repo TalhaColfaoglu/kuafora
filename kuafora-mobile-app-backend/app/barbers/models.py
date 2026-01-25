@@ -161,6 +161,23 @@ class Barbershop(models.Model):
             process_image(self.main_image, self.main_image_thumb)
         super().save(*args, **kwargs)
 
+    class Meta:
+        # Performance: Database indexes for frequently queried fields
+        indexes = [
+            # Filtering indexes - most common queries
+            models.Index(fields=['is_approved', 'is_verified', 'city']),
+            models.Index(fields=['is_approved', 'is_verified', 'subscription__status']),
+            # Location-based queries
+            models.Index(fields=['city', 'district']),
+            models.Index(fields=['latitude', 'longitude']),
+            # Sorting and filtering
+            models.Index(fields=['-created_at']),  # Newest shops
+            models.Index(fields=['-rating_avg']),  # Top rated shops
+            # Subscription status filtering
+            models.Index(fields=['subscription__status', 'is_verified', 'is_approved']),
+        ]
+        ordering = ['-created_at']
+
     def __str__(self) -> str:  # pragma: no cover - trivial
         return self.name
 

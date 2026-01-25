@@ -31,23 +31,26 @@ class HomeDashboardApi(APIView):
         cached_response = cache.get(cache_key)
         if cached_response is not None:
             return Response(cached_response)
-        city = request.query_params.get('city')
-        lat = request.query_params.get('lat')
-        lng = request.query_params.get('lng')
-        radius_km = float(request.query_params.get('radius_km', 10))
+        
+        # Convert radius_km to float for calculations
+        try:
+            radius_km = float(radius_km) if radius_km else 10.0
+        except (ValueError, TypeError):
+            radius_km = 10.0
         
         # 1. Categories
         categories = ShopCategory.objects.filter(is_active=True)
         cat_data = ShopCategorySerializer(categories, many=True).data
 
         # Base query for shops - Sadece aktif subscription'ı olanlar, ismi olanlar ve banlı olmayanlar
+        # Performance: select_related ve prefetch_related ile optimize et
         from app.subscriptions.models import Subscription
         shops_qs = Barbershop.objects.filter(
             subscription__status__in=['trial', 'active', 'lifetime', 'grace_period'],
             name__isnull=False,
             is_verified=True,  # Banlı kuaförleri filtrele
             is_approved=True  # Admin onayı - sadece onaylanmış kuaförler ana uygulamada görünür
-        ).exclude(name='')
+        ).exclude(name='').select_related('subscription').prefetch_related('images', 'categories')
 
         if city:
             shops_qs = shops_qs.filter(city__icontains=city)

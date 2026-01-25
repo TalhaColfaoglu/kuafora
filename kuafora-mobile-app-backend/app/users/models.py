@@ -207,6 +207,19 @@ class User(AbstractBaseUser, PermissionsMixin):
             # Save again to update the thumbnail field
             super().save(update_fields=['image_thumb'])
 
+    class Meta:
+        # Performance: Database indexes for frequently queried fields
+        indexes = [
+            # Active user filtering (most common query)
+            models.Index(fields=['is_active', 'last_login']),
+            # Email verification queries
+            models.Index(fields=['email_verified', 'is_active']),
+            # Registration date queries
+            models.Index(fields=['-created_at']),
+            # Login tracking for dashboard
+            models.Index(fields=['last_login', 'is_active']),
+        ]
+
     def __str__(self) -> str:  # pragma: no cover - trivial
         return self.email
 

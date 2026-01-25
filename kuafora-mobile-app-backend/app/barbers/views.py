@@ -139,8 +139,8 @@ class IsStaffMember(BasePermission):
 class BarbershopViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = (
         Barbershop.objects.all()
-        .select_related()
-        .prefetch_related("images", "services", "staff")
+        .select_related("owner", "subscription")  # Optimize foreign key lookups
+        .prefetch_related("images", "services", "staff", "categories")  # Optimize many-to-many and reverse FK
     )
     serializer_class = BarbershopSerializer
     filterset_class = BarbershopFilter
