@@ -106,8 +106,10 @@ MIDDLEWARE = [
 ]
 
 # Security Headers - Production'da zorunlu
+# NOT: SECURE_SSL_REDIRECT kapalı çünkü Nginx zaten HTTPS redirect yapıyor.
+# Django'nun redirect yapması, Nginx'in backend'e HTTP ile bağlanmasını engelliyor.
 if not DEBUG:
-    SECURE_SSL_REDIRECT = True
+    SECURE_SSL_REDIRECT = False  # Nginx handles HTTPS redirect
     SECURE_HSTS_SECONDS = 31536000  # 1 year
     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
     SECURE_HSTS_PRELOAD = True
