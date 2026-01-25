@@ -1,17 +1,18 @@
 from django.contrib import admin
 from django.utils import timezone
-from django.db.models import Count, Q, Avg, Max, Min
+from django.db.models import Count, Q, Avg, Max, Min, Sum
 from django.shortcuts import render
 from django.template.response import TemplateResponse
-from django.db.models.functions import TruncDate
+from django.db.models.functions import TruncDate, TruncDay
 from datetime import timedelta, datetime
 from app.users.models import User, UserAddress
 from app.barbers.models import Barbershop, Favorite, Review
 from app.appointments.models import Appointment
+from app.subscriptions.models import Subscription
 
 
 def admin_dashboard_view(request):
-    """Admin panelinde kullanıcı ve sistem istatistiklerini gösteren dashboard"""
+    """Admin panelinde kullanıcı ve sistem istatistiklerini gösteren dashboard - Optimize edilmiş ve doğru veriler"""
     now = timezone.now()
     today = now.date()
     yesterday = today - timedelta(days=1)
@@ -19,12 +20,37 @@ def admin_dashboard_view(request):
     month_ago = today - timedelta(days=30)
     year_ago = today - timedelta(days=365)
     
-    # Kullanıcı istatistikleri
-    total_users = User.objects.count()
-    active_users = User.objects.filter(is_active=True).count()
-    banned_users = User.objects.filter(is_active=False).count()
+    # Helper functions
+    def calculate_percentage(part, total):
+        """Güvenli yüzde hesaplama"""
+        if total == 0:
+            return 0.0
+        return round((part / total) * 100, 2)
     
-    # Aktif kullanıcı metrikleri (last_login bazlı)
+    def calculate_growth_rate(current, previous):
+        """Büyüme oranı hesaplama"""
+        if previous == 0:
+            return 100.0 if current > 0 else 0.0
+        return round(((current - previous) / previous) * 100, 2)
+    
+    # ==================== KULLANICI İSTATİSTİKLERİ ====================
+    
+    # Temel kullanıcı sayıları (optimize edilmiş - tek sorgu)
+    user_stats = User.objects.aggregate(
+        total=Count('id'),
+        active=Count('id', filter=Q(is_active=True)),
+        banned=Count('id', filter=Q(is_active=False)),
+        verified=Count('id', filter=Q(email_verified=True)),
+        unverified=Count('id', filter=Q(email_verified=False)),
+    )
+    
+    total_users = user_stats['total']
+    active_users = user_stats['active']
+    banned_users = user_stats['banned']
+    verified_users = user_stats['verified']
+    unverified_users = user_stats['unverified']
+    
+    # Aktif kullanıcı metrikleri (last_login bazlı - DOĞRU HESAPLAMA)
     # Günlük aktif kullanıcı (son 24 saatte login olanlar)
     daily_active_users = User.objects.filter(
         last_login__gte=now - timedelta(hours=24),
@@ -49,38 +75,35 @@ def admin_dashboard_view(request):
         is_active=True
     ).count()
     
-    # Son 1 ay içerisinde uygulamaya girmeyen kullanıcılar
+    # Son 1 ay içerisinde uygulamaya girmeyen aktif kullanıcılar
     inactive_last_month = User.objects.filter(
-        (Q(last_login__lt=now - timedelta(days=30)) | Q(last_login__isnull=True)) & Q(is_active=True)
+        Q(is_active=True) &
+        (Q(last_login__lt=now - timedelta(days=30)) | Q(last_login__isnull=True))
     ).count()
     
-    # Hiç giriş yapmamış kullanıcılar
+    # Hiç giriş yapmamış aktif kullanıcılar
     never_logged_in = User.objects.filter(
         last_login__isnull=True,
         is_active=True
     ).count()
     
-    # Bugün kayıt olanlar
+    # Kayıt istatistikleri (DOĞRU TARİH HESAPLAMALARI)
+    week_start = timezone.make_aware(datetime.combine(week_ago, datetime.min.time()))
+    month_start = timezone.make_aware(datetime.combine(month_ago, datetime.min.time()))
+    
     today_registrations = User.objects.filter(
         created_at__date=today
     ).count()
     
-    # Bu hafta kayıt olanlar
     week_registrations = User.objects.filter(
-        created_at__gte=timezone.make_aware(datetime.combine(week_ago, datetime.min.time()))
+        created_at__gte=week_start
     ).count()
     
-    # Bu ay kayıt olanlar
     month_registrations = User.objects.filter(
-        created_at__gte=timezone.make_aware(datetime.combine(month_ago, datetime.min.time()))
+        created_at__gte=month_start
     ).count()
     
     # Yüzdeler hesaplama
-    def calculate_percentage(part, total):
-        if total == 0:
-            return 0.0
-        return round((part / total) * 100, 2)
-    
     daily_active_percentage = calculate_percentage(daily_active_users, total_users)
     weekly_active_percentage = calculate_percentage(weekly_active_users, total_users)
     monthly_active_percentage = calculate_percentage(monthly_active_users, total_users)
@@ -88,14 +111,27 @@ def admin_dashboard_view(request):
     inactive_percentage = calculate_percentage(inactive_last_month, total_users)
     never_logged_percentage = calculate_percentage(never_logged_in, total_users)
     
-    # Son 7 günlük kayıt grafiği için
+    # ==================== GRAFİKLER (OPTİMİZE EDİLMİŞ) ====================
+    
+    # Son 7 günlük kayıt grafiği (database sorgusu ile)
     registration_chart = []
     max_registration_count = 0
+    
+    # Tek sorgu ile tüm günlerin kayıt sayılarını al
+    registration_data = User.objects.filter(
+        created_at__gte=timezone.make_aware(datetime.combine(today - timedelta(days=6), datetime.min.time()))
+    ).annotate(
+        date=TruncDate('created_at')
+    ).values('date').annotate(
+        count=Count('id')
+    ).order_by('date')
+    
+    # Dictionary'ye çevir (hızlı erişim için)
+    registration_dict = {item['date']: item['count'] for item in registration_data}
+    
     for i in range(7):
         date = today - timedelta(days=6-i)
-        count = User.objects.filter(
-            created_at__date=date
-        ).count()
+        count = registration_dict.get(date, 0)
         if count > max_registration_count:
             max_registration_count = count
         registration_chart.append({
@@ -103,22 +139,23 @@ def admin_dashboard_view(request):
             'count': count
         })
     
-    # Son 30 günlük aktif kullanıcı grafiği (optimize edilmiş)
+    # Son 30 günlük aktif kullanıcı grafiği (OPTİMİZE EDİLMİŞ - database sorgusu)
     daily_active_chart = []
     max_daily_active = 0
-    # Tüm aktif kullanıcıları bir kerede çek (optimizasyon)
-    active_users_with_login = User.objects.filter(
-        is_active=True,
-        last_login__isnull=False
-    ).values_list('last_login', flat=True)
     
+    # Her gün için aktif kullanıcı sayısını database'den al (doğru ve hızlı)
     for i in range(30):
         date = today - timedelta(days=29-i)
         date_start = timezone.make_aware(datetime.combine(date, datetime.min.time()))
         date_end = timezone.make_aware(datetime.combine(date, datetime.max.time()))
-        # In-memory filtering (daha hızlı)
-        count = sum(1 for login_time in active_users_with_login 
-                   if date_start <= login_time <= date_end)
+        
+        # Database sorgusu ile (in-memory filtering yerine)
+        count = User.objects.filter(
+            is_active=True,
+            last_login__gte=date_start,
+            last_login__lte=date_end
+        ).count()
+        
         if count > max_daily_active:
             max_daily_active = count
         daily_active_chart.append({
@@ -126,41 +163,73 @@ def admin_dashboard_view(request):
             'count': count
         })
     
-    # Barbershop istatistikleri
-    total_barbershops = Barbershop.objects.count()
-    approved_barbershops = Barbershop.objects.filter(is_approved=True, is_verified=True).count()
-    pending_barbershops = Barbershop.objects.filter(is_approved=False, is_verified=True).count()
-    rejected_barbershops = Barbershop.objects.filter(is_approved=False, is_verified=False).count()
+    # ==================== BARBERSHOP İSTATİSTİKLERİ ====================
     
-    # Randevu istatistikleri (varsa)
+    # Barbershop istatistikleri (subscription durumu da dahil)
+    barbershop_stats = Barbershop.objects.aggregate(
+        total=Count('id'),
+        approved=Count('id', filter=Q(is_approved=True, is_verified=True)),
+        pending=Count('id', filter=Q(is_approved=False, is_verified=True)),
+        rejected=Count('id', filter=Q(is_approved=False, is_verified=False, rejection_reason__isnull=False)),
+    )
+    
+    total_barbershops = barbershop_stats['total']
+    approved_barbershops = barbershop_stats['approved']
+    pending_barbershops = barbershop_stats['pending']
+    rejected_barbershops = barbershop_stats['rejected']
+    
+    # Aktif aboneliği olan barbershop sayısı
+    active_subscription_shops = Barbershop.objects.filter(
+        subscription__status__in=['trial', 'active', 'lifetime', 'grace_period'],
+        is_approved=True,
+        is_verified=True
+    ).count()
+    
+    # ==================== RANDEVU İSTATİSTİKLERİ ====================
+    
     try:
-        total_appointments = Appointment.objects.count()
-        today_appointments = Appointment.objects.filter(
-            start_datetime__date=today
-        ).count()
-    except:
+        appointment_stats = Appointment.objects.aggregate(
+            total=Count('id'),
+            today=Count('id', filter=Q(start_datetime__date=today)),
+            this_week=Count('id', filter=Q(start_datetime__gte=week_start)),
+            this_month=Count('id', filter=Q(start_datetime__gte=month_start)),
+        )
+        
+        total_appointments = appointment_stats['total']
+        today_appointments = appointment_stats['today']
+        week_appointments = appointment_stats['this_week']
+        month_appointments = appointment_stats['this_month']
+        
+        # Randevu durumları
+        appointment_statuses = Appointment.objects.values('status').annotate(
+            count=Count('id')
+        ).order_by('-count')
+        
+    except Exception as e:
         total_appointments = 0
         today_appointments = 0
+        week_appointments = 0
+        month_appointments = 0
+        appointment_statuses = []
     
-    # Email doğrulama istatistikleri
-    verified_users = User.objects.filter(email_verified=True).count()
-    unverified_users = User.objects.filter(email_verified=False).count()
+    # ==================== BÜYÜME VE TREND METRİKLERİ ====================
     
     # Önceki dönem karşılaştırması (büyüme oranı için)
     prev_week_start = timezone.make_aware(datetime.combine(week_ago - timedelta(days=7), datetime.min.time()))
-    prev_week_end = timezone.make_aware(datetime.combine(week_ago, datetime.max.time()))
+    prev_week_end = week_start
     prev_week_registrations = User.objects.filter(
         created_at__gte=prev_week_start,
         created_at__lt=prev_week_end
     ).count()
     
     prev_month_start = timezone.make_aware(datetime.combine(month_ago - timedelta(days=30), datetime.min.time()))
-    prev_month_end = timezone.make_aware(datetime.combine(month_ago, datetime.max.time()))
+    prev_month_end = month_start
     prev_month_registrations = User.objects.filter(
         created_at__gte=prev_month_start,
         created_at__lt=prev_month_end
     ).count()
     
+    # Önceki dönem aktif kullanıcı sayıları
     prev_week_daily_active = User.objects.filter(
         last_login__gte=prev_week_start,
         last_login__lt=prev_week_end,
@@ -173,19 +242,16 @@ def admin_dashboard_view(request):
         is_active=True
     ).count()
     
-    # Büyüme oranları hesaplama
-    def calculate_growth_rate(current, previous):
-        if previous == 0:
-            return 100.0 if current > 0 else 0.0
-        return round(((current - previous) / previous) * 100, 2)
-    
+    # Büyüme oranları
     week_growth_rate = calculate_growth_rate(week_registrations, prev_week_registrations)
     month_growth_rate = calculate_growth_rate(month_registrations, prev_month_registrations)
     daily_active_growth = calculate_growth_rate(daily_active_users, prev_week_daily_active)
     
+    # ==================== RETENTION VE CHURN METRİKLERİ ====================
+    
     # Retention Rate (Tutma Oranı) - Bu hafta kayıt olanların kaçı hala aktif
     week_retention_users = User.objects.filter(
-        created_at__gte=timezone.make_aware(datetime.combine(week_ago, datetime.min.time())),
+        created_at__gte=week_start,
         last_login__gte=now - timedelta(days=7),
         is_active=True
     ).count()
@@ -193,7 +259,7 @@ def admin_dashboard_view(request):
     
     # Churn Rate (Ayrılma Oranı) - Son 30 günde kayıt olup son 7 günde giriş yapmayanlar
     churned_users = User.objects.filter(
-        Q(created_at__gte=timezone.make_aware(datetime.combine(month_ago, datetime.min.time()))) &
+        Q(created_at__gte=month_start) &
         (Q(last_login__lt=now - timedelta(days=7)) | Q(last_login__isnull=True)) &
         Q(is_active=True)
     ).count()
@@ -201,21 +267,24 @@ def admin_dashboard_view(request):
     
     # Conversion Rate - Kayıt olanların aktif kullanıcıya dönüşme oranı
     converted_users = User.objects.filter(
-        created_at__gte=timezone.make_aware(datetime.combine(month_ago, datetime.min.time())),
+        created_at__gte=month_start,
         last_login__isnull=False,
         is_active=True
     ).count()
     conversion_rate = calculate_percentage(converted_users, month_registrations) if month_registrations > 0 else 0.0
     
-    # Cinsiyet dağılımı
+    # ==================== DEMOGRAFİK ANALİZ ====================
+    
+    # Cinsiyet dağılımı (sadece aktif kullanıcılar)
     gender_stats = User.objects.filter(is_active=True).values('gender').annotate(
         count=Count('id')
     ).order_by('-count')
     gender_distribution = {}
     for item in gender_stats:
-        gender_distribution[item['gender'] or 'belirtilmemiş'] = item['count']
+        gender_key = item['gender'] if item['gender'] else 'belirtilmemiş'
+        gender_distribution[gender_key] = item['count']
     
-    # Şehir dağılımı (UserAddress'ten)
+    # Şehir dağılımı (UserAddress'ten - optimize edilmiş)
     city_stats = UserAddress.objects.filter(
         user__is_active=True,
         city__isnull=False
@@ -224,42 +293,63 @@ def admin_dashboard_view(request):
     ).order_by('-count')[:10]  # Top 10 şehir
     city_distribution = [{'city': item['city'], 'count': item['count']} for item in city_stats]
     
-    # Engagement metrikleri
-    total_favorites = Favorite.objects.count()
-    total_reviews = Review.objects.count()
-    users_with_favorites = Favorite.objects.values('user').distinct().count()
-    users_with_reviews = Review.objects.values('user').distinct().count()
+    # ==================== ENGAGEMENT METRİKLERİ ====================
     
-    # Ortalama favori sayısı (favori ekleyen kullanıcılar için)
+    # Favori ve yorum istatistikleri
+    engagement_stats = Favorite.objects.aggregate(
+        total_favorites=Count('id'),
+        users_with_favorites=Count('user', distinct=True)
+    )
+    
+    review_stats = Review.objects.aggregate(
+        total_reviews=Count('id'),
+        users_with_reviews=Count('user', distinct=True),
+        avg_rating=Avg('rating')
+    )
+    
+    total_favorites = engagement_stats['total_favorites']
+    users_with_favorites = engagement_stats['users_with_favorites']
+    total_reviews = review_stats['total_reviews']
+    users_with_reviews = review_stats['users_with_reviews']
+    avg_rating = review_stats['avg_rating'] or 0.0
+    
+    # Ortalama favori ve yorum sayıları
     avg_favorites_per_user = round(total_favorites / users_with_favorites, 2) if users_with_favorites > 0 else 0
     avg_reviews_per_user = round(total_reviews / users_with_reviews, 2) if users_with_reviews > 0 else 0
     
-    # En aktif kullanıcılar (son 7 günde en çok giriş yapanlar - last_login bazlı, gerçek aktivite tracking yok)
-    # Şimdilik son giriş zamanına göre sıralıyoruz
+    # ==================== TOP KULLANICILAR ====================
+    
+    # En aktif kullanıcılar (son giriş zamanına göre - gerçek aktivite tracking yok)
     top_active_users = User.objects.filter(
         is_active=True,
         last_login__isnull=False
     ).order_by('-last_login')[:10].values('email', 'full_name', 'last_login', 'created_at')
     
-    # Haftalık aktif kullanıcı trendi (son 4 hafta)
+    # ==================== HAFTALIK TREND ====================
+    
+    # Haftalık aktif kullanıcı trendi (son 4 hafta - DOĞRU HESAPLAMA)
     weekly_active_trend = []
     for i in range(4):
-        week_start = today - timedelta(days=(3-i)*7 + 6)
-        week_end = today - timedelta(days=(3-i)*7)
+        week_end = today - timedelta(days=i*7)
+        week_start = week_end - timedelta(days=6)
         week_start_dt = timezone.make_aware(datetime.combine(week_start, datetime.min.time()))
         week_end_dt = timezone.make_aware(datetime.combine(week_end, datetime.max.time()))
+        
         count = User.objects.filter(
             last_login__gte=week_start_dt,
             last_login__lte=week_end_dt,
             is_active=True
         ).count()
+        
         weekly_active_trend.append({
             'week': f"Hafta {4-i}",
             'count': count,
             'date_range': f"{week_start.strftime('%d.%m')} - {week_end.strftime('%d.%m')}"
         })
     
-    max_weekly_active = max([w['count'] for w in weekly_active_trend]) if weekly_active_trend else 1
+    max_weekly_active = max([w['count'] for w in weekly_active_trend]) if weekly_active_trend and any(w['count'] > 0 for w in weekly_active_trend) else 1
+    
+    # ==================== CONTEXT OLUŞTURMA ====================
     
     context = {
         **admin.site.each_context(request),
@@ -303,6 +393,7 @@ def admin_dashboard_view(request):
                 'users_with_reviews': users_with_reviews,
                 'avg_favorites_per_user': avg_favorites_per_user,
                 'avg_reviews_per_user': avg_reviews_per_user,
+                'avg_rating': round(avg_rating, 2) if avg_rating else 0.0,
                 # Trend
                 'weekly_active_trend': weekly_active_trend,
                 'max_weekly_active': max_weekly_active,
@@ -314,10 +405,14 @@ def admin_dashboard_view(request):
                 'approved': approved_barbershops,
                 'pending': pending_barbershops,
                 'rejected': rejected_barbershops,
+                'active_subscription': active_subscription_shops,
             },
             'appointments': {
                 'total': total_appointments,
                 'today': today_appointments,
+                'this_week': week_appointments,
+                'this_month': month_appointments,
+                'statuses': list(appointment_statuses),
             },
             'registration_chart': registration_chart,
             'max_registration_count': max_registration_count if max_registration_count > 0 else 1,

@@ -605,6 +605,17 @@
         </div>
         <p class="stat-value">{{ stats.users.avg_reviews_per_user|floatformat:1 }}</p>
     </div>
+    
+    {% if stats.users.avg_rating > 0 %}
+    <div class="stat-card success">
+        <div class="stat-card-header">
+            <h3>Ortalama Puan</h3>
+            <div class="stat-card-icon">⭐</div>
+        </div>
+        <p class="stat-value">{{ stats.users.avg_rating|floatformat:1 }}</p>
+        <div class="stat-subtitle">Tüm yorumların ortalaması</div>
+    </div>
+    {% endif %}
 </div>
 
 <div class="chart-container">
@@ -816,6 +827,17 @@
         <p class="stat-value">{{ stats.barbershops.rejected|floatformat:0 }}</p>
         <div class="stat-percentage">{% widthratio stats.barbershops.rejected stats.barbershops.total 100 %}%</div>
     </div>
+    
+    {% if stats.barbershops.active_subscription > 0 %}
+    <div class="stat-card success">
+        <div class="stat-card-header">
+            <h3>Aktif Abonelik</h3>
+            <div class="stat-card-icon">💳</div>
+        </div>
+        <p class="stat-value">{{ stats.barbershops.active_subscription|floatformat:0 }}</p>
+        <div class="stat-subtitle">Aktif aboneliği olan onaylı kuaförler</div>
+    </div>
+    {% endif %}
 </div>
 
 {% if stats.appointments.total > 0 %}
@@ -839,7 +861,46 @@
         </div>
         <p class="stat-value">{{ stats.appointments.today|floatformat:0 }}</p>
     </div>
+    
+    <div class="stat-card">
+        <div class="stat-card-header">
+            <h3>Bu Hafta</h3>
+            <div class="stat-card-icon">📆</div>
+        </div>
+        <p class="stat-value">{{ stats.appointments.this_week|floatformat:0 }}</p>
+    </div>
+    
+    <div class="stat-card">
+        <div class="stat-card-header">
+            <h3>Bu Ay</h3>
+            <div class="stat-card-icon">🗓️</div>
+        </div>
+        <p class="stat-value">{{ stats.appointments.this_month|floatformat:0 }}</p>
+    </div>
 </div>
+
+{% if stats.appointments.statuses %}
+<h2 class="section-title">
+    <span>📊</span>
+    <span>Randevu Durumları</span>
+</h2>
+<div class="distribution-list">
+    {% for status in stats.appointments.statuses %}
+    <div class="distribution-item">
+        <span class="distribution-label">
+            {% if status.status == 'confirmed' %}✅ Onaylandı
+            {% elif status.status == 'pending' %}⏳ Beklemede
+            {% elif status.status == 'cancelled' %}❌ İptal Edildi
+            {% elif status.status == 'completed' %}✓ Tamamlandı
+            {% elif status.status == 'no_show' %}🚫 Gelmedi
+            {% else %}📝 {{ status.status|title }}
+            {% endif %}
+        </span>
+        <span class="distribution-value">{{ status.count|floatformat:0 }} randevu</span>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
 {% endif %}
 
 {% endblock %}

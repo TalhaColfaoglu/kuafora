@@ -101,6 +101,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "app.core.middleware.ETagMiddleware",  # ETag support for conditional requests
     "app.core.middleware.SecurityHeadersMiddleware",  # Additional security headers
 ]
 

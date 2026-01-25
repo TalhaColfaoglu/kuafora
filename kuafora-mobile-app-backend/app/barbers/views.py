@@ -137,6 +137,9 @@ class IsStaffMember(BasePermission):
 
 
 class BarbershopViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    Optimized ViewSet for barbershop listings with caching and query optimization.
+    """
     queryset = (
         Barbershop.objects.all()
         .select_related("owner", "subscription")  # Optimize foreign key lookups
@@ -145,6 +148,17 @@ class BarbershopViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = BarbershopSerializer
     filterset_class = BarbershopFilter
     search_fields = ("name", "city", "district")
+    # Use larger pagination for map views
+    pagination_class = None  # Will be set dynamically based on request
+
+    def get_pagination_class(self):
+        """Dynamically set pagination based on request type."""
+        from app.core.pagination import StandardPageNumberPagination, LargePageNumberPagination
+        
+        # For map views, use larger page size
+        if any(param in self.request.query_params for param in ['min_lat', 'max_lat', 'min_lng', 'max_lng']):
+            return LargePageNumberPagination
+        return StandardPageNumberPagination
 
     def get_queryset(self):
         qs = super().get_queryset()
@@ -225,9 +239,12 @@ class BarbershopViewSet(viewsets.ReadOnlyModelViewSet):
 
     def list(self, request, *args, **kwargs):
         """
-        Override list to add caching for frequently accessed barbershop lists.
+        Override list to add caching and dynamic pagination for frequently accessed barbershop lists.
         Cache key includes all query parameters to ensure correct filtering.
         """
+        # Set dynamic pagination based on request type
+        self.pagination_class = self.get_pagination_class()
+        
         # Cache sadece GET istekleri için ve include_inactive yoksa (ana uygulama için)
         include_inactive = request.query_params.get("include_inactive", "").lower() == "true"
         

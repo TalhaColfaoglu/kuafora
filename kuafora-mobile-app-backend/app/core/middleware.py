@@ -3,10 +3,13 @@ Security middleware for additional protection layers.
 """
 import logging
 import time
+import hashlib
+import json
 from django.utils.deprecation import MiddlewareMixin
-from django.http import HttpResponse, JsonResponse
+from django.http import HttpResponse, JsonResponse, HttpResponseNotModified
 from django.core.exceptions import SuspiciousOperation
 from django.conf import settings
+from django.utils.cache import patch_response_headers
 
 logger = logging.getLogger(__name__)
 
@@ -31,6 +34,48 @@ class RequestSizeLimitMiddleware(MiddlewareMixin):
             except (ValueError, TypeError):
                 pass
         return None
+
+
+class ETagMiddleware(MiddlewareMixin):
+    """
+    Add ETag support for GET requests to enable conditional requests and reduce bandwidth.
+    This middleware generates ETags based on response content and handles If-None-Match headers.
+    """
+    def process_response(self, request, response):
+        # Only process GET requests with 200 OK status
+        if request.method != 'GET' or response.status_code != 200:
+            return response
+        
+        # Skip for admin and non-API endpoints
+        if request.path.startswith('/admin/') or not request.path.startswith('/api/'):
+            return response
+        
+        # Skip if ETag already set
+        if 'ETag' in response:
+            return response
+        
+        # Generate ETag from response content
+        try:
+            # For JSON responses, use content hash
+            if hasattr(response, 'content') and response.content:
+                content_hash = hashlib.md5(response.content).hexdigest()
+                etag = f'"{content_hash}"'
+                
+                # Check If-None-Match header
+                if_none_match = request.META.get('HTTP_IF_NONE_MATCH', '')
+                if if_none_match == etag:
+                    # Content hasn't changed, return 304 Not Modified
+                    return HttpResponseNotModified()
+                
+                # Add ETag to response
+                response['ETag'] = etag
+                # Add Cache-Control for public caching (adjust max-age as needed)
+                if 'Cache-Control' not in response:
+                    response['Cache-Control'] = 'public, max-age=300'  # 5 minutes default
+        except Exception as e:
+            logger.debug(f"ETag generation failed: {e}")
+        
+        return response
 
 
 class SecurityHeadersMiddleware(MiddlewareMixin):
@@ -110,4 +155,3 @@ class IPWhitelistMiddleware(MiddlewareMixin):
                     logger.warning(f"Blocked admin access from unauthorized IP: {client_ip}")
                     return HttpResponse('Unauthorized', status=403)
         return None
-
