@@ -355,8 +355,11 @@ CACHES = {
     }
 }
 
-# Session storage - Use Redis for sessions (faster than database)
-SESSION_ENGINE = "django.contrib.sessions.backends.cache"
+# Session storage - Use database for sessions (Redis cache for API responses only)
+# Note: Redis sessions can cause 500 errors if Redis is unavailable
+# Using database sessions for reliability, Redis cache for API performance
+SESSION_ENGINE = "django.contrib.sessions.backends.db"  # Database sessions (more reliable)
+# SESSION_ENGINE = "django.contrib.sessions.backends.cache"  # Redis sessions (faster but requires Redis)
 SESSION_CACHE_ALIAS = "default"
 SESSION_COOKIE_AGE = 86400  # 24 hours
 SESSION_SAVE_EVERY_REQUEST = False  # Only save when session is modified
