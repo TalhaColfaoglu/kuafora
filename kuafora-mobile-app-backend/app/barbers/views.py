@@ -1379,6 +1379,16 @@ class PartnerBarbershopViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(instance, data=data, partial=partial)
         serializer.is_valid(raise_exception=True)
         self.perform_update(serializer)
+        
+        # Eğer barbershop reddedilmişse ve profil güncelleniyorsa,
+        # reddetme bilgilerini temizle ve tekrar inceleme için hazırla
+        if instance.rejection_reason or instance.rejected_at:
+            instance.rejection_reason = None
+            instance.rejected_at = None
+            instance.is_verified = False  # Yeniden inceleme için
+            instance.is_approved = False   # Açıkça False yap
+            instance.save(update_fields=['rejection_reason', 'rejected_at', 'is_verified', 'is_approved'])
+        
         return Response(serializer.data)
 
     @action(detail=True, methods=["patch"], url_path="status")
@@ -3926,6 +3936,70 @@ class CalendarStatusViewSet(viewsets.ReadOnlyModelViewSet):
             return Response(StaffCalendarStatusSerializer(status).data)
         except (Staff.DoesNotExist, ValueError):
             return Response({"detail": "Invalid staff or date"}, status=404)
+    
+    def _calculate_staff_status(self, staff, date):
+        """Personel durumunu hesapla"""
+        # Haftanın günü kodu (MON..SUN)
+        weekday_code_map = {0: "MON", 1: "TUE", 2: "WED", 3: "THU", 4: "FRI", 5: "SAT", 6: "SUN"}
+        day_code = weekday_code_map.get(date.weekday())
+        # Personel override'larını kontrol et
+        staff_overrides = Override.objects.filter(
+            staff=staff,
+            start_date__lte=date,
+            end_date__gte=date
+        ).order_by('-created_at')
+        
+        if staff_overrides.exists():
+            override = staff_overrides.first()
+            if override.override_scope == 'full_day_closed':
+                return {
+                    'staff_id': staff.id,
+                    'staff_name': staff.user.email,
+                    'date': date,
+                    'is_working': False,
+                    'start_time': None,
+                    'end_time': None,
+                    'status_message': f"İzinli: {override.reason or 'Özel durum'}",
+                    'active_overrides': [override]
+                }
+        
+        # Personel saatlerini al
+        staff_hours = StaffWorkingHours.objects.filter(
+            staff=staff,
+            day_of_week=day_code
+        ).first()
+        
+        if not staff_hours or staff_hours.is_closed:
+            return {
+                'staff_id': staff.id,
+                'staff_name': staff.user.email,
+                'date': date,
+                'is_working': False,
+                'start_time': None,
+                'end_time': None,
+                'status_message': "Bu gün çalışmıyor",
+                'active_overrides': []
+            }
+        
+        # Dükkan saatlerini devral
+        shop_hours = ShopWorkingHours.objects.filter(
+            barbershop=staff.barbershop,
+            day_of_week=day_code
+        ).first()
+        
+        start_time = staff_hours.start_time or (shop_hours.start_time if shop_hours else None)
+        end_time = staff_hours.end_time or (shop_hours.end_time if shop_hours else None)
+        
+        return {
+            'staff_id': staff.id,
+            'staff_name': staff.user.email,
+            'date': date,
+            'is_working': True,
+            'start_time': start_time,
+            'end_time': end_time,
+            'status_message': None,
+            'active_overrides': []
+        }
 
     @action(detail=False, methods=["get"], url_path="now")
     def now(self, request):
@@ -4015,16 +4089,31 @@ class CalendarStatusViewSet(viewsets.ReadOnlyModelViewSet):
                     is_open = False
                     status_message = "Bugün Kapalı"
                 else:
-                    # Check open/close times
-                    if current_time < shop_hours.start_time:
-                        is_open = False
-                        status_message = f"Açılış: {shop_hours.start_time.strftime('%H:%M')}"
-                        open_dt = timezone.make_aware(datetime.combine(today, shop_hours.start_time))
-                        minutes_until_open = int((open_dt - now).total_seconds() / 60)
-                    elif current_time >= shop_hours.end_time:
-                        is_open = False
-                        status_message = "Kapalı"
+                    # Check open/close times - timezone-aware karşılaştırma
+                    start_time = shop_hours.start_time
+                    end_time = shop_hours.end_time
+                    
+                    if start_time and end_time:
+                        # Açılış saatinden önceyse kapalı
+                        if current_time < start_time:
+                            is_open = False
+                            status_message = f"Açılış: {start_time.strftime('%H:%M')}"
+                            open_dt = timezone.make_aware(datetime.combine(today, start_time))
+                            minutes_until_open = int((open_dt - now).total_seconds() / 60)
+                        # Kapanış saatinden sonra veya eşitse kapalı
+                        elif current_time >= end_time:
+                            is_open = False
+                            status_message = "Kapalı"
+                        else:
+                            # Çalışma saatleri içindeyse açık (mola kontrolü aşağıda yapılacak)
+                            pass
                     else:
+                        # Saat bilgisi yoksa kapalı say
+                        is_open = False
+                        status_message = "Saat bilgisi bulunamadı"
+                    
+                    # Eğer hala açıksa mola kontrolü yap
+                    if is_open:
                         # Within working hours, check breaks
                         # 1. Önce haftalık periyodik mola kontrolü
                         if shop_hours.break_start_time and shop_hours.break_end_time:

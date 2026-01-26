@@ -81,6 +81,35 @@ class HasSocialMediaFilter(SimpleListFilter):
             )
 
 
+class RejectionStatusFilter(SimpleListFilter):
+    title = "Reddetme Durumu"
+    parameter_name = "rejection_status"
+    
+    def lookups(self, request, model_admin):
+        return (
+            ("rejected", "Reddedilmiş"),
+            ("pending", "Beklemede"),
+            ("approved", "Onaylanmış"),
+            ("resubmitted", "Tekrar Başvurulmuş"),
+        )
+    
+    def queryset(self, request, queryset):
+        if self.value() == "rejected":
+            return queryset.filter(rejection_reason__isnull=False).exclude(rejection_reason="")
+        if self.value() == "pending":
+            return queryset.filter(is_approved=False, rejection_reason__isnull=True)
+        if self.value() == "approved":
+            return queryset.filter(is_approved=True)
+        if self.value() == "resubmitted":
+            # Reddetme bilgisi temizlenmiş ama henüz onaylanmamış (tekrar başvurulmuş)
+            return queryset.filter(
+                is_approved=False,
+                rejection_reason__isnull=True,
+                rejected_at__isnull=True
+            ).exclude(created_at__gte=timezone.now() - timedelta(days=1))  # Son 24 saat içinde oluşturulmamış
+        return queryset
+
+
 class BarbershopImageInline(TabularInline):
     model = BarbershopImage
     extra = 1
@@ -115,6 +144,7 @@ class BarbershopAdmin(ModelAdmin):
         "is_approved", 
         "subscription__status",
         "system_type",
+        RejectionStatusFilter,
         HasGoogleMapsFilter,
         HasImagesFilter,
         HasSocialMediaFilter,
@@ -124,7 +154,7 @@ class BarbershopAdmin(ModelAdmin):
     list_select_related = ("subscription",)
     list_per_page = 50
     inlines = [BarbershopImageInline]
-    actions = ["verify_barbershops", "unverify_barbershops", "approve_barbershops", "reject_barbershops"]
+    actions = ["verify_barbershops", "unverify_barbershops", "approve_barbershops", "reject_barbershops", "resubmit_for_review"]
     readonly_fields = (
         "rating_avg", 
         "total_reviews", 
@@ -139,6 +169,8 @@ class BarbershopAdmin(ModelAdmin):
         "social_media_display",
         "stats_display",
         "categories_display",
+        "rejection_reason",
+        "rejected_at",
     )
 
     fieldsets = (
@@ -174,9 +206,10 @@ class BarbershopAdmin(ModelAdmin):
             "fields": ("stats_display", "rating_avg", "total_reviews", "favorites_count", "views_weekly"),
             "classes": ("collapse",)
         }),
-        ("❌ Reddetme Bilgileri", {
+        ("❌ Reddetme Bilgileri (Sadece Görüntüleme)", {
             "fields": ("rejection_reason", "rejected_at"),
-            "classes": ("collapse",)
+            "classes": ("collapse",),
+            "description": "Bu kuaför reddedilmişse, reddetme nedeni ve tarihi burada görüntülenir. Profil güncellendiğinde otomatik olarak temizlenir ve tekrar inceleme sürecine alınır."
         }),
         ("⚙️ Sistem", {
             "fields": ("created_at", "updated_at"),
@@ -288,7 +321,14 @@ class BarbershopAdmin(ModelAdmin):
     def approval_badge(self, obj):
         if obj.is_approved:
             return format_html('<span class="text-green-600 font-bold">✓ Onaylandı</span>')
-        return format_html('<span class="text-red-600 font-bold">✗ Onay Bekliyor</span>')
+        elif obj.rejection_reason:
+            # Reddedilmiş
+            return format_html(
+                '<span class="text-red-600 font-bold">✗ Reddedildi</span>'
+                '<br><small style="color: #9ca3af; font-size: 11px;">Tekrar başvuru yapılabilir</small>'
+            )
+        else:
+            return format_html('<span class="text-yellow-600 font-bold">⏳ Onay Bekliyor</span>')
     approval_badge.short_description = "Admin Onayı"
 
     def verification_badge(self, obj):
