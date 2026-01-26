@@ -648,7 +648,20 @@ class BarbershopViewSet(viewsets.ReadOnlyModelViewSet):
                     if not st or not et:
                         errors[day] = "invalid_time"
                         continue
-                    normalized.append({"day": day, "is_closed": False, "open": st, "close": et})
+                    # Mola saatleri (opsiyonel)
+                    break_start_s = item.get("break_start")
+                    break_end_s = item.get("break_end")
+                    break_start = parse_hhmm(break_start_s) if break_start_s else None
+                    break_end = parse_hhmm(break_end_s) if break_end_s else None
+                    
+                    normalized.append({
+                        "day": day, 
+                        "is_closed": False, 
+                        "open": st, 
+                        "close": et,
+                        "break_start": break_start,
+                        "break_end": break_end,
+                    })
 
                 if errors:
                     return Response({"detail": "invalid_payload", "errors": errors}, status=400)
@@ -662,6 +675,8 @@ class BarbershopViewSet(viewsets.ReadOnlyModelViewSet):
                         is_closed=it["is_closed"],
                         start_time=it["open"],
                         end_time=it["close"],
+                        break_start_time=it.get("break_start"),
+                        break_end_time=it.get("break_end"),
                     )
                 return Response({"detail": "Updated"})
         finally:
@@ -982,13 +997,59 @@ def _compute_shop_status(barbershop_id: int, ts: datetime) -> dict:
     # 4) WeeklySchedule
     open_interval, breaks = _effective_shop_hours_with_breaks(shop, date)
     msg, next_change = _message_for_state(open_interval, breaks, local_ts)
+    
+    # Haftalık periyodik mola kontrolü (şu an mola saatinde mi?)
+    weekday_code_map = {0: "MON", 1: "TUE", 2: "WED", 3: "THU", 4: "FRI", 5: "SAT", 6: "SUN"}
+    code = weekday_code_map.get(date.weekday())
+    shop_hours = ShopWorkingHours.objects.filter(barbershop=shop, day_of_week=code).first()
+    active_break = None
+    if shop_hours and shop_hours.break_start_time and shop_hours.break_end_time:
+        if shop_hours.break_start_time <= now_time <= shop_hours.break_end_time:
+            active_break = {
+                "label": "Mola",
+                "start_time": shop_hours.break_start_time.strftime('%H:%M'),
+                "end_time": shop_hours.break_end_time.strftime('%H:%M'),
+                "scope": "shop",
+            }
+    
+    # NEW: Check if any staff is working (critical for shop status)
+    from app.barbers.models import StaffWorkingHours
+    active_staff_count = 0
+    if open_interval and open_interval[0] and open_interval[1]:
+        # Check if any staff is working at this time
+        active_staff_count = StaffWorkingHours.objects.filter(
+            staff__barbershop=shop,
+            day_of_week=code,
+            is_closed=False,
+            start_time__lte=now_time,
+            end_time__gte=now_time
+        ).exclude(
+            # Exclude staff with full_day_closed override
+            staff__overrides__override_type='staff_individual',
+            staff__overrides__override_scope='full_day_closed',
+            staff__overrides__start_date__lte=date,
+            staff__overrides__end_date__gte=date,
+            staff__overrides__is_active=True
+        ).count()
+    
+    # If shop hours are open but no staff is working, shop is effectively closed
+    final_status = _open_closed_now(open_interval, breaks, local_ts)
+    if final_status == 'open' and active_staff_count == 0:
+        final_status = 'closed'
+        if msg and 'açık' in msg.lower():
+            msg = "Şu an hiç personel çalışmıyor"
+        elif not msg:
+            msg = "Şu an hiç personel çalışmıyor"
+    
     data = {
-        "status": _open_closed_now(open_interval, breaks, local_ts),
+        "status": final_status,
         "source": "WEEKLY_SCHEDULE",
         "message": msg,
         "next_change": next_change,
         "open_interval": _to_dict_interval(open_interval),
         "breaks": _to_list_breaks(breaks),
+        "active_break": active_break,
+        "active_staff_count": active_staff_count,
     }
     return _cache_and_return(data)
 
@@ -1001,6 +1062,21 @@ def _effective_shop_hours_with_breaks(shop, date, extra_closed=None):
         return (None, None), []
     open_interval = (sh.start_time, sh.end_time)
     breaks = []
+    
+    # 1. Haftalık periyodik mola (ShopWorkingHours modelindeki break_start_time/break_end_time)
+    if sh.break_start_time and sh.break_end_time:
+        breaks.append(
+            {
+                "start": sh.break_start_time,
+                "end": sh.break_end_time,
+                "label": "Mola",
+                "scope": "shop",
+                "staff_id": None,
+                "staff_name": None,
+            }
+        )
+    
+    # 2. Extra closed intervals (override'lar)
     if extra_closed:
         for item in extra_closed:
             if not item:
@@ -1017,8 +1093,11 @@ def _effective_shop_hours_with_breaks(shop, date, extra_closed=None):
                         "staff_name": None,
                     }
                 )
+    
+    # 3. Tarih bazlı özel molalar (BreakWindow - belirli bir tarihe atanmış)
     for br in BreakWindow.objects.filter(barbershop=shop, scope=BreakWindow.Scope.SHOP, date=date):
         breaks.append(serialize_break_window(br))
+    
     return open_interval, breaks
 
 
@@ -2231,6 +2310,8 @@ class PartnerShopWorkingHoursViewSet(viewsets.ModelViewSet):
                 continue
 
             is_closed = bool(raw.get("is_closed", False))
+            break_start = _parse_time(raw.get("break_start") or raw.get("break_start_time"))
+            break_end = _parse_time(raw.get("break_end") or raw.get("break_end_time"))
 
             if is_closed:
                 normalized_schedule.append(
@@ -2726,6 +2807,8 @@ class PartnerStaffWorkingHoursViewSet(viewsets.ModelViewSet):
                             "is_closed": bool(getattr(sh, 'is_closed', False)),
                             "open": getattr(sh, 'start_time', None) and sh.start_time.strftime("%H:%M"),
                             "close": getattr(sh, 'end_time', None) and sh.end_time.strftime("%H:%M"),
+                            "break_start": getattr(sh, 'break_start_time', None) and sh.break_start_time.strftime("%H:%M"),
+                            "break_end": getattr(sh, 'break_end_time', None) and sh.break_end_time.strftime("%H:%M"),
                             "source": "staff",
                         })
                     else:
@@ -2735,6 +2818,8 @@ class PartnerStaffWorkingHoursViewSet(viewsets.ModelViewSet):
                             "is_closed": bool(getattr(shop, 'is_closed', False)) if shop else True,
                             "open": (shop.start_time.strftime("%H:%M") if getattr(shop, 'start_time', None) else None),
                             "close": (shop.end_time.strftime("%H:%M") if getattr(shop, 'end_time', None) else None),
+                            "break_start": (shop.break_start_time.strftime("%H:%M") if getattr(shop, 'break_start_time', None) else None),
+                            "break_end": (shop.break_end_time.strftime("%H:%M") if getattr(shop, 'break_end_time', None) else None),
                             "source": "shop" if shop else "default",
                         })
                 return Response({"staff_id": staff.id, "inherits_shop_hours": inherits, "week": result})
@@ -2779,7 +2864,16 @@ class PartnerStaffWorkingHoursViewSet(viewsets.ModelViewSet):
             st = parse_hhmm(item.get("open")); et = parse_hhmm(item.get("close"))
             if not st or not et:
                 errors[day] = "invalid_time"; continue
-            normalized.append({"day": day, "is_closed": False, "open": st, "close": et})
+            break_start = parse_hhmm(item.get("break_start") or item.get("break_start_time"))
+            break_end = parse_hhmm(item.get("break_end") or item.get("break_end_time"))
+            normalized.append({
+                "day": day, 
+                "is_closed": False, 
+                "open": st, 
+                "close": et,
+                "break_start": break_start,
+                "break_end": break_end,
+            })
         if errors:
             return Response({"detail": "invalid_payload", "errors": errors}, status=400)
 
@@ -2808,6 +2902,8 @@ class PartnerStaffWorkingHoursViewSet(viewsets.ModelViewSet):
                 is_closed=it["is_closed"],
                 start_time=it["open"],
                 end_time=it["close"],
+                break_start_time=it.get("break_start"),
+                break_end_time=it.get("break_end"),
             )
         return Response({"detail": "Updated"})
 
@@ -3187,20 +3283,44 @@ class PartnerOverrideViewSet(viewsets.ModelViewSet):
         except Exception:
             create_message = False
 
-        # Otomatik 00:01 duyuru planlama (create_message flag'inden bağımsız)
+        # Otomatik duyuru ve bildirim planlama
         try:
+            from app.notifications.models import Notification
+            from app.barbers.models import SpecialMessage
+            
             for ov in created:
                 # Başlık kuralları (tamamı otomatik)
                 if ov.staff_id:
                     staff = ov.staff
-                    title = f"Bugün {getattr(staff.user, 'first_name', '')} {getattr(staff.user, 'last_name', '')} salonda olmayacaktır.".strip()
+                    staff_name = f"{getattr(staff.user, 'first_name', '')} {getattr(staff.user, 'last_name', '')}".strip()
+                    title = f"{ov.start_date.strftime('%d.%m.%Y')} tarihinde {staff_name} izinli olacaktır."
                     target_type = 'specific_staff'
+                    # Personel için bildirim
+                    Notification.objects.create(
+                        user=staff.user,
+                        title="İzin Günü Eklendi",
+                        body=f"{ov.start_date.strftime('%d.%m.%Y')} tarihinde izinlisiniz. {ov.reason or ''}",
+                        type='system',
+                        reference_id=f"override_{ov.id}"
+                    )
                 else:
-                    title = "Salon bugün açık olmayacaktır."
+                    title = f"{ov.start_date.strftime('%d.%m.%Y')} tarihinde salon kapalı olacaktır."
                     target_type = 'all_shop'
+                    # Tüm personellere bildirim
+                    for staff_member in Staff.objects.filter(barbershop=ov.barbershop, is_active=True):
+                        Notification.objects.create(
+                            user=staff_member.user,
+                            title="Salon İzin Günü",
+                            body=f"{ov.start_date.strftime('%d.%m.%Y')} tarihinde salon kapalı olacaktır. {ov.reason or ''}",
+                            type='system',
+                            reference_id=f"override_{ov.id}"
+                        )
+                
                 content = (ov.reason or '').strip()
                 start_dt = dj_tz.make_aware(datetime.combine(ov.start_date, time(0, 1)))
                 end_dt = dj_tz.make_aware(datetime.combine(ov.end_date or ov.start_date, time(23, 59)))
+                
+                # SpecialMessage oluştur (duyuru)
                 msg, _ = SpecialMessage.objects.update_or_create(
                     barbershop=ov.barbershop,
                     source='automatic',
@@ -3211,13 +3331,19 @@ class PartnerOverrideViewSet(viewsets.ModelViewSet):
                         'content': content,
                         'end_datetime': end_dt,
                         'created_by': self.request.user,
-                        'is_active': False,  # 00:01'de job açacak
+                        'is_active': True,  # Hemen aktif
                     }
                 )
                 if target_type == 'specific_staff' and ov.staff_id:
                     msg.target_staff.set([ov.staff_id])
-        except Exception:
-            pass
+                
+                # Bildirim planlama: 1 hafta önce ve 1 gün önce
+                # Bu bildirimler bir cron job veya signal ile gönderilecek
+                # Şimdilik sadece kayıt oluşturuyoruz
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Override oluşturulurken duyuru/bildirim hatası: {e}", exc_info=True)
 
     def create(self, request, *args, **kwargs):
         try:
@@ -3310,12 +3436,43 @@ class PartnerOverrideViewSet(viewsets.ModelViewSet):
         except Exception as e:
             return Response({'ok': False, 'error': {'code': 'unknown', 'message': str(e)}})
 
+    def perform_destroy(self, instance):
+        """İzin günü silme - sadece gelecekteki tarihler silinebilir"""
+        from django.utils import timezone
+        from app.barbers.models import SpecialMessage
+        from app.notifications.models import Notification
+        import drf_serializers
+        
+        today = timezone.localdate()
+        
+        # Geçmiş veya bugünkü izin günleri silinemez
+        if instance.start_date <= today:
+            raise drf_serializers.ValidationError({"detail": "Geçmiş veya bugünkü izin günleri silinemez"})
+        
+        # İlgili SpecialMessage'ı da sil (eğer varsa)
+        SpecialMessage.objects.filter(
+            barbershop=instance.barbershop,
+            source='automatic',
+            start_datetime__date=instance.start_date
+        ).delete()
+        
+        # İlgili bildirimleri iptal et (eğer varsa)
+        Notification.objects.filter(
+            type='system',
+            reference_id=f"override_{instance.id}"
+        ).delete()
+        
+        self._log_action('delete', 'Override', instance.id, {})
+        instance.delete()
+
     def destroy(self, request, *args, **kwargs):
         try:
             instance = self.get_object()
             self.perform_destroy(instance)
             return Response({'ok': True})
-        except Exception:
+        except drf_serializers.ValidationError as e:
+            return Response({'ok': False, 'error': {'code': 'validation_error', 'message': str(e.detail)}}, status=400)
+        except Exception as e:
             return Response({'ok': False, 'error': {'code': 'unknown', 'message': 'Silinemedi. Lütfen tekrar deneyin.'}})
 
     @action(detail=False, methods=['get'], url_path='impact')
@@ -3868,24 +4025,37 @@ class CalendarStatusViewSet(viewsets.ReadOnlyModelViewSet):
                         is_open = False
                         status_message = "Kapalı"
                     else:
-                        # Within working hours, check BreakWindow
-                        shop_break = BreakWindow.objects.filter(
-                            barbershop=barbershop,
-                            scope=BreakWindow.Scope.SHOP,
-                            date=today,
-                            start_time__lte=current_time,
-                            end_time__gte=current_time,
-                        ).order_by("start_time").first()
-                        
-                        if shop_break:
-                            is_open = False
-                            is_break = True
-                            status_message = f"Mola ({shop_break.end_time.strftime('%H:%M')} bitiş)"
-                            break_end_time = shop_break.end_time.strftime('%H:%M')
-                            end_dt = timezone.make_aware(datetime.combine(today, shop_break.end_time))
-                            minutes_until_open = int((end_dt - now).total_seconds() / 60)
+                        # Within working hours, check breaks
+                        # 1. Önce haftalık periyodik mola kontrolü
+                        if shop_hours.break_start_time and shop_hours.break_end_time:
+                            if shop_hours.break_start_time <= current_time <= shop_hours.break_end_time:
+                                is_open = False
+                                is_break = True
+                                status_message = f"Mola ({shop_hours.break_end_time.strftime('%H:%M')} bitiş)"
+                                break_end_time = shop_hours.break_end_time.strftime('%H:%M')
+                                end_dt = timezone.make_aware(datetime.combine(today, shop_hours.break_end_time))
+                                minutes_until_open = int((end_dt - now).total_seconds() / 60)
+                            else:
+                                status_message = "Açık"
                         else:
-                            status_message = "Açık"
+                            # 2. Tarih bazlı özel mola kontrolü (BreakWindow)
+                            shop_break = BreakWindow.objects.filter(
+                                barbershop=barbershop,
+                                scope=BreakWindow.Scope.SHOP,
+                                date=today,
+                                start_time__lte=current_time,
+                                end_time__gte=current_time,
+                            ).order_by("start_time").first()
+                            
+                            if shop_break:
+                                is_open = False
+                                is_break = True
+                                status_message = f"Mola ({shop_break.end_time.strftime('%H:%M')} bitiş)"
+                                break_end_time = shop_break.end_time.strftime('%H:%M')
+                                end_dt = timezone.make_aware(datetime.combine(today, shop_break.end_time))
+                                minutes_until_open = int((end_dt - now).total_seconds() / 60)
+                            else:
+                                status_message = "Açık"
 
             return Response({
                 'is_open': is_open,
@@ -5025,14 +5195,35 @@ class PartnerHolidayOverrideViewSet(viewsets.ModelViewSet):
         start_time = staff_hours.start_time or (shop_hours.start_time if shop_hours else None)
         end_time = staff_hours.end_time or (shop_hours.end_time if shop_hours else None)
         
+        # Mola saatlerini kontrol et (personel mola saatleri öncelikli, yoksa dükkan mola saatleri)
+        break_start_time = staff_hours.break_start_time or (shop_hours.break_start_time if shop_hours else None)
+        break_end_time = staff_hours.break_end_time or (shop_hours.break_end_time if shop_hours else None)
+        
+        # Şu anki zamanı kontrol et (mola saatinde mi?)
+        now = timezone.now()
+        current_time = timezone.localtime(now).time()
+        is_on_break = False
+        break_ends_in = None
+        
+        if break_start_time and break_end_time:
+            if break_start_time <= current_time <= break_end_time:
+                is_on_break = True
+                # Mola bitişine kalan dakika
+                break_end_dt = timezone.make_aware(datetime.combine(date, break_end_time))
+                break_ends_in = int((break_end_dt - now).total_seconds() / 60)
+        
         return {
             'staff_id': staff.id,
-            'staff_name': staff.user.email,
+            'staff_name': getattr(staff.user, 'full_name', None) or staff.user.email,
             'date': date,
             'is_working': True,
+            'is_on_break': is_on_break,
             'start_time': start_time,
             'end_time': end_time,
-            'status_message': None,
+            'break_start_time': break_start_time,
+            'break_end_time': break_end_time,
+            'break_ends_in': break_ends_in,
+            'status_message': f"Şu an mola'da, {break_end_time.strftime('%H:%M')}'da mola bitecek" if is_on_break else None,
             'active_overrides': list(staff_overrides)
         }
 

@@ -15,6 +15,8 @@ CRON_FILE="/etc/cron.d/kuafora"
   echo '0 1 * * * root cd /app && python manage.py precompute_day_status --days 7 >> /proc/1/fd/1 2>&1'
   # Reject stale pending appointments every 15 minutes
   echo '*/15 * * * * root cd /app && python manage.py reject_stale_appointments >> /proc/1/fd/1 2>&1'
+  # Send leave day reminders (1 week and 1 day before) - every hour
+  echo '0 * * * * root cd /app && python manage.py send_leave_day_reminders --once >> /proc/1/fd/1 2>&1'
   echo ''
 } > "$CRON_FILE"
 

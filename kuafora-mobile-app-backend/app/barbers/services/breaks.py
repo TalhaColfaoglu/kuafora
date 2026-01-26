@@ -50,19 +50,56 @@ def get_effective_staff_window(staff: Staff, day: date) -> Tuple[Optional[time],
 
 
 def shop_breaks_for_day(shop: Barbershop, day: date) -> Iterable[BreakWindow]:
-    return BreakWindow.objects.filter(
-        barbershop=shop,
-        scope=BreakWindow.Scope.SHOP,
-        date=day,
-    ).order_by("start_time")
+    """Dükkan molalarını döndür: önce haftalık periyodik molalar, sonra tarih bazlı özel molalar"""
+    code = weekday_code_for(day)
+    
+    # Haftalık periyodik mola (ShopWorkingHours modelindeki break_start_time/break_end_time)
+    shop_hours = ShopWorkingHours.objects.filter(barbershop=shop, day_of_week=code).first()
+    if shop_hours and shop_hours.break_start_time and shop_hours.break_end_time:
+        # Haftalık periyodik molayı BreakWindow benzeri bir obje olarak döndür
+        # Not: Bu bir gerçek BreakWindow değil, sadece aynı interface'i sağlıyor
+        class RecurringBreak:
+            def __init__(self, start_time, end_time, shop):
+                self.start_time = start_time
+                self.end_time = end_time
+                self.label = "Mola"
+                self.scope = BreakWindow.Scope.SHOP
+                self.barbershop = shop
+                self.date = day
+                self.staff = None
+        
+        yield RecurringBreak(shop_hours.break_start_time, shop_hours.break_end_time, shop)
+    
+    # Tarih bazlı özel molalar (BreakWindow - belirli bir tarihe atanmış)
+    for br in BreakWindow.objects.filter(barbershop=shop, scope=BreakWindow.Scope.SHOP, date=day).order_by("start_time"):
+        yield br
 
 
 def staff_breaks_for_day(staff: Staff, day: date) -> Iterable[BreakWindow]:
-    return BreakWindow.objects.filter(
-        staff=staff,
-        scope=BreakWindow.Scope.STAFF,
-        date=day,
-    ).order_by("start_time")
+    """Personel molalarını döndür: önce haftalık periyodik molalar, sonra tarih bazlı özel molalar"""
+    from datetime import time as _time
+    weekday_code_map = {0: "MON", 1: "TUE", 2: "WED", 3: "THU", 4: "FRI", 5: "SAT", 6: "SUN"}
+    code = weekday_code_map.get(day.weekday())
+    
+    # Haftalık periyodik mola (StaffWorkingHours modelindeki break_start_time/break_end_time)
+    staff_hours = StaffWorkingHours.objects.filter(staff=staff, day_of_week=code).first()
+    if staff_hours and staff_hours.break_start_time and staff_hours.break_end_time:
+        # Haftalık periyodik molayı BreakWindow benzeri bir obje olarak döndür
+        # Not: Bu bir gerçek BreakWindow değil, sadece aynı interface'i sağlıyor
+        class RecurringBreak:
+            def __init__(self, start_time, end_time, staff):
+                self.start_time = start_time
+                self.end_time = end_time
+                self.label = "Mola"
+                self.scope = BreakWindow.Scope.STAFF
+                self.staff = staff
+                self.date = day
+        
+        yield RecurringBreak(staff_hours.break_start_time, staff_hours.break_end_time, staff)
+    
+    # Tarih bazlı özel molalar (BreakWindow - belirli bir tarihe atanmış)
+    for br in BreakWindow.objects.filter(staff=staff, scope=BreakWindow.Scope.STAFF, date=day).order_by("start_time"):
+        yield br
 
 
 def collect_break_intervals(shop: Barbershop, staff: Optional[Staff], day: date) -> List[Tuple[datetime, datetime, BreakWindow]]:

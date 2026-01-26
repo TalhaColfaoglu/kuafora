@@ -83,6 +83,7 @@ INSTALLED_APPS = [
     "app.appointments",
     "app.campaigns",
     "app.chat",
+    "app.analytics",
     "app.notifications",
     "app.subscriptions",
     "app.search",
