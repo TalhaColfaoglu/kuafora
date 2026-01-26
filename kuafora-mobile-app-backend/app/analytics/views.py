@@ -86,58 +86,53 @@ class TrackingViewSet(viewsets.ViewSet):
                         ).update(event_count=F('event_count') + len(events))
                     except Exception:
                         pass
-        
-        # Screen views kaydetme
-        screen_views = data.get('screen_views', [])
-        if screen_views:
-            view_objs = []
-            for view_data in screen_views:
-                view_objs.append(ScreenView(
-                    user=user,
-                    **view_data
-                ))
-            try:
-                ScreenView.objects.bulk_create(view_objs, ignore_conflicts=True, batch_size=500)
-            except Exception as e:
-                import logging
-                logger = logging.getLogger(__name__)
-                logger.warning(f'Error creating screen views: {e}')
             
-            # Session'a screen count ekle
-            if session_data and session_data.get('session_id'):
+            # Screen views kaydetme
+            screen_views = data.get('screen_views', [])
+            if screen_views:
+                view_objs = []
+                for view_data in screen_views:
+                    view_objs.append(ScreenView(
+                        user=user,
+                        **view_data
+                    ))
                 try:
-                    UserSession.objects.filter(
-                        session_id=session_data['session_id']
-                    ).update(screen_count=F('screen_count') + len(screen_views))
-                except Exception:
-                    pass
-        
-        # Feature usages kaydetme
-        feature_usages = data.get('feature_usages', [])
-        if feature_usages:
-            usage_objs = []
-            for usage_data in feature_usages:
-                usage_objs.append(FeatureUsage(
-                    user=user,
-                    **usage_data
-                ))
-            try:
-                FeatureUsage.objects.bulk_create(usage_objs, ignore_conflicts=True, batch_size=500)
-            except Exception as e:
-                import logging
-                logger = logging.getLogger(__name__)
-                logger.warning(f'Error creating feature usages: {e}')
+                    ScreenView.objects.bulk_create(view_objs, ignore_conflicts=True, batch_size=500)
+                except Exception as e:
+                    import logging
+                    logger = logging.getLogger(__name__)
+                    logger.warning(f'Error creating screen views: {e}')
+                
+                # Session'a screen count ekle
+                if session_data and session_data.get('session_id'):
+                    try:
+                        UserSession.objects.filter(
+                            session_id=session_data['session_id']
+                        ).update(screen_count=F('screen_count') + len(screen_views))
+                    except Exception:
+                        pass
+            
+            # Feature usages kaydetme
+            feature_usages = data.get('feature_usages', [])
+            if feature_usages:
+                usage_objs = []
+                for usage_data in feature_usages:
+                    usage_objs.append(FeatureUsage(
+                        user=user,
+                        **usage_data
+                    ))
+                try:
+                    FeatureUsage.objects.bulk_create(usage_objs, ignore_conflicts=True, batch_size=500)
+                except Exception as e:
+                    import logging
+                    logger = logging.getLogger(__name__)
+                    logger.warning(f'Error creating feature usages: {e}')
             
             return Response({'status': 'success', 'saved': {
                 'events': len(events),
                 'screen_views': len(screen_views),
                 'feature_usages': len(feature_usages),
             }}, status=status.HTTP_201_CREATED)
-        except Exception as e:
-            import logging
-            logger = logging.getLogger(__name__)
-            logger.error(f'Error in batch_tracking: {e}')
-            return Response({'error': 'Internal server error'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         except Exception as e:
             import logging
             logger = logging.getLogger(__name__)
