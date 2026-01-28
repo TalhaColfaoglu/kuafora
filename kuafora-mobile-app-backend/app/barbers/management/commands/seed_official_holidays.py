@@ -14,7 +14,7 @@ TR_STATIC = {
     (10, 29): ("Cumhuriyet Bayramı", "national"),
 }
 
-# Opsiyonel: bazı yıllar için dini bayram tarihleri (örnek 2025)
+# Opsiyonel: bazı yıllar için dini bayram tarihleri
 TR_RELIGIOUS_BY_YEAR = {
     2025: [
         (3, 29, "Ramazan Bayramı Arefesi", "religious"),
@@ -26,7 +26,29 @@ TR_RELIGIOUS_BY_YEAR = {
         (6, 7,  "Kurban Bayramı 2. Gün", "religious"),
         (6, 8,  "Kurban Bayramı 3. Gün", "religious"),
         (6, 9,  "Kurban Bayramı 4. Gün", "religious"),
-    ]
+    ],
+    2026: [
+        (3, 18, "Ramazan Bayramı Arefesi", "religious"),
+        (3, 19, "Ramazan Bayramı 1. Gün", "religious"),
+        (3, 20, "Ramazan Bayramı 2. Gün", "religious"),
+        (3, 21, "Ramazan Bayramı 3. Gün", "religious"),
+        (5, 25, "Kurban Bayramı Arefesi", "religious"),
+        (5, 26, "Kurban Bayramı 1. Gün", "religious"),
+        (5, 27, "Kurban Bayramı 2. Gün", "religious"),
+        (5, 28, "Kurban Bayramı 3. Gün", "religious"),
+        (5, 29, "Kurban Bayramı 4. Gün", "religious"),
+    ],
+    2027: [
+        (3, 8,  "Ramazan Bayramı Arefesi", "religious"),
+        (3, 9,  "Ramazan Bayramı 1. Gün", "religious"),
+        (3, 10, "Ramazan Bayramı 2. Gün", "religious"),
+        (3, 11, "Ramazan Bayramı 3. Gün", "religious"),
+        (5, 15, "Kurban Bayramı Arefesi", "religious"),
+        (5, 16, "Kurban Bayramı 1. Gün", "religious"),
+        (5, 17, "Kurban Bayramı 2. Gün", "religious"),
+        (5, 18, "Kurban Bayramı 3. Gün", "religious"),
+        (5, 19, "Kurban Bayramı 4. Gün", "religious"),
+    ],
 }
 
 

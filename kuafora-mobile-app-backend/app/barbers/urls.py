@@ -111,6 +111,7 @@ urlpatterns = [
     # Calendar aliases for APPEND_SLASH=False compatibility
     path("calendar/holidays", CalendarStatusViewSet.as_view({'get': 'holidays'}), name="calendar-holidays-alias"),
     path("calendar/now", CalendarStatusViewSet.as_view({'get': 'now'}), name="calendar-now-alias"),
-    # Official holidays alias for APPEND_SLASH=False compatibility
-    path("partner/holidayoverride/official-holidays", PartnerHolidayOverrideViewSet.as_view({'get': 'official_holidays'}), name="partner-holiday-override-official-holidays-alias"),
+    # Official holidays alias for APPEND_SLASH=False compatibility (hem trailing slash ile hem de olmadan)
+    path("partner/holidayoverride/official-holidays/", PartnerHolidayOverrideViewSet.as_view({'get': 'official_holidays'}), name="partner-holiday-override-official-holidays-alias"),
+    path("partner/holidayoverride/official-holidays", PartnerHolidayOverrideViewSet.as_view({'get': 'official_holidays'}), name="partner-holiday-override-official-holidays-alias-no-slash"),
 ]

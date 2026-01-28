@@ -5420,25 +5420,30 @@ class PartnerHolidayOverrideViewSet(viewsets.ModelViewSet):
                 raise drf_serializers.ValidationError({'detail': 'Özel saatler mağaza çalışma saatleri içinde olmalıdır'})
         serializer.save(barbershop=admin_staff.barbershop)
 
-    @action(detail=False, methods=['get'], url_path='official-holidays')
+    @action(detail=False, methods=['get'], url_path='official-holidays', permission_classes=[permissions.IsAuthenticated])
     def official_holidays(self, request):
         """
         Türkiye'nin tüm resmi tatillerini (dini ve milli bayramlar) döndürür.
+        Herhangi bir authenticated kullanıcı erişebilir (sadece okuma).
         Query params: year (opsiyonel, varsayılan: mevcut yıl)
         """
         from django.utils import timezone
         year = int(request.query_params.get('year') or timezone.now().year)
         
-        # Otomatik tatil seed kontrolü
+        # Otomatik tatil seed kontrolü - mevcut yıl ve gelecek yıl için
         current_year = timezone.now().year
-        if year in [current_year, current_year + 1]:
+        if year in [current_year, current_year + 1, current_year + 2]:
             holiday_count = OfficialHoliday.objects.filter(country_code='TR', year=year).count()
-            if holiday_count < 6:  # TR'de 6 sabit tatil var
+            if holiday_count < 6:  # TR'de en az 6 sabit tatil var
                 from django.core.management import call_command
                 try:
                     call_command('seed_official_holidays', year=year, verbosity=0)
-                except Exception:
-                    pass  # Seed komutu yoksa devam et
+                    # Seed sonrası tekrar say
+                    holiday_count = OfficialHoliday.objects.filter(country_code='TR', year=year).count()
+                except Exception as e:
+                    import logging
+                    logger = logging.getLogger(__name__)
+                    logger.warning(f"Official holidays seed failed for year {year}: {e}")
         
         holidays = OfficialHoliday.objects.filter(country_code='TR', year=year).order_by('date')
         return Response({
