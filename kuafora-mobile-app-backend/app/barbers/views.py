@@ -4282,7 +4282,7 @@ class CalendarStatusViewSet(viewsets.ReadOnlyModelViewSet):
                 is_open = daily_override.status == 'open'
                 status_message = daily_override.note.strip() if daily_override.note and daily_override.note.strip() else ("Bugün açık" if is_open else "Bugün kapalı")
                 note = daily_override.note or ""
-                resp = Response({
+                resp_data = {
                     'is_open': is_open,
                     'is_break': False,
                     'status_message': status_message,
@@ -4290,14 +4290,13 @@ class CalendarStatusViewSet(viewsets.ReadOnlyModelViewSet):
                     'minutes_until_open': None,
                     'break_end_time': None,
                     'source': 'TOGGLE'
-                })
+                }
                 # Cache bypass için header ekle
-                try:
-                    resp['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
-                    resp['Pragma'] = 'no-cache'
-                    resp['Expires'] = '0'
-                except Exception:
-                    pass
+                resp = Response(resp_data, headers={
+                    'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0',
+                    'Pragma': 'no-cache',
+                    'Expires': '0'
+                })
                 return resp
             
             # Defaults
