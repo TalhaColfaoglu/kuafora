@@ -2,7 +2,7 @@ import datetime
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 from django.core.management import call_command
-from app.barbers.models import OfficialHoliday, DailyOverride
+from app.barbers.models import OfficialHoliday, DailyOverride, SpecialMessage
 
 
 class Command(BaseCommand):
@@ -28,20 +28,46 @@ class Command(BaseCommand):
         else:
             self.stdout.write("  No expired daily overrides found")
         
-        # 3. Status precompute (gelecek 30 gün)
-        self.stdout.write("3. Precomputing shop statuses...")
+        # 3. Süresi dolmuş otomatik duyuruları temizle (izin günü geçtikten sonra)
+        self.stdout.write("3. Cleaning expired automatic announcements...")
+        now = timezone.now()
+        expired_messages = SpecialMessage.objects.filter(
+            source='automatic',
+            end_datetime__lt=now
+        )
+        expired_msg_count = expired_messages.count()
+        if expired_msg_count > 0:
+            expired_messages.delete()
+            self.stdout.write(f"  Cleaned {expired_msg_count} expired automatic announcements")
+        else:
+            self.stdout.write("  No expired automatic announcements found")
+        
+        # 4. Status precompute (gelecek 30 gün)
+        self.stdout.write("4. Precomputing shop statuses...")
         call_command('precompute_day_status', days=30, verbosity=0)
         
-        # 4. Duyurular (yaklaşan tatiller)
-        self.stdout.write("4. Checking for upcoming announcements...")
+        # 5. Duyurular (yaklaşan tatiller)
+        self.stdout.write("5. Checking for upcoming announcements...")
         call_command('announce_calendar', mode='upcoming', verbosity=0)
         
-        # 5. Bugünkü duyurular (00:01'de çalışacak)
+        # 6. Bugünkü duyurular (00:01'de çalışacak)
         current_time = timezone.now()
         if current_time.hour == 0 and current_time.minute < 5:  # Gece yarısından sonra 5 dakika içinde
-            self.stdout.write("5. Sending today's announcements...")
+            self.stdout.write("6. Activating today's announcements...")
             call_command('announce_calendar', mode='today', verbosity=0)
+            
+            # 1 hafta önce duyurularını aktif et
+            self.stdout.write("7. Activating 1-week-before announcements...")
+            one_week_from_now = now + datetime.timedelta(days=7)
+            one_week_messages = SpecialMessage.objects.filter(
+                source='automatic',
+                is_active=False,
+                start_datetime__date=one_week_from_now.date()
+            )
+            activated_count = one_week_messages.update(is_active=True)
+            if activated_count > 0:
+                self.stdout.write(f"  Activated {activated_count} 1-week-before announcements")
         else:
-            self.stdout.write("5. Skipping today's announcements (not midnight)")
+            self.stdout.write("6. Skipping today's announcements (not midnight)")
         
         self.stdout.write(self.style.SUCCESS("Daily maintenance completed successfully"))
