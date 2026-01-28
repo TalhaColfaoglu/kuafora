@@ -54,8 +54,8 @@ class Command(BaseCommand):
                             )
                             sent_count += 1
                     elif ov.override_type == 'shop_global':
-                        # Send to all staff
-                        for staff_member in Staff.objects.filter(barbershop=ov.barbershop, is_active=True):
+                        # Send to all staff - is_active field'ı yok, sadece barbershop'a göre filtrele
+                        for staff_member in Staff.objects.filter(barbershop=ov.barbershop):
                             if not Notification.objects.filter(
                                 user=staff_member.user,
                                 type='system',
@@ -88,8 +88,8 @@ class Command(BaseCommand):
                             )
                             sent_count += 1
                     elif ov.override_type == 'shop_global':
-                        # Send to all staff
-                        for staff_member in Staff.objects.filter(barbershop=ov.barbershop, is_active=True):
+                        # Send to all staff - is_active field'ı yok, sadece barbershop'a göre filtrele
+                        for staff_member in Staff.objects.filter(barbershop=ov.barbershop):
                             if not Notification.objects.filter(
                                 user=staff_member.user,
                                 type='system',

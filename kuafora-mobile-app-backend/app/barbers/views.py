@@ -3316,8 +3316,8 @@ class PartnerOverrideViewSet(viewsets.ModelViewSet):
                 else:
                     title = f"{ov.start_date.strftime('%d.%m.%Y')} tarihinde salon kapalı olacaktır."
                     target_type = 'all_shop'
-                    # Tüm personellere bildirim
-                    for staff_member in Staff.objects.filter(barbershop=ov.barbershop, is_active=True):
+                    # Tüm personellere bildirim - is_active field'ı yok, sadece barbershop'a göre filtrele
+                    for staff_member in Staff.objects.filter(barbershop=ov.barbershop):
                         Notification.objects.create(
                             user=staff_member.user,
                             title="Salon İzin Günü",
@@ -4931,7 +4931,11 @@ class PartnerHolidayOverrideViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-        return ShopHolidayOverride.objects.filter(barbershop__staff__user=user, barbershop__staff__is_admin=True)
+        # Admin staff'ı bul ve sadece o barbershop'un holiday override'larını getir
+        admin_staff = Staff.objects.filter(user=user, is_admin=True).first()
+        if not admin_staff:
+            return ShopHolidayOverride.objects.none()
+        return ShopHolidayOverride.objects.filter(barbershop=admin_staff.barbershop).distinct()
 
     @action(detail=False, methods=['get'], url_path='impact')
     def impact(self, request):
@@ -5113,6 +5117,34 @@ class PartnerHolidayOverrideViewSet(viewsets.ModelViewSet):
             if not shop_wh or not shop_wh.start_time or not shop_wh.end_time or not (shop_wh.start_time <= open_time < close_time <= shop_wh.end_time):
                 raise drf_serializers.ValidationError({'detail': 'Özel saatler mağaza çalışma saatleri içinde olmalıdır'})
         serializer.save(barbershop=admin_staff.barbershop)
+
+    @action(detail=False, methods=['get'], url_path='official-holidays')
+    def official_holidays(self, request):
+        """
+        Türkiye'nin tüm resmi tatillerini (dini ve milli bayramlar) döndürür.
+        Query params: year (opsiyonel, varsayılan: mevcut yıl)
+        """
+        from django.utils import timezone
+        year = int(request.query_params.get('year') or timezone.now().year)
+        
+        # Otomatik tatil seed kontrolü
+        current_year = timezone.now().year
+        if year in [current_year, current_year + 1]:
+            holiday_count = OfficialHoliday.objects.filter(country_code='TR', year=year).count()
+            if holiday_count < 6:  # TR'de 6 sabit tatil var
+                from django.core.management import call_command
+                try:
+                    call_command('seed_official_holidays', year=year, verbosity=0)
+                except Exception:
+                    pass  # Seed komutu yoksa devam et
+        
+        holidays = OfficialHoliday.objects.filter(country_code='TR', year=year).order_by('date')
+        return Response({
+            'ok': True,
+            'data': OfficialHolidaySerializer(holidays, many=True).data,
+            'year': year,
+            'count': holidays.count()
+        })
 
     def create(self, request, *args, **kwargs):
         try:
