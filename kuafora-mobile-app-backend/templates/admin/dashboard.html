@@ -409,10 +409,6 @@
     <p>Kullanıcı aktiviteleri, büyüme metrikleri ve sistem istatistikleri</p>
 </div>
 
-<div class="info-note success">
-    <strong>✅ Tracking Sistemi Aktif:</strong> Uygulama açılma sayısı, ekran görüntülemeleri ve özellik kullanımı gibi detaylı metrikler artık gerçek zamanlı olarak toplanıyor ve gösteriliyor.
-</div>
-
 <h2 class="section-title">
     <span>👥</span>
     <span>Kullanıcı İstatistikleri</span>
@@ -793,95 +789,6 @@
     </div>
     {% endfor %}
 </div>
-{% endif %}
-
-{% if stats.tracking %}
-<h2 class="section-title">
-    <span>📱</span>
-    <span>Uygulama Tracking Metrikleri</span>
-</h2>
-<div class="dashboard-stats">
-    <div class="stat-card success">
-        <div class="stat-card-header">
-            <h3>Toplam Uygulama Açılma</h3>
-            <div class="stat-card-icon">🚀</div>
-        </div>
-        <p class="stat-value">{{ stats.tracking.app_opens_total|floatformat:0 }}</p>
-        <div class="stat-subtitle">Tüm zamanlar</div>
-    </div>
-    
-    <div class="stat-card info">
-        <div class="stat-card-header">
-            <h3>Bugün Açılma</h3>
-            <div class="stat-card-icon">📅</div>
-        </div>
-        <p class="stat-value">{{ stats.tracking.app_opens_today|floatformat:0 }}</p>
-        <div class="stat-subtitle">Son 24 saat</div>
-    </div>
-    
-    <div class="stat-card info">
-        <div class="stat-card-header">
-            <h3>Bu Hafta Açılma</h3>
-            <div class="stat-card-icon">📊</div>
-        </div>
-        <p class="stat-value">{{ stats.tracking.app_opens_week|floatformat:0 }}</p>
-        <div class="stat-subtitle">Son 7 gün</div>
-    </div>
-    
-    <div class="stat-card info">
-        <div class="stat-card-header">
-            <h3>Bu Ay Açılma</h3>
-            <div class="stat-card-icon">📈</div>
-        </div>
-        <p class="stat-value">{{ stats.tracking.app_opens_month|floatformat:0 }}</p>
-        <div class="stat-subtitle">Son 30 gün</div>
-    </div>
-    
-    <div class="stat-card purple">
-        <div class="stat-card-header">
-            <h3>Ort. Oturum Süresi</h3>
-            <div class="stat-card-icon">⏱️</div>
-        </div>
-        <p class="stat-value">{{ stats.tracking.avg_session_duration_minutes|floatformat:1 }}</p>
-        <div class="stat-subtitle">Dakika</div>
-    </div>
-</div>
-
-{% if stats.tracking.top_screens %}
-<h2 class="section-title">
-    <span>📺</span>
-    <span>En Çok Görüntülenen Ekranlar</span>
-</h2>
-<div class="distribution-list">
-    {% for screen in stats.tracking.top_screens %}
-    <div class="distribution-item">
-        <span class="distribution-label">
-            📱 {{ screen.screen_name }}
-            <span style="color: #9CA3AF; font-size: 12px;">({{ screen.app_type }})</span>
-        </span>
-        <span class="distribution-value">{{ screen.count|floatformat:0 }} görüntüleme</span>
-    </div>
-    {% endfor %}
-</div>
-{% endif %}
-
-{% if stats.tracking.top_features %}
-<h2 class="section-title">
-    <span>⚡</span>
-    <span>En Çok Kullanılan Özellikler</span>
-</h2>
-<div class="distribution-list">
-    {% for feature in stats.tracking.top_features %}
-    <div class="distribution-item">
-        <span class="distribution-label">
-            🔧 {{ feature.feature_type }}
-            <span style="color: #9CA3AF; font-size: 12px;">({{ feature.app_type }})</span>
-        </span>
-        <span class="distribution-value">{{ feature.count|floatformat:0 }} kullanım</span>
-    </div>
-    {% endfor %}
-</div>
-{% endif %}
 {% endif %}
 
 <h2 class="section-title">

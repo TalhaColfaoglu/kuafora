@@ -2255,14 +2255,22 @@ class PartnerShopWorkingHoursViewSet(viewsets.ModelViewSet):
 
         schedule_data = request.data.get("schedule", [])
         effective_date_str = request.data.get("effective_date")
-        
+        barbershop_id = request.data.get("barbershop")
+
         try:
-            admin_staff = Staff.objects.filter(user=request.user, is_admin=True).order_by('-id').first()
+            admin_qs = Staff.objects.filter(user=request.user, is_admin=True).order_by('-id')
+            if barbershop_id is not None:
+                try:
+                    bid = int(barbershop_id)
+                    admin_qs = admin_qs.filter(barbershop_id=bid)
+                except (TypeError, ValueError):
+                    pass
+            admin_staff = admin_qs.first()
             if not admin_staff:
-                 return Response({"detail": "Admin yetkisi gerekli"}, status=403)
+                return Response({"detail": "Admin yetkisi gerekli veya bu dükkan için yetkiniz yok"}, status=403)
             shop = admin_staff.barbershop
         except Staff.DoesNotExist:
-             return Response({"detail": "Admin yetkisi gerekli"}, status=403)
+            return Response({"detail": "Admin yetkisi gerekli"}, status=403)
 
         if not isinstance(schedule_data, list) or not schedule_data:
             return Response({"detail": "Schedule data required"}, status=400)
@@ -2426,6 +2434,14 @@ class PartnerShopWorkingHoursViewSet(viewsets.ModelViewSet):
                 ShopWorkingHours.objects.bulk_create(normalized_objs)
                 
                 count = check_and_cancel_conflicts(shop, schedule_data, today)
+            # Cache bust: shop_status kullanıldığı için güncel saatler hemen yansısın
+            try:
+                from django.core.cache import cache
+                for i in range(8):
+                    d = today + timedelta(days=-3 + i)
+                    cache.delete(f"shop_status:{shop.id}:{d.strftime('%Y-%m-%d')}")
+            except Exception:
+                pass
             
             return Response({"detail": f"Çalışma saatleri güncellendi. {count} çakışan randevu iptal edildi."})
 
@@ -3084,6 +3100,7 @@ class PartnerOverrideViewSet(viewsets.ModelViewSet):
     serializer_class = OverrideSerializer
     # Personel kendi özel gününü oluşturabilsin; dükkan genel override için RBAC aşağıda kontrol ediliyor
     permission_classes = [permissions.IsAuthenticated]
+    pagination_class = None  # Liste ham dizi dönsün (vitrin + ana uygulama uyumluluğu)
 
     def get_queryset(self):
         user = self.request.user
@@ -3293,7 +3310,7 @@ class PartnerOverrideViewSet(viewsets.ModelViewSet):
                 total_conflicts = sum(c for _, c in appointment_conflicts)
                 # Uyarı mesajı response'a eklenebilir, ama override oluşturulur
             
-            # Tek tek create
+            # Tek tek create (is_active=True: ana uygulamada seçilen günde salon/personel kapalı görünsün)
             for d in dates:
                 obj = Override.objects.create(
                     barbershop=base_shop,
@@ -3307,6 +3324,7 @@ class PartnerOverrideViewSet(viewsets.ModelViewSet):
                     is_recurring=False,
                     recurring_rule='',
                     reason=serializer.validated_data.get('reason',''),
+                    is_active=True,
                     created_by=self.request.user,
                 )
                 created.append(obj)
@@ -3420,6 +3438,7 @@ class PartnerOverrideViewSet(viewsets.ModelViewSet):
                             if not (open_interval[0] <= st and et <= open_interval[1]):
                                 raise drf_serializers.ValidationError({"detail": "Saat, açık saatlerin dışında seçilemez"})
             
+            serializer.validated_data['is_active'] = True
             serializer.save(barbershop=base_shop, created_by=self.request.user)
             # Merge same-day overlapping ranges
             if scope == 'time_range_closed':
@@ -4117,17 +4136,41 @@ class CalendarStatusViewSet(viewsets.ReadOnlyModelViewSet):
     
     @action(detail=False, methods=["get"], url_path="shop-status")
     def shop_status(self, request):
-        """Dükkanın belirtilen zamandaki tek-kaynak durumunu hesapla"""
+        """Dükkanın belirtilen zamandaki tek-kaynak durumunu hesapla.
+        Ana uygulama is_open, opening_time, closing_time beklediği için response zenginleştirilir."""
         barbershop_id = request.query_params.get('barbershop_id')
         ts_str = request.query_params.get('ts')
+        date_str = request.query_params.get('date')
         if not barbershop_id:
             return Response({"detail": "barbershop_id required"}, status=400)
         try:
-            ts = datetime.fromisoformat(ts_str) if ts_str else timezone.now()
+            if ts_str:
+                ts = datetime.fromisoformat(ts_str) if isinstance(ts_str, str) else timezone.now()
+            elif date_str:
+                parsed = datetime.strptime(date_str, '%Y-%m-%d').date()
+                ts = timezone.make_aware(datetime.combine(parsed, datetime.min.time()).replace(hour=12, minute=0, second=0, microsecond=0))
+            else:
+                ts = timezone.now()
         except Exception:
             ts = timezone.now()
         data = _compute_shop_status(int(barbershop_id), ts)
-        return Response(data)
+        # Ana uygulama ve diğer client'ların beklediği alanlar (now_status ile uyumlu)
+        open_interval = data.get('open_interval') or {}
+        payload = {
+            **data,
+            'is_open': data.get('status') == 'open',
+            'opening_time': open_interval.get('start') if open_interval else None,
+            'closing_time': open_interval.get('end') if open_interval else None,
+            'status_message': data.get('message', ''),  # Ana uygulama status_message bekliyor
+        }
+        resp = Response(payload)
+        try:
+            resp['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+            resp['Pragma'] = 'no-cache'
+            resp['Expires'] = '0'
+        except Exception:
+            pass
+        return resp
 
     @action(detail=False, methods=["get"], url_path="staff-status")
     def staff_status(self, request):
@@ -4169,10 +4212,11 @@ class CalendarStatusViewSet(viewsets.ReadOnlyModelViewSet):
         if shop_override:
             return {
                 'staff_id': staff.id,
-                'staff_name': staff.user.email,
+                'staff_name': getattr(staff.user, 'full_name', None) or staff.user.email,
                 'date': date,
                 'is_working': False,
-                'is_on_leave': True,  # İzinli
+                'is_on_leave': True,
+                'is_on_break': False,
                 'start_time': None,
                 'end_time': None,
                 'status_message': f"İzinli: {shop_override.reason or 'Salon izin günü'}",
@@ -4191,10 +4235,11 @@ class CalendarStatusViewSet(viewsets.ReadOnlyModelViewSet):
             if override.override_scope == 'full_day_closed':
                 return {
                     'staff_id': staff.id,
-                    'staff_name': staff.user.email,
+                    'staff_name': getattr(staff.user, 'full_name', None) or staff.user.email,
                     'date': date,
                     'is_working': False,
-                    'is_on_leave': True,  # İzinli
+                    'is_on_leave': True,
+                    'is_on_break': False,
                     'start_time': None,
                     'end_time': None,
                     'status_message': f"İzinli: {override.reason or 'Özel durum'}",
@@ -4210,10 +4255,11 @@ class CalendarStatusViewSet(viewsets.ReadOnlyModelViewSet):
         if not staff_hours or staff_hours.is_closed:
             return {
                 'staff_id': staff.id,
-                'staff_name': staff.user.email,
+                'staff_name': getattr(staff.user, 'full_name', None) or staff.user.email,
                 'date': date,
                 'is_working': False,
-                'is_on_leave': False,  # Çalışmıyor ama izinli değil
+                'is_on_leave': False,
+                'is_on_break': False,
                 'start_time': None,
                 'end_time': None,
                 'status_message': "Bu gün çalışmıyor",
@@ -4228,36 +4274,52 @@ class CalendarStatusViewSet(viewsets.ReadOnlyModelViewSet):
         
         start_time = staff_hours.start_time or (shop_hours.start_time if shop_hours else None)
         end_time = staff_hours.end_time or (shop_hours.end_time if shop_hours else None)
+        # Haftalık periyodik mola (personel veya dükkan)
+        break_start_time = staff_hours.break_start_time or (shop_hours.break_start_time if shop_hours else None)
+        break_end_time = staff_hours.break_end_time or (shop_hours.break_end_time if shop_hours else None)
         
-        # Mola kontrolü
+        # Mola kontrolü: 1) Haftalık periyodik mola 2) İleri tarihe atanmış BreakWindow
         is_on_break = False
         break_ends_in = None
         now = dj_tz.now()
+        current_time = now.time()
         if date == now.date():
-            # Bugün için mola kontrolü yap
-            from app.barbers.models import BreakWindow
-            break_windows = BreakWindow.objects.filter(
-                staff=staff,
-                date=date,
-                start_time__lte=now.time(),
-                end_time__gt=now.time()
-            ).first()
-            if break_windows:
+            # 1) Haftalık periyodik mola (StaffWorkingHours break_start_time/break_end_time)
+            if break_start_time and break_end_time and break_start_time <= current_time <= break_end_time:
                 is_on_break = True
-                break_end_dt = dj_tz.make_aware(datetime.combine(date, break_windows.end_time))
+                break_end_dt = dj_tz.make_aware(datetime.combine(date, break_end_time))
                 break_ends_in = int((break_end_dt - now).total_seconds() / 60)
+            # 2) İleri tarihe atanmış günlük mola (BreakWindow)
+            if not is_on_break:
+                from app.barbers.models import BreakWindow
+                break_windows = BreakWindow.objects.filter(
+                    staff=staff,
+                    date=date,
+                    start_time__lte=current_time,
+                    end_time__gt=current_time
+                ).first()
+                if break_windows:
+                    is_on_break = True
+                    break_end_dt = dj_tz.make_aware(datetime.combine(date, break_windows.end_time))
+                    break_ends_in = int((break_end_dt - now).total_seconds() / 60)
+        
+        status_message = None
+        if is_on_break and break_end_time:
+            status_message = f"Şu an mola'da, {break_end_time.strftime('%H:%M')}'da mola bitecek"
         
         return {
             'staff_id': staff.id,
-            'staff_name': staff.user.email,
+            'staff_name': getattr(staff.user, 'full_name', None) or staff.user.email,
             'date': date,
             'is_working': True,
             'is_on_leave': False,
             'is_on_break': is_on_break,
             'break_ends_in': break_ends_in,
+            'break_start_time': break_start_time,
+            'break_end_time': break_end_time,
             'start_time': start_time,
             'end_time': end_time,
-            'status_message': None,
+            'status_message': status_message,
             'active_overrides': []
         }
 
@@ -4282,6 +4344,18 @@ class CalendarStatusViewSet(viewsets.ReadOnlyModelViewSet):
                 is_open = daily_override.status == 'open'
                 status_message = daily_override.note.strip() if daily_override.note and daily_override.note.strip() else ("Bugün açık" if is_open else "Bugün kapalı")
                 note = daily_override.note or ""
+                weekday_code_map = {0: "MON", 1: "TUE", 2: "WED", 3: "THU", 4: "FRI", 5: "SAT", 6: "SUN"}
+                day_code = weekday_code_map.get(today.weekday())
+                active_staff_count = StaffWorkingHours.objects.filter(
+                    staff__barbershop=barbershop,
+                    day_of_week=day_code,
+                    start_time__lte=current_time,
+                    end_time__gte=current_time,
+                    is_closed=False
+                ).values('staff').distinct().count() if is_open else 0
+                shop_hours = ShopWorkingHours.objects.filter(barbershop=barbershop, day_of_week=day_code).first()
+                opening_time_str = shop_hours.start_time.strftime('%H:%M') if (shop_hours and shop_hours.start_time) else None
+                closing_time_str = shop_hours.end_time.strftime('%H:%M') if (shop_hours and shop_hours.end_time) else None
                 resp_data = {
                     'is_open': is_open,
                     'is_break': False,
@@ -4289,7 +4363,11 @@ class CalendarStatusViewSet(viewsets.ReadOnlyModelViewSet):
                     'note': note,
                     'minutes_until_open': None,
                     'break_end_time': None,
-                    'source': 'TOGGLE'
+                    'source': 'TOGGLE',
+                    'opening_time': opening_time_str,
+                    'closing_time': closing_time_str,
+                    'has_staff_working': active_staff_count > 0,
+                    'active_staff_count': active_staff_count,
                 }
                 # Cache bypass için header ekle
                 resp = Response(resp_data, headers={
@@ -4429,20 +4507,45 @@ class CalendarStatusViewSet(viewsets.ReadOnlyModelViewSet):
                             else:
                                 status_message = "Açık"
 
+            # Opening ve closing time'ları hesapla
+            opening_time_str = None
+            closing_time_str = None
+            if is_open and not is_break:
+                # Normal çalışma saatleri içindeyse closing time'ı göster
+                shop_hours = ShopWorkingHours.objects.filter(barbershop=barbershop, day_of_week=weekday_code_map.get(today.weekday())).first()
+                if shop_hours and shop_hours.end_time:
+                    closing_time_str = shop_hours.end_time.strftime('%H:%M')
+            elif not is_open and not is_break:
+                # Kapalıysa ve mola değilse opening time'ı göster
+                shop_hours = ShopWorkingHours.objects.filter(barbershop=barbershop, day_of_week=weekday_code_map.get(today.weekday())).first()
+                if shop_hours and shop_hours.start_time:
+                    opening_time_str = shop_hours.start_time.strftime('%H:%M')
+            
+            weekday_code_map = {0: "MON", 1: "TUE", 2: "WED", 3: "THU", 4: "FRI", 5: "SAT", 6: "SUN"}
+            day_code = weekday_code_map.get(today.weekday())
+            active_staff_count = StaffWorkingHours.objects.filter(
+                staff__barbershop=barbershop,
+                day_of_week=day_code,
+                start_time__lte=current_time,
+                end_time__gte=current_time,
+                is_closed=False
+            ).values('staff').distinct().count() if is_open else 0
+
             resp = Response({
                 'is_open': is_open,
                 'is_break': is_break,
                 'status_message': status_message,
                 'minutes_until_open': minutes_until_open,
-                'break_end_time': break_end_time
+                'break_end_time': break_end_time,
+                'opening_time': opening_time_str,
+                'closing_time': closing_time_str,
+                'has_staff_working': active_staff_count > 0,
+                'active_staff_count': active_staff_count,
+            }, headers={
+                'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0',
+                'Pragma': 'no-cache',
+                'Expires': '0'
             })
-            # Cache bypass için header ekle - DailyOverride değişiklikleri hemen yansısın
-            try:
-                resp['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
-                resp['Pragma'] = 'no-cache'
-                resp['Expires'] = '0'
-            except Exception:
-                pass
             return resp
             
         except Barbershop.DoesNotExist:
@@ -4664,9 +4767,9 @@ class CalendarStatusViewSet(viewsets.ReadOnlyModelViewSet):
             
             barbershop = Barbershop.objects.get(id=barbershop_id)
             
-            # Haftalık verileri topla (values ile serialize edilir)
-            shop_hours = list(ShopWorkingHours.objects.filter(barbershop=barbershop).values('day_of_week','is_closed','start_time','end_time'))
-            staff_hours = list(StaffWorkingHours.objects.filter(staff__barbershop=barbershop).values('staff_id','day_of_week','is_closed','start_time','end_time'))
+            # Haftalık verileri topla (values ile serialize edilir; personel molaları dahil)
+            shop_hours = list(ShopWorkingHours.objects.filter(barbershop=barbershop).values('day_of_week','is_closed','start_time','end_time','break_start_time','break_end_time'))
+            staff_hours = list(StaffWorkingHours.objects.filter(staff__barbershop=barbershop).values('staff_id','day_of_week','is_closed','start_time','end_time','break_start_time','break_end_time'))
             overrides = list(Override.objects.filter(
                 barbershop=barbershop,
                 start_date__lte=week_end,
@@ -4699,9 +4802,13 @@ class CalendarStatusViewSet(viewsets.ReadOnlyModelViewSet):
             for it in shop_hours:
                 it['start_time'] = _fmt_time(it.get('start_time'))
                 it['end_time'] = _fmt_time(it.get('end_time'))
+                it['break_start_time'] = _fmt_time(it.get('break_start_time'))
+                it['break_end_time'] = _fmt_time(it.get('break_end_time'))
             for it in staff_hours:
                 it['start_time'] = _fmt_time(it.get('start_time'))
                 it['end_time'] = _fmt_time(it.get('end_time'))
+                it['break_start_time'] = _fmt_time(it.get('break_start_time'))
+                it['break_end_time'] = _fmt_time(it.get('break_end_time'))
             for it in overrides:
                 it['start_time'] = _fmt_time(it.get('start_time'))
                 it['end_time'] = _fmt_time(it.get('end_time'))
@@ -4824,6 +4931,7 @@ class CalendarStatusViewSet(viewsets.ReadOnlyModelViewSet):
             'opening_time': status_data.get('open_interval', {}).get('start') if status_data.get('open_interval') else None,
             'closing_time': status_data.get('open_interval', {}).get('end') if status_data.get('open_interval') else None,
             'active_staff_count': active_staff_count,
+            'has_staff_working': active_staff_count > 0,
             'source': status_data.get('source'),
             'message': status_data.get('message'),
             'note': status_data.get('note', ''),  # DailyOverride note'u

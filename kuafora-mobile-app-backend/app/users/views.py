@@ -543,16 +543,20 @@ class ForgotPasswordView(generics.GenericAPIView):
             "Kuafora"
         )
 
+        from_email = getattr(settings, "DEFAULT_FROM_EMAIL", None)
+        if not from_email:
+            from_email = getattr(settings, "EMAIL_HOST_USER", None)
         try:
             send_mail(
                 subject,
                 body,
-                getattr(settings, "DEFAULT_FROM_EMAIL", None),
+                from_email or "noreply@kuafora.com",
                 [user.email],
                 fail_silently=False,
             )
         except Exception as e:
-            print(f"[EMAIL][RESET] send_mail failed: {e}")
+            import logging
+            logging.getLogger(__name__).exception("[EMAIL][RESET] Şifre sıfırlama e-postası gönderilemedi: %s", e)
 
         return Response(generic)
 

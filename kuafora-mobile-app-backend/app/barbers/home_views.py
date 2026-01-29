@@ -148,11 +148,40 @@ class HomeDashboardApi(APIView):
                 "image": c.barbershop.main_image.url if c.barbershop.main_image else None
             })
 
+        # 5. Announcements - Son 30 günün aktif duyuruları (tüm salonlar için)
+        from .models import SpecialMessage
+        thirty_days_ago = timezone.now() - timedelta(days=30)
+        announcements_qs = SpecialMessage.objects.filter(
+            is_active=True,
+            barbershop__subscription__status__in=['trial', 'active', 'lifetime', 'grace_period'],
+            barbershop__is_verified=True,
+            barbershop__name__isnull=False,
+            created_at__gte=thirty_days_ago
+        ).exclude(barbershop__name='').select_related('barbershop').order_by('-created_at')
+        
+        if city:
+            announcements_qs = announcements_qs.filter(barbershop__city__icontains=city)
+        
+        announcements_data = []
+        for ann in announcements_qs[:20]:  # Son 20 duyuru
+            announcements_data.append({
+                "id": ann.id,
+                "barbershop_id": ann.barbershop.id,
+                "barbershop_name": ann.barbershop.name,
+                "title": ann.title,
+                "content": ann.content,
+                "display_type": ann.display_type,
+                "created_at": ann.created_at.isoformat(),
+                "start_datetime": ann.start_datetime.isoformat() if ann.start_datetime else None,
+                "end_datetime": ann.end_datetime.isoformat() if ann.end_datetime else None,
+            })
+
         response_data = {
             "categories": cat_data,
             "newest_shops": newest_data,
             "top_rated_shops": top_rated_data,
-            "campaigns": campaign_data
+            "campaigns": campaign_data,
+            "announcements": announcements_data
         }
         
         # Cache'e kaydet (2 dakika TTL - kategoriler ve kampanyalar sık değişmez)

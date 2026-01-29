@@ -796,8 +796,13 @@ class StaffCalendarStatusSerializer(serializers.Serializer):
     staff_name = serializers.CharField()
     date = serializers.DateField()
     is_working = serializers.BooleanField()
+    is_on_break = serializers.BooleanField(required=False, default=False)
+    is_on_leave = serializers.BooleanField(required=False, default=False)
     start_time = serializers.TimeField(allow_null=True)
     end_time = serializers.TimeField(allow_null=True)
+    break_start_time = serializers.TimeField(allow_null=True, required=False)
+    break_end_time = serializers.TimeField(allow_null=True, required=False)
+    break_ends_in = serializers.IntegerField(allow_null=True, required=False)
     status_message = serializers.CharField(allow_null=True)
     active_overrides = OverrideSerializer(many=True, read_only=True)
 

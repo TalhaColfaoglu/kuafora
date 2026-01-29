@@ -9,7 +9,6 @@ from app.users.models import User, UserAddress
 from app.barbers.models import Barbershop, Favorite, Review
 from app.appointments.models import Appointment
 from app.subscriptions.models import Subscription
-from app.analytics.models import AppEvent, ScreenView, FeatureUsage, UserSession
 
 
 def admin_dashboard_view(request):
@@ -51,113 +50,26 @@ def admin_dashboard_view(request):
     verified_users = user_stats['verified']
     unverified_users = user_stats['unverified']
     
-    # Aktif kullanıcı metrikleri (TRACKING SİSTEMİ ile - gerçek veri)
-    # Günlük aktif kullanıcı (son 24 saatte uygulama açan unique kullanıcılar)
-    try:
-        daily_active_users_tracking = UserSession.objects.filter(
-            start_time__gte=now - timedelta(hours=24)
-        ).values('user').distinct().count()
-    except:
-        daily_active_users_tracking = 0
-    
-    # Fallback: last_login bazlı (tracking verisi yoksa)
-    daily_active_users_login = User.objects.filter(
+    # Aktif kullanıcı metrikleri (last_login bazlı)
+    daily_active_users = User.objects.filter(
         last_login__gte=now - timedelta(hours=24),
         is_active=True
     ).count()
     
-    daily_active_users = daily_active_users_tracking if daily_active_users_tracking > 0 else daily_active_users_login
-    
-    # Haftalık aktif kullanıcı (tracking)
-    try:
-        weekly_active_users_tracking = UserSession.objects.filter(
-            start_time__gte=now - timedelta(days=7)
-        ).values('user').distinct().count()
-    except:
-        weekly_active_users_tracking = 0
-    
-    weekly_active_users_login = User.objects.filter(
+    weekly_active_users = User.objects.filter(
         last_login__gte=now - timedelta(days=7),
         is_active=True
     ).count()
     
-    weekly_active_users = weekly_active_users_tracking if weekly_active_users_tracking > 0 else weekly_active_users_login
-    
-    # Aylık aktif kullanıcı (tracking)
-    try:
-        monthly_active_users_tracking = UserSession.objects.filter(
-            start_time__gte=now - timedelta(days=30)
-        ).values('user').distinct().count()
-    except:
-        monthly_active_users_tracking = 0
-    
-    monthly_active_users_login = User.objects.filter(
+    monthly_active_users = User.objects.filter(
         last_login__gte=now - timedelta(days=30),
         is_active=True
     ).count()
     
-    monthly_active_users = monthly_active_users_tracking if monthly_active_users_tracking > 0 else monthly_active_users_login
-    
-    # Yıllık aktif kullanıcı (tracking)
-    try:
-        yearly_active_users_tracking = UserSession.objects.filter(
-            start_time__gte=now - timedelta(days=365)
-        ).values('user').distinct().count()
-    except:
-        yearly_active_users_tracking = 0
-    
-    yearly_active_users_login = User.objects.filter(
+    yearly_active_users = User.objects.filter(
         last_login__gte=now - timedelta(days=365),
         is_active=True
     ).count()
-    
-    yearly_active_users = yearly_active_users_tracking if yearly_active_users_tracking > 0 else yearly_active_users_login
-    
-    # Uygulama açılma sayısı (tracking)
-    try:
-        app_opens_total = AppEvent.objects.filter(event_type='app_open').count()
-        app_opens_today = AppEvent.objects.filter(
-            event_type='app_open',
-            timestamp__date=today
-        ).count()
-        app_opens_week = AppEvent.objects.filter(
-            event_type='app_open',
-            timestamp__gte=timezone.make_aware(datetime.combine(week_ago, datetime.min.time()))
-        ).count()
-        app_opens_month = AppEvent.objects.filter(
-            event_type='app_open',
-            timestamp__gte=timezone.make_aware(datetime.combine(month_ago, datetime.min.time()))
-        ).count()
-    except:
-        app_opens_total = 0
-        app_opens_today = 0
-        app_opens_week = 0
-        app_opens_month = 0
-    
-    # Ortalama oturum süresi (tracking)
-    try:
-        avg_session_duration = UserSession.objects.filter(
-            duration__isnull=False
-        ).aggregate(avg=Avg('duration'))['avg'] or 0
-        avg_session_duration_minutes = round(avg_session_duration / 60, 1) if avg_session_duration else 0
-    except:
-        avg_session_duration_minutes = 0
-    
-    # Top ekranlar (tracking)
-    try:
-        top_screens = list(ScreenView.objects.values('screen_name', 'app_type').annotate(
-            count=Count('id')
-        ).order_by('-count')[:10])
-    except:
-        top_screens = []
-    
-    # Top özellikler (tracking)
-    try:
-        top_features = list(FeatureUsage.objects.values('feature_type', 'app_type').annotate(
-            count=Count('id')
-        ).order_by('-count')[:10])
-    except:
-        top_features = []
     
     # Son 1 ay içerisinde uygulamaya girmeyen aktif kullanıcılar
     inactive_last_month = User.objects.filter(
@@ -502,16 +414,6 @@ def admin_dashboard_view(request):
             'max_registration_count': max_registration_count if max_registration_count > 0 else 1,
             'daily_active_chart': daily_active_chart,
             'max_daily_active': max_daily_active if max_daily_active > 0 else 1,
-            # Tracking metrikleri
-            'tracking': {
-                'app_opens_total': app_opens_total,
-                'app_opens_today': app_opens_today,
-                'app_opens_week': app_opens_week,
-                'app_opens_month': app_opens_month,
-                'avg_session_duration_minutes': avg_session_duration_minutes,
-                'top_screens': top_screens,
-                'top_features': top_features,
-            },
         }
     }
     
