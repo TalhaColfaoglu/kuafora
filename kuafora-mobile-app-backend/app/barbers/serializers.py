@@ -137,6 +137,15 @@ class BarbershopSerializer(serializers.ModelSerializer):
             except (ValueError, TypeError):
                 attrs['longitude'] = None
         
+        # Google Maps link: gevşek validasyon - http/https ile başlayan herhangi bir link kabul
+        link_val = attrs.get('google_maps_link') or (getattr(self, 'initial_data', {}) or {}).get('google_maps_link')
+        if link_val and str(link_val).strip():
+            link = str(link_val).strip()
+            if not (link.startswith('http://') or link.startswith('https://')):
+                raise serializers.ValidationError({
+                    'google_maps_link': 'Link http:// veya https:// ile başlamalıdır.'
+                })
+        
         # External booking validation
         system_type = attrs.get('system_type')
         external_booking = attrs.get('external_booking', {})

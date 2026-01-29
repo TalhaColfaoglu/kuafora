@@ -444,8 +444,8 @@ def _send_email_verification_code(user, request=None) -> None:
     expires_at = timezone.now() + timezone.timedelta(minutes=10)
     EmailVerificationCode.objects.create(user=user, code_hash=code_hash, expires_at=expires_at)
 
-    subject = "Kuafora • E-posta Doğrulama Kodu"
-    body = (
+    subject = "Kuafora 🔐 E-posta Doğrulama Kodunuz"
+    body_plain = (
         "Merhaba,\n\n"
         "Kuafora hesabınızı doğrulamak için doğrulama kodunuz:\n\n"
         f"{code}\n\n"
@@ -453,17 +453,48 @@ def _send_email_verification_code(user, request=None) -> None:
         "Bu isteği siz yapmadıysanız bu e-postayı yok sayabilirsiniz.\n\n"
         "Kuafora"
     )
-    
+    # Renkli ve emojili HTML e-posta (inline CSS, e-posta istemcileri için uyumlu)
+    body_html = f"""
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+<body style="margin:0; padding:0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f8fafb;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width: 480px; margin: 0 auto; padding: 24px;">
+    <tr>
+      <td style="background: linear-gradient(135deg, #f97316 0%%, #fb923c 100%%); border-radius: 16px 16px 0 0; padding: 28px 24px; text-align: center;">
+        <span style="font-size: 36px;">✂️</span>
+        <h1 style="margin: 12px 0 0; color: #fff; font-size: 22px; font-weight: 700;">Kuafora</h1>
+        <p style="margin: 6px 0 0; color: rgba(255,255,255,0.9); font-size: 14px;">E-posta Doğrulama</p>
+      </td>
+    </tr>
+    <tr>
+      <td style="background: #ffffff; padding: 28px 24px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 16px 16px;">
+        <p style="margin: 0 0 16px; color: #374151; font-size: 16px; line-height: 1.5;">Merhaba 👋</p>
+        <p style="margin: 0 0 20px; color: #4b5563; font-size: 15px; line-height: 1.5;">Hesabınızı doğrulamak için aşağıdaki <strong>6 haneli kodu</strong> uygulamaya girin:</p>
+        <div style="background: linear-gradient(135deg, #fef3c7 0%%, #fde68a 100%%); border: 2px dashed #f59e0b; border-radius: 12px; padding: 20px; text-align: center; margin: 0 0 20px;">
+          <span style="font-size: 28px; font-weight: 800; letter-spacing: 6px; color: #1a1d1e;">{code}</span>
+        </div>
+        <p style="margin: 0 0 8px; color: #6b7280; font-size: 13px;">⏱️ Kod <strong>10 dakika</strong> içinde geçerliliğini yitirir.</p>
+        <p style="margin: 0; color: #9ca3af; font-size: 12px;">Bu isteği siz yapmadıysanız bu e-postayı yok sayabilirsiniz.</p>
+        <p style="margin: 24px 0 0; color: #374151; font-size: 14px;">İyi günler dileriz 🌟</p>
+        <p style="margin: 4px 0 0; color: #f97316; font-size: 14px; font-weight: 700;">Kuafora Ekibi</p>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+"""
     from_email = getattr(settings, "DEFAULT_FROM_EMAIL", None)
     if not from_email:
         raise ValueError("DEFAULT_FROM_EMAIL is not configured in settings")
-    
+
     send_mail(
         subject,
-        body,
+        body_plain,
         from_email,
         [user.email],
         fail_silently=False,
+        html_message=body_html,
     )
 
 
