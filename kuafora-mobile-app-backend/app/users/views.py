@@ -354,6 +354,7 @@ class VerifyEmailView(generics.GenericAPIView):
 
         try:
             _send_email_verification_code(user, request=request)
+            logger.info("[EMAIL][VERIFY_CODE] Doğrulama kodu gönderildi user_id=%s", user.pk)
         except Exception:
             logger.exception("[EMAIL][VERIFY_CODE] send_mail failed")
             return Response(
