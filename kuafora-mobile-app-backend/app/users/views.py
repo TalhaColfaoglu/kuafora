@@ -18,7 +18,10 @@ from django.core.mail import send_mail
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
 from django.utils.crypto import salted_hmac
+import logging
 import secrets
+
+logger = logging.getLogger(__name__)
 
 from .serializers import (
     RegisterSerializer,
@@ -341,9 +344,9 @@ class VerifyEmailView(generics.GenericAPIView):
         user = User.objects.filter(email__iexact=email).first()
 
         # Always return a generic response to prevent email enumeration
-        generic = {"detail": "If the email exists, a verification code will be sent."}
+        generic = {"detail": "If the email exists, a verification code will be sent.", "email_sent": True}
         if not user:
-            return Response(generic)
+            return Response({**generic, "email_sent": True})  # Don't reveal absence
 
         # If already verified, we can still return generic (no-op)
         if getattr(user, "email_verified", False):
@@ -351,8 +354,12 @@ class VerifyEmailView(generics.GenericAPIView):
 
         try:
             _send_email_verification_code(user, request=request)
-        except Exception as e:
-            print(f"[EMAIL][VERIFY_CODE] send_mail failed: {e}")
+        except Exception:
+            logger.exception("[EMAIL][VERIFY_CODE] send_mail failed")
+            return Response(
+                {"detail": "E-posta şu an gönderilemiyor. Lütfen daha sonra tekrar deneyin.", "email_sent": False},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
 
         return Response(generic)
 
@@ -392,13 +399,17 @@ class VerifyEmailCodeView(generics.GenericAPIView):
         if ev.attempts >= 5:
             ev.consumed_at = timezone.now()
             ev.save(update_fields=["consumed_at"])
-            return Response(invalid, status=status.HTTP_400_BAD_REQUEST)
+            return Response({**invalid, "remaining_attempts": 0}, status=status.HTTP_400_BAD_REQUEST)
 
         expected = _hash_email_code(user_id=str(user.pk), code=code)
         if not secrets.compare_digest(ev.code_hash, expected):
             ev.attempts += 1
             ev.save(update_fields=["attempts"])
-            return Response(invalid, status=status.HTTP_400_BAD_REQUEST)
+            remaining = 5 - ev.attempts
+            return Response(
+                {**invalid, "remaining_attempts": max(0, remaining)},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         # Success
         ev.consumed_at = timezone.now()
