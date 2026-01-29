@@ -477,12 +477,28 @@ SPECTACULAR_SETTINGS = {
 PUBLIC_API_ORIGIN = env("PUBLIC_API_ORIGIN", default="").strip()  # e.g. https://api.kuafora.com
 
 # Gmail SMTP varsayılanları (sadece EMAIL_HOST_USER ve EMAIL_HOST_PASSWORD doldurulursa çalışır)
+def _clean_email_setting(value: str) -> str:
+    """Strip and remove non-ASCII / non-breaking space so SMTP login (ASCII) does not fail."""
+    if not value:
+        return value
+    # Remove non-breaking space and other common invisible chars
+    for c in ("\xa0", "\u200b", "\u200c", "\ufeff"):
+        value = value.replace(c, "")
+    value = value.strip()
+    # SMTP login requires ASCII; drop any other non-ASCII (e.g. copy-paste artifacts)
+    try:
+        value.encode("ascii")
+    except UnicodeEncodeError:
+        value = value.encode("ascii", "ignore").decode("ascii").strip()
+    return value
+
+
 EMAIL_HOST = env("EMAIL_HOST", default="smtp.gmail.com").strip()
 EMAIL_PORT = env.int("EMAIL_PORT", default=587)
 EMAIL_USE_TLS = env.bool("EMAIL_USE_TLS", default=True)
 EMAIL_USE_SSL = env.bool("EMAIL_USE_SSL", default=False)
-EMAIL_HOST_USER = env("EMAIL_HOST_USER", default="").strip()
-EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD", default="").strip()
+EMAIL_HOST_USER = _clean_email_setting(env("EMAIL_HOST_USER", default=""))
+EMAIL_HOST_PASSWORD = _clean_email_setting(env("EMAIL_HOST_PASSWORD", default=""))
 
 # Gmail adresi kullanılıyorsa SES'e düşme: her zaman Gmail SMTP kullan
 if EMAIL_HOST_USER and "@gmail.com" in EMAIL_HOST_USER.lower():

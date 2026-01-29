@@ -346,13 +346,16 @@ class VerifyEmailView(generics.GenericAPIView):
         # Always return a generic response to prevent email enumeration
         generic = {"detail": "If the email exists, a verification code will be sent.", "email_sent": True}
         if not user:
+            logger.info("[EMAIL][VERIFY_CODE] 200 no send: user not found email=%s", email[:3] + "***")
             return Response({**generic, "email_sent": True})  # Don't reveal absence
 
-        # If already verified, we can still return generic (no-op)
+        # If already verified, we don't send again (200 but no email)
         if getattr(user, "email_verified", False):
+            logger.info("[EMAIL][VERIFY_CODE] 200 no send: already verified user_id=%s", user.pk)
             return Response(generic)
 
         try:
+            logger.info("[EMAIL][VERIFY_CODE] Sending code to user_id=%s email=%s", user.pk, email[:3] + "***")
             _send_email_verification_code(user, request=request)
             logger.info("[EMAIL][VERIFY_CODE] Doğrulama kodu gönderildi user_id=%s", user.pk)
         except Exception:
