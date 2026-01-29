@@ -39,21 +39,38 @@ def _encrypt(plain: str) -> str:
         return ""
     key = (getattr(settings, "PHONE_ENCRYPTION_KEY", "") or "").strip()
     if not key:
-        # If key is missing, we cannot encrypt. Return empty to skip encryption for this migration.
-        # The user must add PHONE_ENCRYPTION_KEY to .env and run a data migration script separately.
         print("⚠️  WARNING: PHONE_ENCRYPTION_KEY is not set. Skipping phone encryption in migration.")
-        print("   Please add PHONE_ENCRYPTION_KEY to your .env file and run a data migration script.")
-        return ""  # Skip encryption; phone will remain in plaintext until key is set
-    from cryptography.fernet import Fernet  # type: ignore
-    f = Fernet(key.encode())
-    return f.encrypt(plain.encode("utf-8")).decode("utf-8")
+        print("   Generate one: python -c \"from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())\"")
+        return ""
+    try:
+        from cryptography.fernet import Fernet  # type: ignore
+        f = Fernet(key.encode())
+        return f.encrypt(plain.encode("utf-8")).decode("utf-8")
+    except (ValueError, Exception) as e:
+        # Invalid key (wrong format, padding, etc.): skip encryption so migration can complete
+        print("⚠️  WARNING: PHONE_ENCRYPTION_KEY is invalid (e.g. wrong format). Skipping phone encryption.")
+        print("   Generate a valid key: python -c \"from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())\"")
+        return ""
+
+
+def _is_valid_fernet_key(key: str) -> bool:
+    if not key:
+        return False
+    try:
+        from cryptography.fernet import Fernet  # type: ignore
+        Fernet(key.encode())
+        return True
+    except (ValueError, Exception):
+        return False
 
 
 def forwards(apps, schema_editor):
     User = apps.get_model("users", "User")
     qs = User.objects.exclude(phone="").filter(phone_encrypted="")
     key = (getattr(settings, "PHONE_ENCRYPTION_KEY", "") or "").strip()
-    has_key = bool(key)
+    has_key = _is_valid_fernet_key(key)
+    if key and not has_key:
+        print("⚠️  WARNING: PHONE_ENCRYPTION_KEY is invalid. Phones will stay in plaintext until a valid key is set.")
     
     for u in qs.iterator():
         n = _normalize_phone(u.phone)
