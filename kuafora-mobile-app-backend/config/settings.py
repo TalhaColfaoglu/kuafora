@@ -483,6 +483,15 @@ EMAIL_USE_TLS = env.bool("EMAIL_USE_TLS", default=True)
 EMAIL_USE_SSL = env.bool("EMAIL_USE_SSL", default=False)
 EMAIL_HOST_USER = env("EMAIL_HOST_USER", default="").strip()
 EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD", default="").strip()
+
+# Gmail adresi kullanılıyorsa SES'e düşme: her zaman Gmail SMTP kullan
+if EMAIL_HOST_USER and "@gmail.com" in EMAIL_HOST_USER.lower():
+    if "amazonaws.com" in EMAIL_HOST.lower() or "ses" in EMAIL_HOST.lower():
+        EMAIL_HOST = "smtp.gmail.com"
+        EMAIL_PORT = 587
+        EMAIL_USE_TLS = True
+        EMAIL_USE_SSL = False
+
 # Gönderen adresi: Gmail kullanıyorsanız genelde EMAIL_HOST_USER ile aynı olmalı
 DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", default="").strip()
 if not DEFAULT_FROM_EMAIL and EMAIL_HOST_USER:
