@@ -15,10 +15,14 @@ class JWTAuthenticationWithEmailGate(JWTAuthentication):
     """
 
     # Allow verification-related endpoints so the user can complete verification.
+    # Allow forgot-password and reset-password so unverified users can reset password (no "e-posta doğrulanamadı" 403).
     _ALLOWED_PREFIXES = (
         "/api/auth/verify-email/",
         "/api/auth/verify-email/code/",
         "/api/auth/verify-email/confirm/",
+        "/api/auth/forgot-password/",
+        "/api/auth/reset-password/",
+        "/api/auth/reset-password/confirm/",
     )
     # Allow reading own profile to show status + enable UX.
     _ALLOWED_EXACT = (
