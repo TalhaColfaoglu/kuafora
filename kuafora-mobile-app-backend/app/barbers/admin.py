@@ -160,13 +160,14 @@ class BarbershopAdmin(ModelAdmin):
     change_form_template = "admin/barbers/barbershop/change_form.html"
     change_list_template = "admin/barbers/barbershop/change_list.html"
     readonly_fields = (
-        "rating_avg", 
-        "total_reviews", 
-        "favorites_count", 
-        "created_at", 
-        "updated_at", 
-        "main_image_preview", 
-        "images_preview", 
+        "rating_avg",
+        "total_reviews",
+        "favorites_count",
+        "views_weekly",
+        "created_at",
+        "updated_at",
+        "main_image_preview",
+        "images_preview",
         "google_maps_link_display",
         "address_full_display",
         "contact_info_display",

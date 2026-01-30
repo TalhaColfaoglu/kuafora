@@ -209,6 +209,19 @@ class ResetPasswordSerializer(serializers.Serializer):
         return value
 
 
+class ResetPasswordByCodeSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    code = serializers.CharField(min_length=6, max_length=6)
+    new_password = serializers.CharField(min_length=8)
+
+    def validate_code(self, value):
+        return (value or "").strip()
+
+    def validate_new_password(self, value):
+        validate_password(value)
+        return value
+
+
 class UserAddressSerializer(serializers.ModelSerializer):
     class Meta:
         model = UserAddress

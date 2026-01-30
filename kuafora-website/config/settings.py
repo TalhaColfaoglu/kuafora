@@ -43,6 +43,9 @@ for _h in ("localhost", "127.0.0.1"):
     if _h not in ALLOWED_HOSTS:
         ALLOWED_HOSTS.append(_h)
 
+# Şifre sıfırlama sayfası API'ye POST atarken kullanılacak API base URL (sonunda / yok)
+KUAFORA_API_URL = os.getenv("KUAFORA_API_URL", "https://api.kuafora.com").rstrip("/")
+
 # Application definition
 INSTALLED_APPS = [
     'django.contrib.admin',

@@ -109,6 +109,20 @@ Loglarda `Gmail API send failed` veya `Gmail API service build failed` arayn. Ge
 - Refresh token süresi dolmuş veya yanlış (OAuth Playground’dan yeniden alın).
 - Scope eksik: `https://www.googleapis.com/auth/gmail.send` gerekli.
 
+#### `invalid_grant: Bad Request` / `RefreshError`
+
+Bu hata **refresh token'ın geçersiz veya süresi dolmuş** olduğu anlamına gelir. Yapmanız gerekenler:
+
+1. **[OAuth 2.0 Playground](https://developers.google.com/oauthplayground/)** sayfasına gidin.
+2. Dişli → **Use your own OAuth credentials** işaretleyin; mevcut `GMAIL_API_CLIENT_ID` ve `GMAIL_API_CLIENT_SECRET` değerlerinizi girin.
+3. **Gmail API v1** → **https://www.googleapis.com/auth/gmail.send** kapsamını seçin.
+4. **Authorize APIs** → giriş yapın (mail gönderecek hesap).
+5. **Exchange authorization code for tokens** → sağdaki **Refresh token** değerini kopyalayın.
+6. Sunucudaki `.env` (veya container env) içinde `GMAIL_API_REFRESH_TOKEN` değerini bu yeni token ile güncelleyin.
+7. Backend'i yeniden başlatın (`docker compose restart backend_dev` veya gunicorn restart).
+
+Not: Google hesap şifresi değiştiyse veya "güvenli olmayan uygulama erişimi" kapatıldıysa refresh token iptal olur; yukarıdaki adımlarla yeniden almanız gerekir.
+
 ---
 
 ## 7. Kodlara nereden bakılır?

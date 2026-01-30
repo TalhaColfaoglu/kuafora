@@ -22,6 +22,7 @@ class JWTAuthenticationWithEmailGate(JWTAuthentication):
         "/api/auth/verify-email/confirm/",
         "/api/auth/forgot-password/",
         "/api/auth/reset-password/",
+        "/api/auth/reset-password-by-code/",
         "/api/auth/reset-password/confirm/",
     )
     # Allow reading own profile to show status + enable UX.

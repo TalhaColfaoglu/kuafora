@@ -475,6 +475,10 @@ SPECTACULAR_SETTINGS = {
 # Gmail: Set EMAIL_HOST_USER (Gmail adresi) ve EMAIL_HOST_PASSWORD (Uygulama şifresi).
 # Detay için proje kökündeki EMAIL_SETUP.md dosyasına bakın.
 PUBLIC_API_ORIGIN = env("PUBLIC_API_ORIGIN", default="").strip()  # e.g. https://api.kuafora.com
+# Şifre sıfırlama e-postasındaki link website'ye gitsin (link kopyalama yerine tarayıcıda form).
+# Örn: https://kuafora.com → link https://kuafora.com/sifre-sifirla?uid=...&token=...
+# Boşsa mevcut davranış: link API'deki HTML sayfasına gider.
+PASSWORD_RESET_LINK_BASE_URL = env("PASSWORD_RESET_LINK_BASE_URL", default="").strip()
 
 # Gmail SMTP varsayılanları (sadece EMAIL_HOST_USER ve EMAIL_HOST_PASSWORD doldurulursa çalışır)
 def _clean_email_setting(value: str) -> str:

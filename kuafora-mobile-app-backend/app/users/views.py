@@ -19,8 +19,12 @@ from django.views.decorators.csrf import csrf_exempt
 from app.users.email_tracking import increment_daily_email_count
 from django.utils.decorators import method_decorator
 from django.utils.crypto import salted_hmac
+from django.core.cache import cache
+import json
 import logging
+import random
 import secrets
+import time
 
 logger = logging.getLogger(__name__)
 
@@ -34,6 +38,7 @@ from .serializers import (
     VerifyEmailCodeSerializer,
     PhoneSerializer,
     ResetPasswordSerializer,
+    ResetPasswordByCodeSerializer,
     UserAddressSerializer,
     LogoutSerializer,
     BarbershopStatsSerializer,
@@ -559,6 +564,21 @@ class ConfirmEmailView(generics.GenericAPIView):
         return _html("E-posta doğrulandı", "<span class='ok'>E-postanız doğrulandı.</span> Artık uygulamaya geri dönebilirsiniz.")
 
 
+# Şifre sıfırlama: kod 15 dk geçerli, 3 deneme hakkı; 15 dk'da en fazla 3 e-posta
+PW_RESET_CODE_TIMEOUT = 900
+PW_RESET_MAX_ATTEMPTS = 3
+PW_RESET_EMAILS_PER_WINDOW = 3
+PW_RESET_EMAIL_WINDOW_SECONDS = 900  # 15 dakika
+
+
+def _pw_reset_email_slots_key(email: str) -> str:
+    return f"pw_reset_emails:{email}"
+
+
+def _pw_reset_code_data(email: str) -> dict:
+    return {"email": email, "attempts": 0, "created_at": time.time()}
+
+
 class ForgotPasswordView(generics.GenericAPIView):
     serializer_class = EmailSerializer
     throttle_scope = "auth_forgot_password"
@@ -574,20 +594,42 @@ class ForgotPasswordView(generics.GenericAPIView):
         if not user:
             return Response(generic)
 
-        uid = urlsafe_base64_encode(force_bytes(user.pk))
-        token = default_token_generator.make_token(user)
+        # 15 dakikada en fazla 3 kod gönderimi (e-posta bazlı)
+        now = time.time()
+        slots_key = _pw_reset_email_slots_key(email)
+        raw = cache.get(slots_key)
+        if isinstance(raw, bytes):
+            raw = raw.decode("utf-8", errors="replace")
+        timestamps = json.loads(raw) if isinstance(raw, str) else (raw if isinstance(raw, list) else [])
+        if not isinstance(timestamps, list):
+            timestamps = []
+        # Son 15 dakikadaki istekleri tut
+        timestamps = [t for t in timestamps if now - t < PW_RESET_EMAIL_WINDOW_SECONDS]
+        if len(timestamps) >= PW_RESET_EMAILS_PER_WINDOW:
+            oldest = min(timestamps)
+            next_at = int(oldest + PW_RESET_EMAIL_WINDOW_SECONDS)
+            return Response(
+                {
+                    "detail": "15 dakika içinde en fazla 3 kod gönderebilirsiniz. Lütfen süre dolunca tekrar deneyin.",
+                    "next_email_at": next_at,
+                    "retry_after_seconds": max(0, int(next_at - now)),
+                },
+                status=status.HTTP_429_TOO_MANY_REQUESTS,
+            )
+        timestamps.append(now)
+        cache.set(slots_key, json.dumps(timestamps), timeout=PW_RESET_EMAIL_WINDOW_SECONDS + 60)
 
-        api_origin = getattr(settings, "PUBLIC_API_ORIGIN", "").rstrip("/")
-        if not api_origin:
-            api_origin = (request.build_absolute_uri("/") or "").rstrip("/")
+        # 6 haneli kod; cache'de code -> {email, attempts, created_at}
+        code = "".join(random.choices("0123456789", k=6))
+        cache_key = f"pw_reset:{code}"
+        cache.set(cache_key, json.dumps(_pw_reset_code_data(email)), timeout=PW_RESET_CODE_TIMEOUT)
 
-        confirm_url = f"{api_origin}/api/auth/reset-password/confirm/?uid={uid}&token={token}"
-
-        subject = "Kuafora • Şifre Sıfırlama"
+        subject = "Kuafora • Şifre Sıfırlama Kodu"
         body = (
             "Merhaba,\n\n"
-            "Kuafora hesabınızın şifresini sıfırlamak için aşağıdaki bağlantıya tıklayın:\n\n"
-            f"{confirm_url}\n\n"
+            "Kuafora hesabınızın şifresini sıfırlamak için uygulama içinde kullanacağınız kod:\n\n"
+            f"  {code}\n\n"
+            "Bu kod 15 dakika geçerlidir. 3 yanlış denemeden sonra yeni kod almanız gerekir.\n\n"
             "Bu isteği siz yapmadıysanız bu e-postayı yok sayabilirsiniz.\n\n"
             "Kuafora"
         )
@@ -605,10 +647,17 @@ class ForgotPasswordView(generics.GenericAPIView):
             )
             increment_daily_email_count()
         except Exception as e:
-            import logging
             logging.getLogger(__name__).exception("[EMAIL][RESET] Şifre sıfırlama e-postası gönderilemedi: %s", e)
 
-        return Response(generic)
+        code_expires_at = int(now + PW_RESET_CODE_TIMEOUT)
+        emails_remaining = PW_RESET_EMAILS_PER_WINDOW - len(timestamps)
+        next_email_at = int(min(timestamps) + PW_RESET_EMAIL_WINDOW_SECONDS) if timestamps else None
+        return Response({
+            **generic,
+            "emails_remaining": max(0, emails_remaining),
+            "next_email_at": next_email_at,
+            "code_expires_at": code_expires_at,
+        })
 
 
 class ResetPasswordView(generics.GenericAPIView):
@@ -626,6 +675,122 @@ class ResetPasswordView(generics.GenericAPIView):
             return Response({"detail": "Invalid token"}, status=status.HTTP_400_BAD_REQUEST)
         user.set_password(serializer.validated_data["new_password"])
         user.save()
+        return Response({"detail": "Password reset successful"})
+
+
+def _reset_by_code_error_payload(detail: str, remaining_attempts: int, code_expires_at: int | None) -> dict:
+    payload = {"detail": detail, "remaining_attempts": remaining_attempts}
+    if code_expires_at is not None:
+        payload["code_expires_at"] = code_expires_at
+    return payload
+
+
+class ResetPasswordByCodeView(generics.GenericAPIView):
+    """Uygulama içi şifre sıfırlama: e-postadaki 6 haneli kod + yeni şifre. 3 deneme hakkı."""
+    serializer_class = ResetPasswordByCodeSerializer
+    throttle_scope = "auth_forgot_password"
+
+    def post(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        email = (serializer.validated_data["email"] or "").strip().lower()
+        code = (serializer.validated_data["code"] or "").strip()
+        new_password = serializer.validated_data["new_password"]
+
+        cache_key = f"pw_reset:{code}"
+        raw = cache.get(cache_key)
+        if not raw:
+            return Response(
+                _reset_by_code_error_payload(
+                    "Geçersiz veya süresi dolmuş kod. Yeni kod almak için şifremi unuttum kullanın.",
+                    remaining_attempts=0,
+                    code_expires_at=None,
+                ),
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if isinstance(raw, bytes):
+            raw = raw.decode("utf-8", errors="replace")
+        try:
+            data = json.loads(raw) if isinstance(raw, str) else (raw if isinstance(raw, dict) else {})
+        except (TypeError, ValueError):
+            data = {}
+        cached_email = (data.get("email") or "").strip().lower()
+        attempts = int(data.get("attempts") or 0)
+        created_at = float(data.get("created_at") or 0)
+        code_expires_at = int(created_at + PW_RESET_CODE_TIMEOUT)
+
+        if cached_email != email:
+            attempts += 1
+            if attempts >= PW_RESET_MAX_ATTEMPTS:
+                cache.delete(cache_key)
+                return Response(
+                    _reset_by_code_error_payload(
+                        "Deneme hakkınız kalmadı. Yeni kod almak için şifremi unuttum kullanın.",
+                        remaining_attempts=0,
+                        code_expires_at=None,
+                    ),
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            data["attempts"] = attempts
+            cache.set(cache_key, json.dumps(data), timeout=PW_RESET_CODE_TIMEOUT)
+            return Response(
+                _reset_by_code_error_payload(
+                    "Bu kod bu e-posta adresiyle eşleşmiyor.",
+                    remaining_attempts=PW_RESET_MAX_ATTEMPTS - attempts,
+                    code_expires_at=code_expires_at,
+                ),
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if attempts >= PW_RESET_MAX_ATTEMPTS:
+            cache.delete(cache_key)
+            return Response(
+                _reset_by_code_error_payload(
+                    "Deneme hakkınız kalmadı. Yeni kod almak için şifremi unuttum kullanın.",
+                    remaining_attempts=0,
+                    code_expires_at=None,
+                ),
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        user = User.objects.filter(email__iexact=email).first()
+        if not user:
+            cache.delete(cache_key)
+            return Response(
+                _reset_by_code_error_payload("Geçersiz veya süresi dolmuş kod.", remaining_attempts=0, code_expires_at=None),
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Şifre validasyonu (serializer zaten validate_password yaptı; burada ek hata için attempts artırma)
+        try:
+            from django.contrib.auth.password_validation import validate_password
+            validate_password(new_password, user)
+        except Exception:
+            attempts += 1
+            if attempts >= PW_RESET_MAX_ATTEMPTS:
+                cache.delete(cache_key)
+                return Response(
+                    _reset_by_code_error_payload(
+                        "Deneme hakkınız kalmadı. Yeni kod almak için şifremi unuttum kullanın.",
+                        remaining_attempts=0,
+                        code_expires_at=None,
+                    ),
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            data["attempts"] = attempts
+            cache.set(cache_key, json.dumps(data), timeout=PW_RESET_CODE_TIMEOUT)
+            return Response(
+                _reset_by_code_error_payload(
+                    "Şifre gereksinimleri karşılanmıyor.",
+                    remaining_attempts=PW_RESET_MAX_ATTEMPTS - attempts,
+                    code_expires_at=code_expires_at,
+                ),
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        user.set_password(new_password)
+        user.save()
+        cache.delete(cache_key)
         return Response({"detail": "Password reset successful"})
 
 
