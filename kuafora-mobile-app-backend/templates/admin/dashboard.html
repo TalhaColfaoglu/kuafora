@@ -410,6 +410,48 @@
 </div>
 
 <h2 class="section-title">
+    <span>📧</span>
+    <span>Gönderilen E-posta Sayıları</span>
+</h2>
+<div class="dashboard-stats">
+    <div class="stat-card {% if stats.emails.over_threshold %}danger{% else %}info{% endif %}">
+        <div class="stat-card-header">
+            <h3>Günlük</h3>
+            <div class="stat-card-icon">📧</div>
+        </div>
+        <p class="stat-value">{{ stats.emails.today_count|floatformat:0 }}</p>
+        <div class="stat-subtitle">Bugün gönderilen — Limit: {{ stats.emails.alert_threshold }} (aşımda uyarı maili gider)</div>
+        {% if stats.emails.over_threshold %}
+        <div class="info-note" style="margin-top: 12px;">⚠️ Günlük limit aşıldı. Uyarı maili gönderildi.</div>
+        {% endif %}
+    </div>
+    <div class="stat-card info">
+        <div class="stat-card-header">
+            <h3>Haftalık</h3>
+            <div class="stat-card-icon">📆</div>
+        </div>
+        <p class="stat-value">{{ stats.emails.week_count|floatformat:0 }}</p>
+        <div class="stat-subtitle">Son 7 günde gönderilen e-posta</div>
+    </div>
+    <div class="stat-card info">
+        <div class="stat-card-header">
+            <h3>Aylık</h3>
+            <div class="stat-card-icon">🗓️</div>
+        </div>
+        <p class="stat-value">{{ stats.emails.month_count|floatformat:0 }}</p>
+        <div class="stat-subtitle">Son 30 günde gönderilen e-posta</div>
+    </div>
+    <div class="stat-card purple">
+        <div class="stat-card-header">
+            <h3>Yıllık</h3>
+            <div class="stat-card-icon">📊</div>
+        </div>
+        <p class="stat-value">{{ stats.emails.year_count|floatformat:0 }}</p>
+        <div class="stat-subtitle">Son 365 günde gönderilen e-posta</div>
+    </div>
+</div>
+
+<h2 class="section-title">
     <span>👥</span>
     <span>Kullanıcı İstatistikleri</span>
 </h2>

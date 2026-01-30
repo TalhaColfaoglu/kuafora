@@ -508,17 +508,25 @@ if EMAIL_HOST_USER and "@gmail.com" in EMAIL_HOST_USER.lower():
         EMAIL_USE_TLS = True
         EMAIL_USE_SSL = False
 
-# Gönderen adresi: Gmail kullanıyorsanız genelde EMAIL_HOST_USER ile aynı olmalı
+# Gönderen adresi
 DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", default="").strip()
 if not DEFAULT_FROM_EMAIL and EMAIL_HOST_USER:
     DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 if not DEFAULT_FROM_EMAIL:
     DEFAULT_FROM_EMAIL = "noreply@kuafora.com"
 
-if EMAIL_HOST_USER and EMAIL_HOST_PASSWORD:
+# Gmail API (OAuth2 refresh token) — SMTP yerine Google API ile gönderim
+GMAIL_API_REFRESH_TOKEN = env("GMAIL_API_REFRESH_TOKEN", default="").strip()
+GMAIL_API_CLIENT_ID = env("GMAIL_API_CLIENT_ID", default="").strip()
+GMAIL_API_CLIENT_SECRET = env("GMAIL_API_CLIENT_SECRET", default="").strip()
+GMAIL_API_ENABLED = bool(GMAIL_API_REFRESH_TOKEN and GMAIL_API_CLIENT_ID and GMAIL_API_CLIENT_SECRET)
+
+if GMAIL_API_ENABLED:
+    EMAIL_BACKEND = "app.core.gmail_api_backend.GmailAPIEmailBackend"
+elif EMAIL_HOST_USER and EMAIL_HOST_PASSWORD:
     EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
 else:
-    # SMTP yoksa: DEBUG'ta console'a yaz, production'da dummy (mail gitmez)
+    # SMTP/Gmail API yoksa: DEBUG'ta console, production'da dummy
     EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend" if DEBUG else "django.core.mail.backends.dummy.EmailBackend"
 
 # -----------------------------------------------------------------------------

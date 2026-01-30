@@ -1,0 +1,164 @@
+{% extends "admin/base_site.html" %}
+{% load i18n static %}
+
+{% block title %}Önizleme: {{ shop.name }} | {{ block.super }}{% endblock %}
+
+{% block extrastyle %}
+{{ block.super }}
+<style>
+    .preview-page { max-width: 680px; margin: 0 auto 40px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+    .preview-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; flex-wrap: wrap; gap: 12px; }
+    .preview-header h1 { margin: 0; font-size: 22px; color: #111827; }
+    .preview-back { background: #f3f4f6; color: #374151; padding: 8px 16px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 14px; }
+    .preview-back:hover { background: #e5e7eb; }
+    .preview-hero { border-radius: 16px; overflow: hidden; margin-bottom: 24px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+    .preview-hero img { width: 100%; height: 280px; object-fit: cover; display: block; }
+    .preview-hero-placeholder { width: 100%; height: 280px; background: linear-gradient(135deg, #e5e7eb 0%, #d1d5db 100%); display: flex; align-items: center; justify-content: center; color: #6b7280; font-size: 18px; }
+    .preview-card { background: #fff; border-radius: 16px; padding: 20px 24px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); border: 1px solid #e5e7eb; }
+    .preview-card h2 { margin: 0 0 16px; font-size: 18px; color: #111827; display: flex; align-items: center; gap: 8px; }
+    .preview-card h2::before { content: ''; width: 4px; height: 20px; background: #3b82f6; border-radius: 2px; }
+    .preview-meta { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 12px; }
+    .preview-meta span { color: #6b7280; font-size: 14px; }
+    .preview-meta a { color: #2563eb; text-decoration: none; }
+    .preview-meta a:hover { text-decoration: underline; }
+    .preview-desc { color: #4b5563; font-size: 14px; line-height: 1.6; margin: 0; white-space: pre-wrap; }
+    .preview-hours-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    .preview-hours-table th { text-align: left; padding: 10px 12px; color: #6b7280; font-weight: 600; }
+    .preview-hours-table td { padding: 10px 12px; border-top: 1px solid #f3f4f6; color: #374151; }
+    .preview-hours-table .closed { color: #dc2626; }
+    .preview-service-list { list-style: none; margin: 0; padding: 0; }
+    .preview-service-list li { padding: 12px 0; border-bottom: 1px solid #f3f4f6; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
+    .preview-service-list li:last-child { border-bottom: none; }
+    .preview-service-name { font-weight: 500; color: #111827; }
+    .preview-service-meta { font-size: 13px; color: #6b7280; }
+    .preview-service-price { font-weight: 700; color: #059669; }
+    .preview-staff-block { margin-bottom: 24px; }
+    .preview-staff-card { display: flex; gap: 16px; padding: 16px 0; border-bottom: 1px solid #f3f4f6; align-items: flex-start; }
+    .preview-staff-card:last-child { border-bottom: none; }
+    .preview-staff-photo { width: 64px; height: 64px; border-radius: 12px; object-fit: cover; background: #f3f4f6; }
+    .preview-staff-info { flex: 1; min-width: 0; }
+    .preview-staff-name { font-weight: 600; color: #111827; margin-bottom: 4px; }
+    .preview-staff-services { font-size: 13px; color: #6b7280; margin-top: 8px; }
+    .preview-staff-hours { font-size: 12px; color: #9ca3af; margin-top: 4px; }
+    .preview-gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 12px; }
+    .preview-gallery img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 12px; }
+    .preview-badges { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+    .preview-badge { background: #eff6ff; color: #1d4ed8; padding: 4px 10px; border-radius: 8px; font-size: 12px; font-weight: 500; }
+    .preview-social { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 12px; }
+    .preview-social a { color: #2563eb; text-decoration: none; font-size: 14px; }
+    .preview-note { background: #fef3c7; border-left: 4px solid #f59e0b; padding: 12px 16px; border-radius: 8px; margin-bottom: 24px; font-size: 14px; color: #92400e; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="preview-page">
+    <div class="preview-header">
+        <h1>📱 Detay ekranı önizlemesi</h1>
+        <a href="{% url 'admin:barbers_barbershop_change' shop.pk %}" class="preview-back">← Düzenlemeye dön</a>
+    </div>
+
+    <div class="preview-note">Bu sayfa kuaförün uygulamada kullanıcıya nasıl görüneceğini gösterir. Bilgileri buradan kontrol edebilirsiniz.</div>
+
+    <div class="preview-hero">
+        {% if shop.main_image %}
+            <img src="{{ shop.main_image.url }}" alt="{{ shop.name }}">
+        {% else %}
+            <div class="preview-hero-placeholder">Ana görsel yok</div>
+        {% endif %}
+    </div>
+
+    <div class="preview-card">
+        <h2>{{ shop.name }}</h2>
+        <div class="preview-meta">
+            <span>📍 {{ shop.district }}{% if shop.city %}, {{ shop.city }}{% endif %}</span>
+            {% if shop.address %}<span>• {{ shop.address }}</span>{% endif %}
+            {% if shop.phone_number %}<span>• <a href="tel:{{ shop.phone_number }}">{{ shop.phone_number }}</a></span>{% endif %}
+        </div>
+        {% if shop.categories.exists %}
+        <div class="preview-badges">
+            {% for c in shop.categories.all %}<span class="preview-badge">{{ c.name }}</span>{% endfor %}
+        </div>
+        {% endif %}
+        {% if shop.description %}
+        <p class="preview-desc">{{ shop.description }}</p>
+        {% endif %}
+        {% if shop.instagram or shop.facebook or shop.whatsapp %}
+        <div class="preview-social">
+            {% if shop.instagram %}<a href="{{ shop.instagram }}" target="_blank" rel="noopener">Instagram</a>{% endif %}
+            {% if shop.facebook %}<a href="{{ shop.facebook }}" target="_blank" rel="noopener">Facebook</a>{% endif %}
+            {% if shop.whatsapp %}<a href="{{ shop.whatsapp }}" target="_blank" rel="noopener">WhatsApp</a>{% endif %}
+        </div>
+        {% endif %}
+        {% if shop.google_maps_link %}
+        <p style="margin: 12px 0 0;"><a href="{{ shop.google_maps_link }}" target="_blank" rel="noopener">📍 Haritada aç</a></p>
+        {% endif %}
+    </div>
+
+    <div class="preview-card">
+        <h2>Çalışma saatleri (dükkan)</h2>
+        <table class="preview-hours-table">
+            {% for row in shop_schedule %}
+            <tr>
+                <th>{{ row.day }}</th>
+                <td class="{% if row.closed %}closed{% endif %}">{{ row.text }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+    </div>
+
+    {% if categories_with_services %}
+    <div class="preview-card">
+        <h2>Hizmetler</h2>
+        {% for group in categories_with_services %}
+        <p style="font-weight: 600; color: #374151; margin: 16px 0 8px; font-size: 14px;">{{ group.category }}</p>
+        <ul class="preview-service-list">
+            {% for svc in group.services %}
+            <li>
+                <span class="preview-service-name">{{ svc.name }}</span>
+                <span class="preview-service-meta">{{ svc.duration }} dk</span>
+                <span class="preview-service-price">₺{{ svc.price }}</span>
+            </li>
+            {% endfor %}
+        </ul>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if staff_list %}
+    <div class="preview-card">
+        <h2>Personel</h2>
+        {% for item in staff_list %}
+        <div class="preview-staff-card">
+            {% if item.staff.photo %}
+            <img src="{{ item.staff.photo.url }}" alt="" class="preview-staff-photo">
+            {% else %}
+            <div class="preview-staff-photo" style="display: flex; align-items: center; justify-content: center; color: #9ca3af; font-size: 24px;">👤</div>
+            {% endif %}
+            <div class="preview-staff-info">
+                <div class="preview-staff-name">{% if item.staff.user %}{{ item.staff.user.full_name|default:item.staff.email }}{% else %}{{ item.staff.email }}{% endif %}</div>
+                {% if item.services %}
+                <div class="preview-staff-services">Hizmetler: {% for ss in item.services %}{{ ss.service.name }}{% if not forloop.last %}, {% endif %}{% endfor %}</div>
+                {% endif %}
+                <div class="preview-staff-hours">
+                    {% for row in item.schedule %}{{ row.day }}: {{ row.text }}{% if not forloop.last %} · {% endif %}{% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if shop.images.exists %}
+    <div class="preview-card">
+        <h2>Galeri</h2>
+        <div class="preview-gallery">
+            {% for img in shop.images.all %}
+            <img src="{% if img.image_thumb %}{{ img.image_thumb.url }}{% else %}{{ img.image.url }}{% endif %}" alt="">
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <p style="text-align: center; margin-top: 32px;"><a href="{% url 'admin:barbers_barbershop_change' shop.pk %}" class="preview-back">← Kuaförü düzenle</a></p>
+</div>
+{% endblock %}

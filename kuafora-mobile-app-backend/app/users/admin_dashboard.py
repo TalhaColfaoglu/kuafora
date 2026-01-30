@@ -6,6 +6,12 @@ from django.template.response import TemplateResponse
 from django.db.models.functions import TruncDate, TruncDay
 from datetime import timedelta, datetime
 from app.users.models import User, UserAddress
+from app.users.email_tracking import (
+    get_today_email_count,
+    get_weekly_email_count,
+    get_monthly_email_count,
+    get_yearly_email_count,
+)
 from app.barbers.models import Barbershop, Favorite, Review
 from app.appointments.models import Appointment
 from app.subscriptions.models import Subscription
@@ -345,6 +351,13 @@ def admin_dashboard_view(request):
     
     max_weekly_active = max([w['count'] for w in weekly_active_trend]) if weekly_active_trend and any(w['count'] > 0 for w in weekly_active_trend) else 1
     
+    # ==================== E-POSTA İSTATİSTİKLERİ (GÜNLÜK / HAFTALIK / AYLIK / YILLIK) ====================
+    today_email_count = get_today_email_count()
+    week_email_count = get_weekly_email_count()
+    month_email_count = get_monthly_email_count()
+    year_email_count = get_yearly_email_count()
+    daily_email_alert_threshold = 400
+    
     # ==================== CONTEXT OLUŞTURMA ====================
     
     context = {
@@ -414,6 +427,14 @@ def admin_dashboard_view(request):
             'max_registration_count': max_registration_count if max_registration_count > 0 else 1,
             'daily_active_chart': daily_active_chart,
             'max_daily_active': max_daily_active if max_daily_active > 0 else 1,
+            'emails': {
+                'today_count': today_email_count,
+                'week_count': week_email_count,
+                'month_count': month_email_count,
+                'year_count': year_email_count,
+                'alert_threshold': daily_email_alert_threshold,
+                'over_threshold': today_email_count > daily_email_alert_threshold,
+            },
         }
     }
     

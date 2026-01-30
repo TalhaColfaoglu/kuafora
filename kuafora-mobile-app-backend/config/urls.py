@@ -41,6 +41,7 @@ def schema_static(request):
 urlpatterns = [
     path("admin/help/", admin.site.admin_view(__import__("config.admin_help", fromlist=["admin_help_view"]).admin_help_view), name="admin-help"),
     path("admin/dashboard/", admin.site.admin_view(__import__("app.users.admin_dashboard", fromlist=["admin_dashboard_view"]).admin_dashboard_view), name="admin-dashboard"),
+    path("admin/barbershop/<int:pk>/preview/", admin.site.admin_view(__import__("app.barbers.admin_views", fromlist=["barbershop_preview_view"]).barbershop_preview_view), name="admin-barbershop-preview"),
     path("admin/", admin.site.urls),
     # Dinamik şema yerine statik dosyayı servis et (dinamik jeneratör hatalarından etkilenmesin)
     path("api/schema/", schema_static, name="schema"),

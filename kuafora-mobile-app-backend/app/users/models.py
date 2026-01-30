@@ -263,3 +263,18 @@ class EmailVerificationCode(models.Model):
     @property
     def is_consumed(self) -> bool:
         return self.consumed_at is not None
+
+
+class EmailDailyLog(models.Model):
+    """Günlük gönderilen e-posta sayısı ve 400 limit aşımında uyarı durumu."""
+
+    date = models.DateField(unique=True, db_index=True)
+    count = models.PositiveIntegerField(default=0)
+    alert_sent = models.BooleanField(default=False)
+
+    class Meta:
+        verbose_name = "Günlük e-posta logu"
+        verbose_name_plural = "Günlük e-posta logları"
+
+    def __str__(self) -> str:
+        return f"{self.date}: {self.count} e-posta"

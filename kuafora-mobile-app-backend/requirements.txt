@@ -33,6 +33,10 @@ django-unfold==0.37.0
 # Crypto (field-level encryption for sensitive data like phone numbers)
 cryptography>=43.0.1
 
+# Gmail API (optional: send mail via Google API instead of SMTP)
+google-auth>=2.28.0
+google-api-python-client>=2.110.0
+
 # Monitoring (system metrics and health checks)
 psutil==5.9.8
 

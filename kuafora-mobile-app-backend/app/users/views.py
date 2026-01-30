@@ -16,6 +16,7 @@ from django.utils import timezone
 from django.http import HttpResponse
 from django.core.mail import send_mail
 from django.views.decorators.csrf import csrf_exempt
+from app.users.email_tracking import increment_daily_email_count
 from django.utils.decorators import method_decorator
 from django.utils.crypto import salted_hmac
 import logging
@@ -83,6 +84,7 @@ class RegisterView(generics.CreateAPIView):
         # Send OTP code (best-effort, don't fail registration if email fails)
         try:
             _send_email_verification_code(user, request=self.request)
+            increment_daily_email_count()
         except Exception as e:
             import traceback
             import logging
@@ -358,6 +360,7 @@ class VerifyEmailView(generics.GenericAPIView):
             logger.info("[EMAIL][VERIFY_CODE] Sending code to user_id=%s email=%s", user.pk, email[:3] + "***")
             _send_email_verification_code(user, request=request)
             logger.info("[EMAIL][VERIFY_CODE] Doğrulama kodu gönderildi user_id=%s", user.pk)
+            increment_daily_email_count()
         except Exception:
             logger.exception("[EMAIL][VERIFY_CODE] send_mail failed")
             return Response(
@@ -600,6 +603,7 @@ class ForgotPasswordView(generics.GenericAPIView):
                 [user.email],
                 fail_silently=False,
             )
+            increment_daily_email_count()
         except Exception as e:
             import logging
             logging.getLogger(__name__).exception("[EMAIL][RESET] Şifre sıfırlama e-postası gönderilemedi: %s", e)

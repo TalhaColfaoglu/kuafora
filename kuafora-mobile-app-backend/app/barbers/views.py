@@ -4353,9 +4353,7 @@ class CalendarStatusViewSet(viewsets.ReadOnlyModelViewSet):
                     end_time__gte=current_time,
                     is_closed=False
                 ).values('staff').distinct().count() if is_open else 0
-                shop_hours = ShopWorkingHours.objects.filter(barbershop=barbershop, day_of_week=day_code).first()
-                opening_time_str = shop_hours.start_time.strftime('%H:%M') if (shop_hours and shop_hours.start_time) else None
-                closing_time_str = shop_hours.end_time.strftime('%H:%M') if (shop_hours and shop_hours.end_time) else None
+                # Manuel aç/kapa: ana uygulamada sadece "Açık" / "Kapalı" yazsın; saat gösterme
                 resp_data = {
                     'is_open': is_open,
                     'is_break': False,
@@ -4364,8 +4362,8 @@ class CalendarStatusViewSet(viewsets.ReadOnlyModelViewSet):
                     'minutes_until_open': None,
                     'break_end_time': None,
                     'source': 'TOGGLE',
-                    'opening_time': opening_time_str,
-                    'closing_time': closing_time_str,
+                    'opening_time': None,
+                    'closing_time': None,
                     'has_staff_working': active_staff_count > 0,
                     'active_staff_count': active_staff_count,
                 }

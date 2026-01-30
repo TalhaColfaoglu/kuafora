@@ -1,0 +1,45 @@
+{% extends "admin/change_list.html" %}
+{% load static %}
+
+{% block content %}
+{{ block.super }}
+<div id="admin-barbershop-lightbox" style="display: none; position: fixed; inset: 0; z-index: 99999; background: rgba(0,0,0,0.9); align-items: center; justify-content: center; cursor: pointer;">
+    <img id="admin-barbershop-lightbox-img" src="" alt="" style="max-width: 95vw; max-height: 95vh; object-fit: contain; border-radius: 8px; box-shadow: 0 8px 32px rgba(0,0,0,0.5); pointer-events: none;">
+</div>
+<button type="button" id="admin-barbershop-lightbox-close" style="display: none; position: fixed; top: 16px; right: 16px; z-index: 100000; background: #fff; border: none; border-radius: 8px; padding: 10px 16px; cursor: pointer; font-weight: 700; box-shadow: 0 2px 8px rgba(0,0,0,0.3);">Kapat</button>
+<script>
+(function() {
+    function initLightbox() {
+        var overlay = document.getElementById('admin-barbershop-lightbox');
+        var imgEl = document.getElementById('admin-barbershop-lightbox-img');
+        var closeBtn = document.getElementById('admin-barbershop-lightbox-close');
+        if (!overlay || !imgEl) return;
+        function hide() {
+            overlay.style.display = 'none';
+            if (closeBtn) closeBtn.style.display = 'none';
+        }
+        document.querySelectorAll('.admin-barbershop-img-link').forEach(function(a) {
+            a.addEventListener('click', function(e) {
+                e.preventDefault();
+                var href = this.getAttribute('href');
+                if (href) {
+                    imgEl.src = href;
+                    overlay.style.display = 'flex';
+                    if (closeBtn) closeBtn.style.display = 'block';
+                }
+            });
+        });
+        overlay.addEventListener('click', hide);
+        if (closeBtn) closeBtn.addEventListener('click', hide);
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') hide();
+        });
+    }
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initLightbox);
+    } else {
+        initLightbox();
+    }
+})();
+</script>
+{% endblock %}

@@ -5,7 +5,23 @@ from django.utils.html import format_html
 from unfold.admin import ModelAdmin
 from unfold.decorators import action
 
-from .models import User
+from .models import User, EmailDailyLog
+
+
+@admin.register(EmailDailyLog)
+class EmailDailyLogAdmin(ModelAdmin):
+    list_display = ("date", "count", "alert_sent")
+    list_filter = ("alert_sent",)
+    ordering = ("-date",)
+    readonly_fields = ("date", "count", "alert_sent")
+    date_hierarchy = "date"
+    list_per_page = 31
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
 
 
 @admin.register(User)

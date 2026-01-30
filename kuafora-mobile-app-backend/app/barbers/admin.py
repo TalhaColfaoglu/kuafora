@@ -1,4 +1,5 @@
 from django.contrib import admin
+from django.urls import reverse
 from django.utils import timezone
 from django.utils.html import format_html
 from django.db.models import Count, Q, Case, When, BooleanField, Exists, OuterRef
@@ -133,6 +134,7 @@ class BarbershopAdmin(ModelAdmin):
         "favorites_count",
         "views_count",
         "subscription_status",
+        "preview_link",
         "created_at",
     )
     list_display_links = ("id", "name", "thumbnail_preview")
@@ -155,6 +157,8 @@ class BarbershopAdmin(ModelAdmin):
     list_per_page = 50
     inlines = [BarbershopImageInline]
     actions = ["verify_barbershops", "unverify_barbershops", "approve_barbershops", "reject_barbershops", "resubmit_for_review"]
+    change_form_template = "admin/barbers/barbershop/change_form.html"
+    change_list_template = "admin/barbers/barbershop/change_list.html"
     readonly_fields = (
         "rating_avg", 
         "total_reviews", 
@@ -250,12 +254,19 @@ class BarbershopAdmin(ModelAdmin):
         return getattr(obj, "_views_count", 0)
     views_count.short_description = "Görüntülenme"
     
+    def preview_link(self, obj):
+        url = reverse("admin-barbershop-preview", kwargs={"pk": obj.pk})
+        return format_html(
+            '<a href="{}" target="_blank" style="font-weight: 600; color: #2563eb;">📱 Önizleme</a>',
+            url,
+        )
+    preview_link.short_description = "Detay önizleme"
+
     def thumbnail_preview(self, obj):
         if obj.main_image:
-            # Thumbnail varsa onu kullan, yoksa main_image'ı küçült
             image_url = obj.main_image_thumb.url if obj.main_image_thumb else obj.main_image.url
             return format_html(
-                f'<a href="{obj.main_image.url}" target="_blank" style="display: inline-block; cursor: pointer;" title="Tıklayarak tam boyutu aç">'
+                f'<a href="{obj.main_image.url}" class="admin-barbershop-img-link" target="_blank" style="display: inline-block; cursor: pointer;" title="Tıklayarak görseli büyüt">'
                 f'<img src="{image_url}" style="width: 60px; height: 60px; object-fit: cover; border-radius: 8px; border: 2px solid #e5e7eb; transition: transform 0.2s;" '
                 f'onmouseover="this.style.transform=\'scale(1.1)\'; this.style.boxShadow=\'0 4px 8px rgba(0,0,0,0.2)\';" '
                 f'onmouseout="this.style.transform=\'scale(1)\'; this.style.boxShadow=\'none\';" />'
@@ -401,18 +412,17 @@ class BarbershopAdmin(ModelAdmin):
 
     def main_image_preview(self, obj):
         if obj.main_image:
-            # Thumbnail varsa onu göster, tıklayınca tam boyutlu açılsın
             thumbnail_url = obj.main_image_thumb.url if obj.main_image_thumb else obj.main_image.url
             return format_html(
                 f'''
                 <div style="margin: 10px 0;">
-                    <a href="{obj.main_image.url}" target="_blank" style="display: inline-block; cursor: pointer;" title="Tıklayarak tam boyutu aç">
+                    <a href="{obj.main_image.url}" class="admin-barbershop-img-link" style="display: inline-block; cursor: pointer;" title="Tıklayarak görseli büyüt">
                         <img src="{thumbnail_url}" style="max-width: 400px; max-height: 400px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 10px; transition: transform 0.2s;" 
                              onmouseover="this.style.transform='scale(1.02)'; this.style.boxShadow='0 8px 12px rgba(0,0,0,0.15)';" 
                              onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='0 4px 6px rgba(0,0,0,0.1)';" />
                     </a>
                     <br>
-                    <a href="{obj.main_image.url}" target="_blank" style="color: #3b82f6; text-decoration: none; font-size: 12px; display: inline-block; margin-top: 8px;">🔗 Tam boyutu aç (yeni sekmede)</a>
+                    <a href="{obj.main_image.url}" class="admin-barbershop-img-link" style="color: #3b82f6; text-decoration: none; font-size: 12px; display: inline-block; margin-top: 8px;">🔗 Tam boyutu aç / büyüt</a>
                 </div>
                 '''
             )
@@ -429,11 +439,10 @@ class BarbershopAdmin(ModelAdmin):
         html += '<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; margin-top: 10px;">'
         
         for img in images[:12]:  # İlk 12 görseli göster
-            # Thumbnail varsa onu kullan, yoksa main image'ı küçült
             thumbnail_url = img.image_thumb.url if img.image_thumb else img.image.url
             html += f'''
                 <div style="position: relative;">
-                    <a href="{img.image.url}" target="_blank" style="display: block; cursor: pointer;" title="Tıklayarak tam boyutu aç">
+                    <a href="{img.image.url}" class="admin-barbershop-img-link" style="display: block; cursor: pointer;" title="Tıklayarak görseli büyüt">
                         <img src="{thumbnail_url}" style="width: 100%; height: 150px; object-fit: cover; border-radius: 8px; border: 2px solid #e5e7eb; transition: transform 0.2s;" 
                              onmouseover="this.style.transform='scale(1.05)'; this.style.boxShadow='0 4px 8px rgba(0,0,0,0.2)';" 
                              onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='none';" />

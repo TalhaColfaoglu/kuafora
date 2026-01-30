@@ -1,3 +1,6 @@
+from datetime import timedelta
+
+from django.utils import timezone
 from rest_framework import generics, permissions
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -6,10 +9,15 @@ from django.db import ProgrammingError
 from .models import SearchHistory
 from .serializers import SearchHistorySerializer
 
+# Uygulama tarafıyla uyumlu: 1 yıl saklama, en fazla 50 son arama
+SEARCH_HISTORY_MAX_ITEMS = 50
+SEARCH_HISTORY_MAX_AGE_DAYS = 365
+
 
 class SearchHistoryListCreateApi(generics.ListCreateAPIView):
     """
     Auth'lu kullanıcı için son arama geçmişini döner / yeni kayıt ekler.
+    Backend'de saklanır; uygulama açılışında buradan yüklenir.
     """
 
     serializer_class = SearchHistorySerializer
@@ -19,19 +27,16 @@ class SearchHistoryListCreateApi(generics.ListCreateAPIView):
         user = self.request.user
         if getattr(self, "swagger_fake_view", False) or user.is_anonymous:
             return SearchHistory.objects.none()
-        # Son 10 kaydı, en yeniler en üstte olacak şekilde döndür.
-        #
-        # ÖNEMLİ: QuerySet lazy olduğu için (evaluate edilmediği için) ProgrammingError
-        # burada değil serializer aşamasında fırlayabiliyor ve 500'e düşebiliyor.
-        # Bu yüzden küçük bir "exists()" ile tabloyu erişip hatayı burada yakalıyoruz.
-        qs = SearchHistory.objects.filter(user=user).order_by("-created_at")
+        since = timezone.now() - timedelta(days=SEARCH_HISTORY_MAX_AGE_DAYS)
+        qs = SearchHistory.objects.filter(
+            user=user,
+            created_at__gte=since,
+        ).order_by("-created_at")
         try:
             qs.exists()
         except ProgrammingError:
-            # Tablo henüz yoksa (migration uygulanmadı) boş dön, 500 atma.
-            # Kalıcı çözüm: python manage.py migrate
             return SearchHistory.objects.none()
-        return qs[:10]
+        return qs[:SEARCH_HISTORY_MAX_ITEMS]
 
     def perform_create(self, serializer):
         # Kullanıcının yaptığı her yeni aramayı kaydet
