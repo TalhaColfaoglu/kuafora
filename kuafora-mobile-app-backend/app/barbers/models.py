@@ -148,6 +148,13 @@ class Barbershop(models.Model):
     whatsapp = models.CharField(max_length=100, blank=True)
     features = models.JSONField(default=list, blank=True)
 
+    # Hizmet süresi aralığı (dakika): hizmet eklerken süre bu aralığın katı olur (10, 15, 20)
+    service_duration_interval = models.PositiveIntegerField(
+        default=15,
+        choices=[(10, "10 dk"), (15, "15 dk"), (20, "20 dk")],
+        help_text="Hizmet süresi aralığı (dakika); süreler bu değerin katı olarak seçilir",
+    )
+
     def save(self, *args, **kwargs):
         if self.pk:
             try:

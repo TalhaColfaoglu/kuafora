@@ -34,6 +34,77 @@
         margin: 0;
         opacity: 0.95;
     }
+
+    .period-selector-wrap {
+        background: white;
+        border-radius: 16px;
+        padding: 20px 24px;
+        margin-bottom: 24px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.06);
+        border: 1px solid #e5e7eb;
+    }
+    .period-form {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 20px;
+    }
+    .period-tabs {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+    .period-tab {
+        display: inline-flex;
+        align-items: center;
+        padding: 10px 18px;
+        border-radius: 10px;
+        font-size: 14px;
+        font-weight: 600;
+        color: #6b7280;
+        background: #f3f4f6;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    .period-tab:hover {
+        background: #e5e7eb;
+        color: #374151;
+    }
+    .period-tab.active {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+    }
+    .period-tab input {
+        display: none;
+    }
+    .month-picker-wrap {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    .month-picker-wrap label {
+        font-size: 14px;
+        font-weight: 600;
+        color: #374151;
+    }
+    .month-picker-wrap select {
+        padding: 10px 14px;
+        border-radius: 10px;
+        border: 1px solid #e5e7eb;
+        font-size: 14px;
+        font-weight: 500;
+        color: #1f2937;
+        background: white;
+        min-width: 180px;
+    }
+    .month-picker-wrap select:focus {
+        outline: none;
+        border-color: #667eea;
+        box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2);
+    }
+    .period-stats .stat-subtitle {
+        font-size: 11px;
+    }
     
     .dashboard-stats {
         display: grid;
@@ -406,12 +477,121 @@
 {% block content %}
 <div class="dashboard-header">
     <h1>📊 Kuafora Analytics Dashboard</h1>
-    <p>Kullanıcı aktiviteleri, büyüme metrikleri ve sistem istatistikleri</p>
+    <p>Kullanıcı aktiviteleri, büyüme metrikleri ve sistem istatistikleri — Günlük / Haftalık / Aylık / Yıllık</p>
+</div>
+
+<!-- Periyot ve ay seçici -->
+<div class="period-selector-wrap">
+    <form method="get" action="" class="period-form" id="period-form">
+        <div class="period-tabs">
+            <label class="period-tab {% if period == 'daily' %}active{% endif %}">
+                <input type="radio" name="period" value="daily" {% if period == 'daily' %}checked{% endif %} onchange="this.form.submit()"> Günlük
+            </label>
+            <label class="period-tab {% if period == 'weekly' %}active{% endif %}">
+                <input type="radio" name="period" value="weekly" {% if period == 'weekly' %}checked{% endif %} onchange="this.form.submit()"> Haftalık
+            </label>
+            <label class="period-tab {% if period == 'monthly' %}active{% endif %}">
+                <input type="radio" name="period" value="monthly" {% if period == 'monthly' %}checked{% endif %} onchange="this.form.submit()"> Aylık
+            </label>
+            <label class="period-tab {% if period == 'yearly' %}active{% endif %}">
+                <input type="radio" name="period" value="yearly" {% if period == 'yearly' %}checked{% endif %} onchange="this.form.submit()"> Yıllık
+            </label>
+        </div>
+        {% if period == 'monthly' %}
+        <div class="month-picker-wrap">
+            <label for="month-select">Ay seçin:</label>
+            <select name="month" id="month-select" onchange="document.getElementById('period-form').submit()">
+                <option value="">— Bu ay —</option>
+                {% for opt in month_options %}
+                <option value="{{ opt.value }}" {% if selected_month == opt.value %}selected{% endif %}>{{ opt.label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        {% endif %}
+    </form>
+</div>
+
+<!-- Seçili dönem özeti -->
+<h2 class="section-title">
+    <span>📅</span>
+    <span>Seçili dönem: {{ period_label }} — {{ period_range_label }}</span>
+</h2>
+<div class="dashboard-stats period-stats">
+    <div class="stat-card info">
+        <div class="stat-card-header">
+            <h3>Kayıt (dönem)</h3>
+            <div class="stat-card-icon">👤</div>
+        </div>
+        <p class="stat-value">{{ period_stats.registrations|floatformat:0 }}</p>
+        <div class="stat-percentage">
+            <span class="trend-indicator {% if period_growth.registrations > 0 %}trend-up{% elif period_growth.registrations < 0 %}trend-down{% else %}trend-neutral{% endif %}">
+                {% if period_growth.registrations > 0 %}↑{% elif period_growth.registrations < 0 %}↓{% else %}→{% endif %}
+                {{ period_growth.registrations|floatformat:1 }}%
+            </span>
+        </div>
+        <div class="stat-subtitle">Önceki dönem: {{ prev_period_stats.registrations|floatformat:0 }} kayıt ({{ prev_period_range_label }})</div>
+    </div>
+    <div class="stat-card success">
+        <div class="stat-card-header">
+            <h3>Aktif kullanıcı (dönem)</h3>
+            <div class="stat-card-icon">📱</div>
+        </div>
+        <p class="stat-value">{{ period_stats.active_users|floatformat:0 }}</p>
+        <div class="stat-percentage">
+            <span class="trend-indicator {% if period_growth.active_users > 0 %}trend-up{% elif period_growth.active_users < 0 %}trend-down{% else %}trend-neutral{% endif %}">
+                {% if period_growth.active_users > 0 %}↑{% elif period_growth.active_users < 0 %}↓{% else %}→{% endif %}
+                {{ period_growth.active_users|floatformat:1 }}%
+            </span>
+        </div>
+        <div class="stat-subtitle">Önceki dönem: {{ prev_period_stats.active_users|floatformat:0 }}</div>
+    </div>
+    <div class="stat-card purple">
+        <div class="stat-card-header">
+            <h3>Randevu (dönem)</h3>
+            <div class="stat-card-icon">📅</div>
+        </div>
+        <p class="stat-value">{{ period_stats.appointments|floatformat:0 }}</p>
+        <div class="stat-percentage">
+            <span class="trend-indicator {% if period_growth.appointments > 0 %}trend-up{% elif period_growth.appointments < 0 %}trend-down{% else %}trend-neutral{% endif %}">
+                {% if period_growth.appointments > 0 %}↑{% elif period_growth.appointments < 0 %}↓{% else %}→{% endif %}
+                {{ period_growth.appointments|floatformat:1 }}%
+            </span>
+        </div>
+        <div class="stat-subtitle">Önceki dönem: {{ prev_period_stats.appointments|floatformat:0 }}</div>
+    </div>
+    <div class="stat-card warning">
+        <div class="stat-card-header">
+            <h3>E-posta (dönem)</h3>
+            <div class="stat-card-icon">📧</div>
+        </div>
+        <p class="stat-value">{{ period_stats.emails|floatformat:0 }}</p>
+        <div class="stat-percentage">
+            <span class="trend-indicator {% if period_growth.emails > 0 %}trend-up{% elif period_growth.emails < 0 %}trend-down{% else %}trend-neutral{% endif %}">
+                {% if period_growth.emails > 0 %}↑{% elif period_growth.emails < 0 %}↓{% else %}→{% endif %}
+                {{ period_growth.emails|floatformat:1 }}%
+            </span>
+        </div>
+        <div class="stat-subtitle">Önceki dönem: {{ prev_period_stats.emails|floatformat:0 }}</div>
+    </div>
+    <div class="stat-card success">
+        <div class="stat-card-header">
+            <h3>Yeni kuaför (dönem)</h3>
+            <div class="stat-card-icon">🏪</div>
+        </div>
+        <p class="stat-value">{{ period_stats.barbershops_created|floatformat:0 }}</p>
+        <div class="stat-percentage">
+            <span class="trend-indicator {% if period_growth.barbershops_created > 0 %}trend-up{% elif period_growth.barbershops_created < 0 %}trend-down{% else %}trend-neutral{% endif %}">
+                {% if period_growth.barbershops_created > 0 %}↑{% elif period_growth.barbershops_created < 0 %}↓{% else %}→{% endif %}
+                {{ period_growth.barbershops_created|floatformat:1 }}%
+            </span>
+        </div>
+        <div class="stat-subtitle">Önceki dönem: {{ prev_period_stats.barbershops_created|floatformat:0 }}</div>
+    </div>
 </div>
 
 <h2 class="section-title">
     <span>📧</span>
-    <span>Gönderilen E-posta Sayıları</span>
+    <span>Gönderilen E-posta Sayıları (Toplam — Günlük / Haftalık / Aylık / Yıllık)</span>
 </h2>
 <div class="dashboard-stats">
     <div class="stat-card {% if stats.emails.over_threshold %}danger{% else %}info{% endif %}">

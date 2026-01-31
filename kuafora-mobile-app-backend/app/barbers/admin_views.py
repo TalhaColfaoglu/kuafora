@@ -28,6 +28,31 @@ WEEKDAY_LABELS = {
     "SUN": "Pazar",
 }
 
+# Özellik ID → Türkçe etiket (uygulama ile uyumlu)
+FEATURE_LABELS = {
+    "verified": "Doğrulanmış İşletme",
+    "instant_conf": "Anında Onay",
+    "pay_app": "Uygulama ile Ödeme",
+    "adults_only": "Sadece Yetişkin",
+    "wheelchair": "Tekerlekli Sandalye Uygun",
+    "parking": "Otopark Mevcut",
+    "transport": "Toplu Taşıma Yakın",
+    "wifi": "WiFi",
+    "refreshments": "İkramlar",
+    "ac": "Klima",
+    "child_friendly": "Çocuk Dostu",
+    "pet_friendly": "Evcil Hayvan Dostu",
+    "prayer_room": "Mescit",
+    "credit_card": "Kredi Kartı Geçerli",
+    "cash_only": "Sadece Nakit",
+    "security_cam": "Güvenlik Kamerası",
+    "valet": "Vale Hizmeti",
+    "walkins": "Randevusuz Kabul",
+    "silent": "Sessiz Ortam",
+    "music": "Müzik Yayını",
+    "tv": "TV",
+}
+
 
 def barbershop_preview_view(request, pk):
     """Kuaför detay ekranı önizlemesi — sadece staff kullanıcılar."""
@@ -98,11 +123,41 @@ def barbershop_preview_view(request, pk):
             "services": staff_services,
         })
 
+    # Özellik etiketleri (features listesi ID, template'te FEATURE_LABELS ile eşleştirilir)
+    features_list = getattr(shop, "features", None) or []
+    feature_labels_list = [
+        {"id": fid, "label": FEATURE_LABELS.get(str(fid), str(fid))}
+        for fid in (features_list if isinstance(features_list, list) else [])
+    ]
+
+    # Harici randevu (external_booking) – uygulama detay ekranındaki gibi
+    external_booking = getattr(shop, "external_booking", None) or {}
+    if not isinstance(external_booking, dict):
+        external_booking = {}
+
+    # Sistem tipi ve cinsiyet metin
+    system_type = getattr(shop, "system_type", None) or "info"
+    system_type_display = {
+        "info": "Bilgi Sistemi",
+        "booking": "Kuafora Randevu",
+        "external": "Harici Randevu",
+    }.get(system_type, system_type)
+    gender = getattr(shop, "gender", None) or "unisex"
+    gender_display = {
+        "male": "Erkek",
+        "female": "Kadın",
+        "unisex": "Herkes",
+    }.get(gender, gender)
+
     context = {
         "shop": shop,
         "shop_schedule": shop_schedule,
         "categories_with_services": categories_with_services,
         "staff_list": staff_list,
         "weekday_order": WEEKDAY_ORDER,
+        "feature_labels_list": feature_labels_list,
+        "external_booking": external_booking,
+        "system_type_display": system_type_display,
+        "gender_display": gender_display,
     }
     return render(request, "admin/barbers/barbershop_preview.html", context)

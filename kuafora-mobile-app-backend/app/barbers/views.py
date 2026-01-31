@@ -1377,6 +1377,8 @@ class PartnerBarbershopViewSet(viewsets.ModelViewSet):
             "whatsapp",
             # Badges / features (vitrin app uses this)
             "features",
+            # Hizmet süresi aralığı (10, 15, 20 dk)
+            "service_duration_interval",
         }
         data = {k: v for k, v in request.data.items() if k in allowed}
         # phone alias desteği

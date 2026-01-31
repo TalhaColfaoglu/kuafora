@@ -94,3 +94,12 @@ def get_yearly_email_count() -> int:
     start = today - timedelta(days=364)
     result = EmailDailyLog.objects.filter(date__gte=start, date__lte=today).aggregate(total=Sum("count"))
     return result["total"] or 0
+
+
+def get_email_count_for_range(start_date, end_date) -> int:
+    """Belirtilen tarih aralığında (dahil) gönderilen e-posta sayısını döner."""
+    result = EmailDailyLog.objects.filter(
+        date__gte=start_date,
+        date__lte=end_date,
+    ).aggregate(total=Sum("count"))
+    return result["total"] or 0

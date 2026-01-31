@@ -1,40 +1,177 @@
+import calendar
+from datetime import date, timedelta, datetime
+
 from django.contrib import admin
 from django.utils import timezone
-from django.db.models import Count, Q, Avg, Max, Min, Sum
-from django.shortcuts import render
+from django.db.models import Count, Q, Avg, Sum
 from django.template.response import TemplateResponse
-from django.db.models.functions import TruncDate, TruncDay
-from datetime import timedelta, datetime
+from django.db.models.functions import TruncDate
+
 from app.users.models import User, UserAddress
 from app.users.email_tracking import (
     get_today_email_count,
     get_weekly_email_count,
     get_monthly_email_count,
     get_yearly_email_count,
+    get_email_count_for_range,
 )
 from app.barbers.models import Barbershop, Favorite, Review
 from app.appointments.models import Appointment
-from app.subscriptions.models import Subscription
+
+
+def _period_dates(period, month_param, today):
+    """
+    period: 'daily' | 'weekly' | 'monthly' | 'yearly'
+    month_param: 'YYYY-MM' veya None (sadece monthly'de kullanılır)
+    Returns: (period_start, period_end, prev_period_start, prev_period_end) as date objects.
+    """
+    period_start = period_end = prev_period_start = prev_period_end = today
+    if period == "daily":
+        period_start = period_end = today
+        prev_period_start = prev_period_end = today - timedelta(days=1)
+    elif period == "weekly":
+        period_end = today
+        period_start = today - timedelta(days=6)
+        prev_period_end = period_start - timedelta(days=1)
+        prev_period_start = prev_period_end - timedelta(days=6)
+    elif period == "monthly":
+        if month_param:
+            try:
+                y, m = int(month_param[:4]), int(month_param[5:7])
+                period_start = date(y, m, 1)
+                _, last = calendar.monthrange(y, m)
+                period_end = date(y, m, last)
+                if period_end > today:
+                    period_end = today
+            except (ValueError, IndexError):
+                period_start = date(today.year, today.month, 1)
+                _, last = calendar.monthrange(today.year, today.month)
+                period_end = min(date(today.year, today.month, last), today)
+        else:
+            period_start = date(today.year, today.month, 1)
+            _, last = calendar.monthrange(today.year, today.month)
+            period_end = min(date(today.year, today.month, last), today)
+        # Önceki ay
+        if period_start.month == 1:
+            prev_period_start = date(period_start.year - 1, 12, 1)
+            prev_period_end = date(period_start.year - 1, 12, 31)
+        else:
+            prev_period_start = date(period_start.year, period_start.month - 1, 1)
+            _, last = calendar.monthrange(prev_period_start.year, prev_period_start.month)
+            prev_period_end = date(prev_period_start.year, prev_period_start.month, last)
+    else:  # yearly
+        period_start = date(today.year, 1, 1)
+        period_end = today
+        prev_period_start = date(today.year - 1, 1, 1)
+        prev_period_end = date(today.year - 1, 12, 31)
+    return period_start, period_end, prev_period_start, prev_period_end
+
+
+def _period_stats(period_start, period_end, now):
+    """Seçili tarih aralığında kayıt, aktif kullanıcı, randevu, e-posta, yeni kuaför sayıları."""
+    start_dt = timezone.make_aware(datetime.combine(period_start, datetime.min.time()))
+    end_dt = timezone.make_aware(datetime.combine(period_end, datetime.max.time()))
+    if end_dt > now:
+        end_dt = now
+    registrations = User.objects.filter(
+        created_at__date__gte=period_start,
+        created_at__date__lte=period_end,
+    ).count()
+    active_users = User.objects.filter(
+        is_active=True,
+        last_login__gte=start_dt,
+        last_login__lte=end_dt,
+    ).count()
+    appointments = Appointment.objects.filter(
+        start_datetime__gte=start_dt,
+        start_datetime__lte=end_dt,
+    ).count()
+    emails = get_email_count_for_range(period_start, period_end)
+    barbershops_created = Barbershop.objects.filter(
+        created_at__date__gte=period_start,
+        created_at__date__lte=period_end,
+    ).count()
+    return {
+        "registrations": registrations,
+        "active_users": active_users,
+        "appointments": appointments,
+        "emails": emails,
+        "barbershops_created": barbershops_created,
+    }
+
+
+def _month_options(today, count=24):
+    """Son count ay için {value: 'YYYY-MM', label: 'Ocak 2025'} listesi."""
+    months_tr = [
+        "Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran",
+        "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık",
+    ]
+    options = []
+    y, m = today.year, today.month
+    for _ in range(count):
+        options.append({
+            "value": f"{y:04d}-{m:02d}",
+            "label": f"{months_tr[m - 1]} {y}",
+        })
+        m -= 1
+        if m < 1:
+            m = 12
+            y -= 1
+    return options
 
 
 def admin_dashboard_view(request):
-    """Admin panelinde kullanıcı ve sistem istatistiklerini gösteren dashboard - Optimize edilmiş ve doğru veriler"""
+    """Admin panelinde kullanıcı ve sistem istatistiklerini gösteren dashboard - Günlük/Haftalık/Aylık/Yıllık periyot ve ay seçimi."""
     now = timezone.now()
     today = now.date()
     yesterday = today - timedelta(days=1)
     week_ago = today - timedelta(days=7)
     month_ago = today - timedelta(days=30)
     year_ago = today - timedelta(days=365)
-    
+
+    # Periyot ve ay seçimi (GET)
+    period = (request.GET.get("period") or "monthly").strip().lower()
+    if period not in ("daily", "weekly", "monthly", "yearly"):
+        period = "monthly"
+    selected_month = request.GET.get("month") or ""
+    if period != "monthly":
+        selected_month = ""
+
+    period_start, period_end, prev_period_start, prev_period_end = _period_dates(period, selected_month or None, today)
+    period_stats = _period_stats(period_start, period_end, now)
+    prev_period_stats = _period_stats(prev_period_start, prev_period_end, now)
+
+    def growth(current, previous):
+        if previous == 0:
+            return (100.0 if current > 0 else 0.0)
+        return round(((current - previous) / previous) * 100, 2)
+
+    period_growth = {
+        "registrations": growth(period_stats["registrations"], prev_period_stats["registrations"]),
+        "active_users": growth(period_stats["active_users"], prev_period_stats["active_users"]),
+        "appointments": growth(period_stats["appointments"], prev_period_stats["appointments"]),
+        "emails": growth(period_stats["emails"], prev_period_stats["emails"]),
+        "barbershops_created": growth(period_stats["barbershops_created"], prev_period_stats["barbershops_created"]),
+    }
+
+    period_labels = {
+        "daily": "Günlük",
+        "weekly": "Haftalık",
+        "monthly": "Aylık",
+        "yearly": "Yıllık",
+    }
+    period_label = period_labels.get(period, "Aylık")
+    period_range_label = f"{period_start.strftime('%d.%m.%Y')} – {period_end.strftime('%d.%m.%Y')}"
+    prev_period_range_label = f"{prev_period_start.strftime('%d.%m.%Y')} – {prev_period_end.strftime('%d.%m.%Y')}"
+    month_options = _month_options(today, 24)
+
     # Helper functions
     def calculate_percentage(part, total):
-        """Güvenli yüzde hesaplama"""
         if total == 0:
             return 0.0
         return round((part / total) * 100, 2)
-    
+
     def calculate_growth_rate(current, previous):
-        """Büyüme oranı hesaplama"""
         if previous == 0:
             return 100.0 if current > 0 else 0.0
         return round(((current - previous) / previous) * 100, 2)
@@ -359,11 +496,22 @@ def admin_dashboard_view(request):
     daily_email_alert_threshold = 400
     
     # ==================== CONTEXT OLUŞTURMA ====================
-    
+
     context = {
         **admin.site.each_context(request),
-        'title': 'Kuafora Dashboard',
-        'stats': {
+        "title": "Kuafora Dashboard",
+        "period": period,
+        "period_label": period_label,
+        "period_range_label": period_range_label,
+        "prev_period_range_label": prev_period_range_label,
+        "period_start": period_start,
+        "period_end": period_end,
+        "period_stats": period_stats,
+        "prev_period_stats": prev_period_stats,
+        "period_growth": period_growth,
+        "month_options": month_options,
+        "selected_month": selected_month,
+        "stats": {
             'users': {
                 'total': total_users,
                 'active': active_users,

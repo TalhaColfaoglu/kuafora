@@ -47,6 +47,18 @@
     .preview-social { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 12px; }
     .preview-social a { color: #2563eb; text-decoration: none; font-size: 14px; }
     .preview-note { background: #fef3c7; border-left: 4px solid #f59e0b; padding: 12px 16px; border-radius: 8px; margin-bottom: 24px; font-size: 14px; color: #92400e; }
+    .preview-stats { display: flex; gap: 24px; padding: 16px 24px; background: #fff; border-radius: 16px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); border: 1px solid #e5e7eb; }
+    .preview-stats-item { flex: 1; text-align: center; }
+    .preview-stats-value { font-size: 22px; font-weight: 800; color: #111827; }
+    .preview-stats-label { font-size: 13px; color: #6b7280; font-weight: 600; margin-top: 4px; }
+    .preview-gender-badge { display: inline-block; padding: 4px 10px; border-radius: 8px; font-size: 12px; font-weight: 600; background: #eff6ff; color: #1d4ed8; }
+    .preview-system-badge { display: inline-block; padding: 4px 10px; border-radius: 8px; font-size: 12px; font-weight: 600; background: #ecfdf5; color: #059669; }
+    .preview-features { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+    .preview-feature-badge { background: #eff6ff; color: #1d4ed8; padding: 6px 12px; border-radius: 8px; font-size: 12px; font-weight: 500; }
+    .preview-external-booking { margin-top: 12px; padding: 12px; background: #f9fafb; border-radius: 8px; font-size: 14px; }
+    .preview-external-booking dt { font-weight: 600; color: #374151; margin-top: 8px; }
+    .preview-external-booking dt:first-child { margin-top: 0; }
+    .preview-external-booking dd { margin: 4px 0 0; color: #6b7280; }
 </style>
 {% endblock %}
 
@@ -67,12 +79,27 @@
         {% endif %}
     </div>
 
+    <div class="preview-stats">
+        <div class="preview-stats-item">
+            <div class="preview-stats-value">{{ shop.rating_avg|floatformat:1 }} ★</div>
+            <div class="preview-stats-label">{{ shop.total_reviews }} değerlendirme</div>
+        </div>
+        <div class="preview-stats-item">
+            <div class="preview-stats-value">{{ shop.favorites_count }}</div>
+            <div class="preview-stats-label">Favori</div>
+        </div>
+    </div>
+
     <div class="preview-card">
         <h2>{{ shop.name }}</h2>
         <div class="preview-meta">
             <span>📍 {{ shop.district }}{% if shop.city %}, {{ shop.city }}{% endif %}</span>
             {% if shop.address %}<span>• {{ shop.address }}</span>{% endif %}
             {% if shop.phone_number %}<span>• <a href="tel:{{ shop.phone_number }}">{{ shop.phone_number }}</a></span>{% endif %}
+        </div>
+        <div style="margin-top: 12px;">
+            <span class="preview-gender-badge">{{ gender_display }}</span>
+            <span class="preview-system-badge" style="margin-left: 8px;">{{ system_type_display }}</span>
         </div>
         {% if shop.categories.exists %}
         <div class="preview-badges">
@@ -81,6 +108,11 @@
         {% endif %}
         {% if shop.description %}
         <p class="preview-desc">{{ shop.description }}</p>
+        {% endif %}
+        {% if feature_labels_list %}
+        <div class="preview-features">
+            {% for f in feature_labels_list %}<span class="preview-feature-badge">{{ f.label }}</span>{% endfor %}
+        </div>
         {% endif %}
         {% if shop.instagram or shop.facebook or shop.whatsapp %}
         <div class="preview-social">
@@ -92,7 +124,24 @@
         {% if shop.google_maps_link %}
         <p style="margin: 12px 0 0;"><a href="{{ shop.google_maps_link }}" target="_blank" rel="noopener">📍 Haritada aç</a></p>
         {% endif %}
+        {% if shop.latitude and shop.longitude %}
+        <p style="margin: 8px 0 0; font-size: 13px; color: #6b7280;">Konum: {{ shop.latitude }}, {{ shop.longitude }}</p>
+        {% endif %}
     </div>
+
+    {% if external_booking %}
+    <div class="preview-card">
+        <h2>Harici randevu</h2>
+        <dl class="preview-external-booking">
+            {% for key, val in external_booking.items %}
+            {% if val.enabled %}
+            <dt>{{ key }}</dt>
+            <dd>{% firstof val.value val.url val.phone "—" %}</dd>
+            {% endif %}
+            {% endfor %}
+        </dl>
+    </div>
+    {% endif %}
 
     <div class="preview-card">
         <h2>Çalışma saatleri (dükkan)</h2>

@@ -73,6 +73,7 @@ class BarbershopSerializer(serializers.ModelSerializer):
             "google_maps_link",
             "categories",
             "weekly_schedule",
+            "service_duration_interval",
             "created_at",
             "updated_at",
             "rating_avg",
