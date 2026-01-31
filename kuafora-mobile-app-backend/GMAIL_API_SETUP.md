@@ -85,6 +85,25 @@ E-posta gönderirken **RefreshError: invalid_grant: Bad Request** alıyorsanız,
 
 ---
 
+## 5a. OAuth "Testing" modu — refresh token 7 gün sonra düşer (çok sık neden)
+
+Google Cloud Console’da OAuth izin ekranı **"Testing"** (Test) modundaysa, **refresh token’lar yalnızca 7 gün geçerlidir**. 7 gün sonra "invalid_grant" alırsınız; yeni token alırsınız, yine 7 gün sonra düşer.
+
+**Kalıcı çözüm (birini yapın):**
+
+1. **Test kullanıcısı ekleyin (önerilen):**  
+   [Google Cloud Console](https://console.cloud.google.com/) → **API’ler ve Hizmetler** → **OAuth izin ekranı** (OAuth consent screen).  
+   Aşağı kaydırın → **Test kullanıcılar** (Test users) bölümü → **+ ADD USERS** → E-postaları **göndereceğiniz Gmail adresini** ekleyin (örn. `info@kuafora.com` veya kullandığınız hesap).  
+   Bu hesapla OAuth2 Playground’dan aldığınız refresh token **7 gün sınırına takılmaz** (test kullanıcıları için token süresi düşmez).
+
+2. **Veya uygulamayı yayınlayın:**  
+   OAuth izin ekranında **"Uygulamayı yayınla"** (Publish app) deyin. Uygulama "Production" moduna geçer; refresh token süresi 7 gün ile sınırlı olmaz (Google’ın normal politikası geçerli olur).
+
+Sunucuda tam hatayı görmek için:  
+`python manage.py test_gmail_refresh`
+
+---
+
 ## 5b. Yeni refresh token yazdım ama hâlâ invalid_grant
 
 Yeni, güncel bir token yazıp kaydettiğiniz hâlde aynı hata devam ediyorsa genelde şunlardan biri vardır:

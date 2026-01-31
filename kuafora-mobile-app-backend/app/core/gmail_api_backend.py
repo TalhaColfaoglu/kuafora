@@ -50,10 +50,15 @@ class GmailAPIEmailBackend(BaseEmailBackend):
                     creds.refresh(Request())
                 except Exception as refresh_err:  # noqa: BLE001
                     err_str = str(refresh_err).lower()
+                    # Google'dan dönen tam yanıt (invalid_grant nedenini görmek için)
+                    extra = getattr(refresh_err, "args", ())
+                    if len(extra) >= 2 and isinstance(extra[1], dict):
+                        logger.error("Gmail API refresh hatası (Google yanıtı): %s", extra[1])
                     if "invalid_grant" in err_str or "refresherror" in type(refresh_err).__name__.lower():
                         logger.error(
-                            "Gmail API: Refresh token geçersiz veya süresi dolmuş (invalid_grant). "
-                            "OAuth2 Playground ile yeni refresh token alın: GMAIL_API_SETUP.md"
+                            "Gmail API: Refresh token geçersiz (invalid_grant). "
+                            "Olası nedenler: OAuth 'Testing' modunda 7 gün sonra token düşer (Test kullanıcısı ekleyin veya yayınlayın); "
+                            "Client ID/Secret token ile eşleşmiyor; token kesilmiş. GMAIL_API_SETUP.md ve python manage.py test_gmail_refresh"
                         )
                     raise
             self._service = build("gmail", "v1", credentials=creds, cache_discovery=False)
