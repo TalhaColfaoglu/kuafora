@@ -69,7 +69,53 @@ pip install google-auth google-api-python-client
 
 ---
 
-## 5. Şimdi ne yapmalı?
+## 5. "invalid_grant: Bad Request" hatası
+
+E-posta gönderirken **RefreshError: invalid_grant: Bad Request** alıyorsanız, sunucudaki **refresh token artık geçersiz** demektir.
+
+**Neden olur?**
+- Refresh token süresi dolmuş (uzun süre kullanılmadı, Google iptal etti).
+- Hesap şifresi değişti veya “Güvenli olmayan uygulamalar” erişimi kapatıldı.
+- OAuth istemci kimlik bilgileri (Client ID/Secret) yenilendi; eski refresh token yeni istemciyle çalışmaz.
+
+**Ne yapmalı?**
+1. **Yeni refresh token alın:** Yukarıdaki **2. Refresh token almak** adımını tekrarlayın (OAuth2 Playground ile giriş yapıp **Exchange authorization code for tokens** deyin).
+2. Sunucudaki `.env` (veya `.env.prod`) içinde **GMAIL_API_REFRESH_TOKEN** değerini yeni token ile güncelleyin.
+3. Backend’i yeniden başlatın (Docker ise container’ı restart edin).
+
+---
+
+## 5b. Yeni refresh token yazdım ama hâlâ invalid_grant
+
+Yeni, güncel bir token yazıp kaydettiğiniz hâlde aynı hata devam ediyorsa genelde şunlardan biri vardır:
+
+1. **Client ID / Client Secret uyuşmuyor**  
+   Refresh token, onu üretirken kullandığınız OAuth istemcisine (Client ID + Secret) bağlıdır. Sunucudaki `GMAIL_API_CLIENT_ID` ve `GMAIL_API_CLIENT_SECRET` değerleri, OAuth2 Playground’da “Use your own OAuth credentials” ile girdiğiniz değerlerle **birebir aynı** olmalı. Farklı bir proje veya farklı bir “OAuth istemci kimliği” kullanıyorsanız token çalışmaz.
+
+2. **Yanlış .env dosyası**  
+   Backend, `DJANGO_ENV=production` ise **`.env.prod`**, değilse **`.env`** dosyasını okur. Docker’da production kullanıyorsanız token’ı **`.env.prod`** içine yazın veya `docker-compose` / ortam değişkenleriyle container’a verin. Sadece yerel `.env`’i güncellediyseniz sunucu/container hâlâ eski değeri görüyor olabilir.
+
+3. **Container / process yeniden başlamadı**  
+   `.env` veya `.env.prod` güncellense bile, process bir kez başladıktan sonra env’i bellekte tutar. Değişikliğin geçerli olması için backend’i (veya ilgili container’ı) **yeniden başlatın**:  
+   `docker compose restart` veya ilgili servisi restart edin.
+
+4. **Token kesilmiş veya bozulmuş**  
+   Token tek satırda, başında/sonunda gereksiz boşluk veya satır sonu olmadan olmalı. Tırnak kullanıyorsanız sadece değerin kendisini tırnak içine alın; satır ortasında tırnak kırıp token’ı iki parçaya bölmeyin. Kopyalarken tamamının yapıştığından emin olun (özellikle uzun token’lar bazen kesilir).
+
+5. **Scope uyuşmazlığı**  
+   Token’ı alırken OAuth2 Playground’da **Gmail API v1 → https://www.googleapis.com/auth/gmail.send** kapsamı seçilmiş olmalı. Başka bir scope ile alınan token ile `gmail.send` çağrıları invalid_grant verebilir.
+
+**Sunucuda ne okunduğunu kontrol etmek için** (token’ın kendisi yazdırılmaz, sadece uzunluk ve maskeli önizleme):
+
+```bash
+python manage.py check_gmail_token
+```
+
+Bu komut hangi env dosyasının okunduğunu, token uzunluğunu ve CLIENT_ID/CLIENT_SECRET’ın dolu olup olmadığını gösterir. Token uzunluğu 50’den kısa çıkıyorsa büyük ihtimalle kesilmiş veya yanlış yapışmıştır.
+
+---
+
+## 6. Şimdi ne yapmalı?
 
 1. **Backend’i (yeniden) başlatın**  
    Örnek: `python manage.py runserver` veya production’da gunicorn/uwsgi restart. Böylece `.env` değerleri okunur.
@@ -94,7 +140,7 @@ Kendinize veya bir adrese test maili gönderin (mevcut backend kullanılır — 
 python manage.py sendtestemail your@email.com
 ```
 
-Mail gelirse Gmail API (veya SMTP) çalışıyordur.
+Mail gelirse Gmail API çalışıyordur.
 
 ### B) Uygulama akışları
 
