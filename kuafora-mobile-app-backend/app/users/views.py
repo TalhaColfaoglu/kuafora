@@ -624,8 +624,8 @@ class ForgotPasswordView(generics.GenericAPIView):
         cache_key = f"pw_reset:{code}"
         cache.set(cache_key, json.dumps(_pw_reset_code_data(email)), timeout=PW_RESET_CODE_TIMEOUT)
 
-        subject = "Kuafora • Şifre Sıfırlama Kodu"
-        body = (
+        subject = "Kuafora 🔑 Şifre Sıfırlama Kodunuz"
+        body_plain = (
             "Merhaba,\n\n"
             "Kuafora hesabınızın şifresini sıfırlamak için uygulama içinde kullanacağınız kod:\n\n"
             f"  {code}\n\n"
@@ -633,6 +633,37 @@ class ForgotPasswordView(generics.GenericAPIView):
             "Bu isteği siz yapmadıysanız bu e-postayı yok sayabilirsiniz.\n\n"
             "Kuafora"
         )
+        body_html = f"""
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+<body style="margin:0; padding:0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f8fafb;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width: 480px; margin: 0 auto; padding: 24px;">
+    <tr>
+      <td style="background: linear-gradient(135deg, #f97316 0%%, #fb923c 100%); border-radius: 16px 16px 0 0; padding: 28px 24px; text-align: center;">
+        <span style="font-size: 36px;">🔑</span>
+        <h1 style="margin: 12px 0 0; color: #fff; font-size: 22px; font-weight: 700;">Kuafora</h1>
+        <p style="margin: 6px 0 0; color: rgba(255,255,255,0.9); font-size: 14px;">Şifre Sıfırlama</p>
+      </td>
+    </tr>
+    <tr>
+      <td style="background: #ffffff; padding: 28px 24px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 16px 16px;">
+        <p style="margin: 0 0 16px; color: #374151; font-size: 16px; line-height: 1.5;">Merhaba 👋</p>
+        <p style="margin: 0 0 20px; color: #4b5563; font-size: 15px; line-height: 1.5;">Hesabınızın şifresini sıfırlamak için aşağıdaki <strong>6 haneli kodu</strong> uygulamada ilgili alana girin:</p>
+        <div style="background: linear-gradient(135deg, #fef3c7 0%%, #fde68a 100%); border: 2px dashed #f59e0b; border-radius: 12px; padding: 20px; text-align: center; margin: 0 0 20px;">
+          <span style="font-size: 28px; font-weight: 800; letter-spacing: 6px; color: #1a1d1e;">{code}</span>
+        </div>
+        <p style="margin: 0 0 8px; color: #6b7280; font-size: 13px;">⏱️ Kod <strong>15 dakika</strong> geçerlidir.</p>
+        <p style="margin: 0 0 8px; color: #6b7280; font-size: 13px;">🔒 3 yanlış denemeden sonra yeni kod talep etmeniz gerekir.</p>
+        <p style="margin: 0; color: #9ca3af; font-size: 12px;">Bu isteği siz yapmadıysanız bu e-postayı yok sayabilirsiniz.</p>
+        <p style="margin: 24px 0 0; color: #374151; font-size: 14px;">İyi günler dileriz 🌟</p>
+        <p style="margin: 4px 0 0; color: #f97316; font-size: 14px; font-weight: 700;">Kuafora Ekibi</p>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+"""
 
         from_email = getattr(settings, "DEFAULT_FROM_EMAIL", None)
         if not from_email:
@@ -640,10 +671,11 @@ class ForgotPasswordView(generics.GenericAPIView):
         try:
             send_mail(
                 subject,
-                body,
+                body_plain,
                 from_email or "noreply@kuafora.com",
                 [user.email],
                 fail_silently=False,
+                html_message=body_html,
             )
             increment_daily_email_count()
         except Exception as e:

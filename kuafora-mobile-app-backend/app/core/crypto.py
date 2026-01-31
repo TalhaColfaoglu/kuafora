@@ -9,7 +9,9 @@ from django.utils.crypto import salted_hmac
 
 
 def _require_phone_key() -> Optional[str]:
-    """Get phone encryption key, return None if not set or invalid."""
+    """Get phone encryption key, return None if not set or invalid.
+    Key must be exactly the output of: python -c \"from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())\"
+    No newlines or extra spaces. For backend_dev use env/backend.dev.env and restart container."""
     key = getattr(settings, "PHONE_ENCRYPTION_KEY", "") or ""
     key = key.strip()
     if not key:
@@ -64,9 +66,12 @@ def decrypt_text(token: str) -> str:
     token = (token or "").strip()
     if not token:
         return ""
-    f = _get_fernet()
     try:
+        f = _get_fernet()
         return f.decrypt(token.encode("utf-8")).decode("utf-8")
+    except ImproperlyConfigured:
+        # Key missing or invalid: don't crash, return empty (e.g. admin/view reading phone)
+        return ""
     except Exception:  # pragma: no cover - invalid token / key rotation
         return ""
 
