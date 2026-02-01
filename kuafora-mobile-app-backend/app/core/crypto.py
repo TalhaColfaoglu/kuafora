@@ -11,18 +11,25 @@ from django.utils.crypto import salted_hmac
 def _require_phone_key() -> Optional[str]:
     """Get phone encryption key, return None if not set or invalid.
     Key must be exactly the output of: python -c \"from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())\"
-    No newlines or extra spaces. For backend_dev use env/backend.dev.env and restart container."""
+    No newlines or extra spaces. Docker: use env/backend.env (not backend's .env); then restart backend container."""
     key = getattr(settings, "PHONE_ENCRYPTION_KEY", "") or ""
-    key = key.strip()
+    if isinstance(key, bytes):
+        key = key.decode("utf-8", errors="replace")
+    key = key.strip().strip('"').strip("'")
     if not key:
         return None
-    # Validate key format
+    # Validate key format (Fernet: 44 chars, urlsafe base64)
     try:
         from cryptography.fernet import Fernet
         Fernet(key.encode())
         return key
-    except (ValueError, Exception):
+    except (ValueError, Exception) as e:
         # Key format is invalid
+        import logging
+        logging.getLogger(__name__).warning(
+            "PHONE_ENCRYPTION_KEY invalid format: %s. Key must be 44 chars, urlsafe base64 (Fernet.generate_key()).",
+            e,
+        )
         return None
 
 
@@ -58,7 +65,11 @@ def encrypt_text(plain: str) -> str:
         # This allows registration to proceed without encryption
         import logging
         logger = logging.getLogger(__name__)
-        logger.warning(f"Phone encryption failed: {e}. Storing phone without encryption.")
+        key_set = bool((getattr(settings, "PHONE_ENCRYPTION_KEY", "") or "").strip())
+        hint = "PHONE_ENCRYPTION_KEY not set or wrong file. Docker: add to env/backend.env and restart backend."
+        if key_set:
+            hint = "PHONE_ENCRYPTION_KEY invalid (wrong format?). Must be 44-char Fernet key, no quotes."
+        logger.warning("Phone encryption failed: %s. %s Storing phone without encryption.", e, hint)
         return ""
 
 

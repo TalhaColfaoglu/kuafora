@@ -20,8 +20,9 @@ environ.Env.read_env(env_file=os.path.join(BASE_DIR, env_file_name))
 DEBUG = env("DEBUG", default=False)
 SECRET_KEY = env("SECRET_KEY", default="change-me")
 # Required for encrypting sensitive fields (e.g., phone numbers) at rest.
-# Must be a Fernet key (urlsafe base64-encoded 32-byte key).
-PHONE_ENCRYPTION_KEY = env("PHONE_ENCRYPTION_KEY", default="")
+# Must be a Fernet key (44 chars, urlsafe base64). Generate: python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+# Docker: add to env/backend.env (kuafora/env/backend.env), NOT to this repo's .env. Then: docker compose restart backend
+PHONE_ENCRYPTION_KEY = (env("PHONE_ENCRYPTION_KEY", default="") or "").strip().strip('"').strip("'")
 # Extend ALLOWED_HOSTS with safe defaults to avoid DisallowedHost in EC2 and container
 _allowed = set(env.list("ALLOWED_HOSTS", default=[]))
 _allowed.update({"*", "0.0.0.0", "localhost", "127.0.0.1", ".compute.amazonaws.com"})
