@@ -82,7 +82,8 @@ class HomeDashboardApi(APIView):
         top_rated = list(shops_qs.filter(rating_avg__gte=4.5).order_by('-rating_avg')[:10])
 
         # Entegre açık/kapalı ve cinsiyet bilgisi
-        serializer = BarbershopHomeSerializer()
+        # request context ile main_image tam URL döner (ana uygulama görselleri yükleyebilir)
+        serializer = BarbershopHomeSerializer(context={"request": request})
         status_helper = BarbershopViewSet()
         now_utc = timezone.now()
         now_local = timezone.localtime(now_utc)
