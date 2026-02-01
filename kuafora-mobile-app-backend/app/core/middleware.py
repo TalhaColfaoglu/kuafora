@@ -50,6 +50,12 @@ class ETagMiddleware(MiddlewareMixin):
         if request.path.startswith('/admin/') or not request.path.startswith('/api/'):
             return response
         
+        # Skip ETag for barbershop list/detail ve dashboard; client her zaman güncel body alsın (görsel URL'leri doğru)
+        if (request.path.startswith('/api/barbershops/') or
+                request.path.startswith('/api/mobile/home/dashboard')):
+            response['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+            return response
+        
         # Skip if ETag already set
         if 'ETag' in response:
             return response
