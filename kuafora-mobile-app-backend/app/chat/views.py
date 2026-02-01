@@ -3,10 +3,18 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
 from django.db import models
-from django.db.models import Q
-from .models import ChatRoom, ChatMessage, ChatBan
+from django.db.models import Q, Count
+from django.utils import timezone
+from datetime import timedelta
+from .models import ChatRoom, ChatMessage, ChatBan, ChatMessageReport
 from .serializers import ChatRoomSerializer, ChatMessageSerializer
 from app.barbers.models import Barbershop
+
+# Mesaj uzunluk ve spam limitleri
+CHAT_MESSAGE_MAX_LENGTH = 200
+CHAT_MESSAGE_RATE_WINDOW_SECONDS = 30
+CHAT_MESSAGE_RATE_MAX_PER_WINDOW = 5
+CHAT_REPORT_AUTO_HIDE_THRESHOLD = 3
 
 class ChatRoomViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
@@ -112,48 +120,87 @@ class ChatRoomViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=["post"])
     def send_message(self, request, pk=None):
         room = self.get_object()
-        content = request.data.get("content")
-        
-        if not content or not content.strip():
-            return Response({"detail": "Message content required"}, status=400)
+        content = (request.data.get("content") or "").strip()
+
+        if not content:
+            return Response({"detail": "Mesaj içeriği gerekli."}, status=status.HTTP_400_BAD_REQUEST)
+        if len(content) > CHAT_MESSAGE_MAX_LENGTH:
+            return Response(
+                {"detail": f"Mesaj en fazla {CHAT_MESSAGE_MAX_LENGTH} karakter olabilir."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         # Check ban status
         if request.user and ChatBan.objects.filter(barbershop=room.barbershop, user=request.user).exists():
-             return Response({"detail": "Chat banned."}, status=status.HTTP_403_FORBIDDEN)
+            return Response({"detail": "Bu kuaförle sohbet edemezsiniz (engellendiniz)."}, status=status.HTTP_403_FORBIDDEN)
 
-        is_staff_reply = False
-        # If user is staff of this shop, mark as staff reply
-        if room.barbershop.staff.filter(user=request.user).exists():
-            is_staff_reply = True
-        else:
-            # Validation: if private room, user must be the customer
+        is_staff = room.barbershop.staff.filter(user=request.user).exists()
+        if not is_staff:
+            # Spam: son X saniyede bu odada bu kullanıcının mesaj sayısı
+            since = timezone.now() - timedelta(seconds=CHAT_MESSAGE_RATE_WINDOW_SECONDS)
+            recent_count = ChatMessage.objects.filter(
+                room=room, sender=request.user, created_at__gte=since
+            ).count()
+            if recent_count >= CHAT_MESSAGE_RATE_MAX_PER_WINDOW:
+                return Response(
+                    {"detail": "Çok hızlı mesaj gönderiyorsunuz. Lütfen biraz bekleyin."},
+                    status=status.HTTP_429_TOO_MANY_REQUESTS,
+                )
             if room.room_type == ChatRoom.RoomType.PRIVATE and room.customer != request.user:
-                 return Response({"detail": "Not authorized"}, status=403)
-            # Public room: anyone authenticated can write (except bans)
-        
+                return Response({"detail": "Not authorized"}, status=status.HTTP_403_FORBIDDEN)
+
         msg = ChatMessage.objects.create(
             room=room,
             sender=request.user,
             content=content,
-            is_staff_reply=is_staff_reply
+            is_staff_reply=is_staff,
         )
         room.last_message_at = msg.created_at
-        room.save()
-        
+        room.save(update_fields=["last_message_at", "updated_at"])
         return Response(ChatMessageSerializer(msg, context={"request": request}).data)
     
     @action(detail=True, methods=["get"])
     def messages(self, request, pk=None):
         room = self.get_object()
-        
-        # Access control for private rooms
+        is_staff = room.barbershop.staff.filter(user=request.user).exists()
         if room.room_type == ChatRoom.RoomType.PRIVATE:
-            is_staff = room.barbershop.staff.filter(user=request.user).exists()
             if room.customer != request.user and not is_staff:
-                return Response({"detail": "Not authorized"}, status=403)
-        
-        msgs = room.messages.all().select_related('sender').order_by("created_at")
-        return Response(ChatMessageSerializer(msgs, many=True, context={"request": request}).data)
+                return Response({"detail": "Not authorized"}, status=status.HTTP_403_FORBIDDEN)
+
+        msgs = room.messages.all().select_related("sender").order_by("created_at")
+        if not is_staff:
+            msgs = msgs.filter(is_hidden=False)
+        else:
+            msgs = msgs.annotate(report_count_annotated=Count("reports"))
+        return Response(
+            ChatMessageSerializer(msgs, many=True, context={"request": request}).data
+        )
+
+    @action(detail=True, methods=["post"], url_path="report_message")
+    def report_message(self, request, pk=None):
+        """Mesaja şikayet et. 3 farklı kullanıcı şikayet edince mesaj otomatik gizlenir."""
+        room = self.get_object()
+        message_id = request.data.get("message_id")
+        if not message_id:
+            return Response({"detail": "message_id gerekli."}, status=status.HTTP_400_BAD_REQUEST)
+        msg = get_object_or_404(ChatMessage, id=message_id, room=room)
+        if msg.sender_id == request.user.id:
+            return Response({"detail": "Kendi mesajınızı şikayet edemezsiniz."}, status=status.HTTP_400_BAD_REQUEST)
+        if msg.is_hidden:
+            return Response({"detail": "Bu mesaj zaten gizlendi."}, status=status.HTTP_400_BAD_REQUEST)
+
+        report, created = ChatMessageReport.objects.get_or_create(
+            message=msg, user=request.user, defaults={}
+        )
+        if not created:
+            return Response({"detail": "Bu mesajı zaten şikayet ettiniz."}, status=status.HTTP_400_BAD_REQUEST)
+
+        count = msg.reports.count()
+        if count >= CHAT_REPORT_AUTO_HIDE_THRESHOLD:
+            msg.is_hidden = True
+            msg.hidden_at = timezone.now()
+            msg.save(update_fields=["is_hidden", "hidden_at"])
+        return Response({"detail": "Şikayetiniz alındı.", "hidden": count >= CHAT_REPORT_AUTO_HIDE_THRESHOLD})
 
     @action(detail=True, methods=["delete"], url_path=r"messages/(?P<message_id>[^/.]+)")
     def delete_message(self, request, pk=None, message_id=None):
@@ -180,6 +227,20 @@ class ChatRoomViewSet(viewsets.ModelViewSet):
         room.save(update_fields=["last_message_at", "updated_at"])
 
         return Response({"success": True}, status=status.HTTP_200_OK)
+
+    @action(detail=True, methods=["post"], url_path=r"messages/(?P<message_id>[^/.]+)/unhide")
+    def unhide_message(self, request, pk=None, message_id=None):
+        """Personel: 3 şikayet sonrası gizlenen mesajı tekrar görünür yapar."""
+        room = self.get_object()
+        if not room.barbershop.staff.filter(user=request.user).exists():
+            return Response({"detail": "Sadece kuaför personeli mesajı görünür yapabilir."}, status=status.HTTP_403_FORBIDDEN)
+        msg = get_object_or_404(ChatMessage, id=message_id, room=room)
+        if not msg.is_hidden:
+            return Response({"detail": "Bu mesaj zaten görünür."}, status=status.HTTP_400_BAD_REQUEST)
+        msg.is_hidden = False
+        msg.hidden_at = None
+        msg.save(update_fields=["is_hidden", "hidden_at"])
+        return Response(ChatMessageSerializer(msg, context={"request": request}).data)
 
     @action(detail=True, methods=["post"])
     def ban_user(self, request, pk=None):

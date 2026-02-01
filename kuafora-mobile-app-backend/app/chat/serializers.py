@@ -1,16 +1,24 @@
 from rest_framework import serializers
 from drf_spectacular.utils import extend_schema_field
 from .models import ChatRoom, ChatMessage
+from app.barbers.models import Staff
+
 
 class ChatMessageSerializer(serializers.ModelSerializer):
     sender_name = serializers.SerializerMethodField()
     is_me = serializers.SerializerMethodField()
     can_delete = serializers.SerializerMethodField()
+    sender_is_admin = serializers.SerializerMethodField()
+    report_count = serializers.SerializerMethodField()
 
     class Meta:
         model = ChatMessage
-        fields = ("id", "room", "sender", "sender_name", "is_staff_reply", "content", "created_at", "read_at", "is_me", "can_delete")
-        read_only_fields = ("sender", "created_at", "read_at", "is_staff_reply")
+        fields = (
+            "id", "room", "sender", "sender_name", "is_staff_reply", "sender_is_admin",
+            "content", "created_at", "read_at", "is_hidden", "report_count",
+            "is_me", "can_delete",
+        )
+        read_only_fields = ("sender", "created_at", "read_at", "is_staff_reply", "is_hidden")
 
     def get_is_me(self, obj):
         request = self.context.get("request")
@@ -45,11 +53,34 @@ class ChatMessageSerializer(serializers.ModelSerializer):
             return False
         if obj.sender == request.user:
             return True
-        # Shop staff can delete messages in their shop rooms
         try:
             return obj.room.barbershop.staff.filter(user=request.user).exists()
         except Exception:
             return False
+
+    def get_sender_is_admin(self, obj):
+        """Gönderen bu kuaförde yetkili (admin) personel mi? UI'da farklı renk/badge için."""
+        if not obj.is_staff_reply:
+            return False
+        try:
+            staff = Staff.objects.filter(
+                barbershop=obj.room.barbershop, user=obj.sender
+            ).values_list("is_admin", flat=True).first()
+            return staff is True
+        except Exception:
+            return False
+
+    def get_report_count(self, obj):
+        """Şikayet sayısı (personel/admin görsün). View'da annotate edilmiş olabilir."""
+        request = self.context.get("request")
+        if not request or not request.user.is_authenticated:
+            return 0
+        try:
+            if obj.room.barbershop.staff.filter(user=request.user).exists():
+                return getattr(obj, "report_count_annotated", None) or obj.reports.count()
+        except Exception:
+            pass
+        return 0
 
 class ChatRoomSerializer(serializers.ModelSerializer):
     # Backwards-compatible aliases
@@ -109,7 +140,15 @@ class ChatRoomSerializer(serializers.ModelSerializer):
     
     @extend_schema_field(serializers.DictField(allow_null=True))
     def get_last_message(self, obj):
-        last_msg = obj.messages.order_by("-created_at").first()
+        request = self.context.get("request")
+        qs = obj.messages.order_by("-created_at")
+        if request and request.user.is_authenticated:
+            try:
+                if not obj.barbershop.staff.filter(user=request.user).exists():
+                    qs = qs.filter(is_hidden=False)
+            except Exception:
+                pass
+        last_msg = qs.first()
         if last_msg:
             return ChatMessageSerializer(last_msg, context=self.context).data
         return None
