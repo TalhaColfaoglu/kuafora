@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% load static %}
+{% load static static_tags %}
 
 {% block title %}Kuafora — Kuaförünü Keşfet | Türkiye'nin Kuaför Keşif Platformu{% endblock %}
 
@@ -29,6 +29,9 @@
           Yakınındaki <strong class="text-primary">kuaför ve güzellik salonlarını</strong> harita üzerinde keşfet. 
           Gerçek yorumları oku, fotoğrafları incele, <strong class="text-primary">sana en uygun salonu</strong> bul.
         </p>
+        <p class="mt-4 text-base text-muted max-w-lg">
+          <strong class="text-primary">Üniversite öğrencileri</strong> için de faydalı: kampüs ve yurt çevresindeki kuaförleri keşfet, bütçene uygun salonları karşılaştır, tek uygulamadan randevu bilgisine ulaş.
+        </p>
         
         <!-- Store (Coming Soon) + Notify -->
         <div id="notify" class="mt-10 flex flex-col sm:flex-row gap-4">
@@ -52,7 +55,7 @@
           </div>
         </div>
         <div class="mt-4 text-sm text-muted">
-          Yayına çıktığında haber almak için: <a class="underline font-medium" href="mailto:kuafora@outlook.com?subject=Kuafora%20Haberdar%20Ol">kuafora@outlook.com</a>
+          Yayına çıktığında haber almak için: <a class="underline font-medium" href="mailto:info@kuafora.com?subject=Kuafora%20Haberdar%20Ol">info@kuafora.com</a>
         </div>
         
         <!-- Coming Soon Badge -->
@@ -599,7 +602,7 @@
             <span>Özel hesap yöneticisi</span>
           </li>
         </ul>
-        <a href="mailto:kuafora@outlook.com" class="block w-full text-center py-4 rounded-xl border-2 border-primary text-primary font-semibold hover:bg-primary hover:text-white transition-all">
+        <a href="mailto:info@kuafora.com" class="block w-full text-center py-4 rounded-xl border-2 border-primary text-primary font-semibold hover:bg-primary hover:text-white transition-all">
           İletişime Geç
         </a>
       </div>

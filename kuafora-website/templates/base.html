@@ -201,14 +201,16 @@
           <!-- Navigation Links -->
           <div class="hidden md:flex items-center">
             {% if request.resolver_match.url_name|slice:":7" == "partner" %}
+              <a href="/" class="nav-pill px-4 py-2 rounded-full text-sm font-medium">Ana Sayfa</a>
               <a href="/partner/kuafora-partner/" class="nav-pill px-4 py-2 rounded-full text-sm font-medium {% if request.resolver_match.url_name == 'partner_landing' %}active{% endif %}">Partner Uygulaması</a>
               <a href="/partner/kuafora-partner/ozellikler/" class="nav-pill px-4 py-2 rounded-full text-sm font-medium {% if request.resolver_match.url_name == 'partner_features' %}active{% endif %}">Özellikler</a>
               <a href="/partner/kuafora-partner/sss/" class="nav-pill px-4 py-2 rounded-full text-sm font-medium {% if request.resolver_match.url_name == 'partner_faq' %}active{% endif %}">SSS</a>
             {% else %}
-              <a href="/" class="nav-pill px-4 py-2 rounded-full text-sm font-medium">Keşfet</a>
+              <a href="/" class="nav-pill px-4 py-2 rounded-full text-sm font-medium {% if request.path == '/' %}active{% endif %}">Ana Sayfa</a>
               <a href="{% url 'customer_app' %}" class="nav-pill px-4 py-2 rounded-full text-sm font-medium">Müşteri Uygulaması</a>
               <a href="/partner/kuafora-partner/" class="nav-pill px-4 py-2 rounded-full text-sm font-medium">Partner Uygulaması</a>
             {% endif %}
+            <a href="{% url 'legal_terms' %}" class="nav-pill px-4 py-2 rounded-full text-sm font-medium">Yasal</a>
           </div>
           
           <!-- Divider -->
@@ -242,14 +244,16 @@
       <div id="mobile-menu" class="hidden pointer-events-auto mx-4 mt-2">
         <div class="dynamic-nav rounded-3xl p-4 space-y-2">
             {% if request.resolver_match.url_name|slice:":7" == "partner" %}
+            <a href="/" class="block text-white/80 hover:text-white py-3 px-4 rounded-xl hover:bg-white/10 transition-all font-medium">Ana Sayfa</a>
             <a href="/partner/kuafora-partner/" class="block text-white/80 hover:text-white py-3 px-4 rounded-xl hover:bg-white/10 transition-all font-medium">Partner Uygulaması</a>
             <a href="/partner/kuafora-partner/ozellikler/" class="block text-white/80 hover:text-white py-3 px-4 rounded-xl hover:bg-white/10 transition-all font-medium">Özellikler</a>
             <a href="/partner/kuafora-partner/sss/" class="block text-white/80 hover:text-white py-3 px-4 rounded-xl hover:bg-white/10 transition-all font-medium">SSS</a>
           {% else %}
-            <a href="/" class="block text-white/80 hover:text-white py-3 px-4 rounded-xl hover:bg-white/10 transition-all font-medium">Keşfet</a>
+            <a href="/" class="block text-white/80 hover:text-white py-3 px-4 rounded-xl hover:bg-white/10 transition-all font-medium">Ana Sayfa</a>
             <a href="{% url 'customer_app' %}" class="block text-white/80 hover:text-white py-3 px-4 rounded-xl hover:bg-white/10 transition-all font-medium">Müşteri Uygulaması</a>
             <a href="/partner/kuafora-partner/" class="block text-white/80 hover:text-white py-3 px-4 rounded-xl hover:bg-white/10 transition-all font-medium">Partner Uygulaması</a>
           {% endif %}
+            <a href="{% url 'legal_terms' %}" class="block text-white/80 hover:text-white py-3 px-4 rounded-xl hover:bg-white/10 transition-all font-medium">Yasal</a>
           <div class="pt-2">
             {% if request.resolver_match.url_name|slice:":7" == "partner" %}
               <a href="/partner/kuafora-partner/#join" class="flex items-center justify-center gap-2 bg-white text-black py-3 px-4 rounded-xl font-semibold">
@@ -304,9 +308,9 @@
           <div class="md:col-span-2">
             <h4 class="font-semibold text-sm uppercase tracking-wider text-white/40 mb-6">Platform</h4>
             <ul class="space-y-4">
-              <li><a href="/" class="text-white/70 hover:text-white transition-colors">Keşfet</a></li>
-              <li><a href="{% url 'customer_app' %}" class="text-white/70 hover:text-white transition-colors">Nasıl Çalışır</a></li>
-              <li><a href="/partner/kuafora-partner/" class="text-white/70 hover:text-white transition-colors">İşletmeler İçin</a></li>
+              <li><a href="/" class="text-white/70 hover:text-white transition-colors">Ana Sayfa</a></li>
+              <li><a href="{% url 'customer_app' %}" class="text-white/70 hover:text-white transition-colors">Müşteri Uygulaması</a></li>
+              <li><a href="/partner/kuafora-partner/" class="text-white/70 hover:text-white transition-colors">Partner Uygulaması</a></li>
             </ul>
         </div>
           
@@ -324,21 +328,29 @@
             <h4 class="font-semibold text-sm uppercase tracking-wider text-white/40 mb-6">İletişim</h4>
             <ul class="space-y-4">
               <li>
-                <a href="mailto:kuafora@outlook.com" class="text-white/70 hover:text-white transition-colors flex items-center gap-2">
+                <a href="mailto:info@kuafora.com" class="text-white/70 hover:text-white transition-colors flex items-center gap-2">
                   <svg class="w-5 h-5 text-accent-rose" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
                   </svg>
-                  kuafora@outlook.com
+                  info@kuafora.com
                 </a>
               </li>
               <li>
-                <a href="#" class="text-white/70 hover:text-white transition-colors flex items-center gap-2">
+                <a href="mailto:hasimdenizhanmetin@kuafora.com" class="text-white/70 hover:text-white transition-colors flex items-center gap-2">
                   <svg class="w-5 h-5 text-accent-violet" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+                  </svg>
+                  hasimdenizhanmetin@kuafora.com
+                </a>
+              </li>
+              <li>
+                <span class="text-white/70 flex items-center gap-2">
+                  <svg class="w-5 h-5 text-accent-amber" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
                   </svg>
-                  İstanbul, Türkiye
-                </a>
+                  Bursa / İstanbul, Türkiye
+                </span>
               </li>
           </ul>
           </div>

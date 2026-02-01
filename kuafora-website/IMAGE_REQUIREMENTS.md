@@ -1,203 +1,102 @@
-# Görsel Gereksinimleri ve Yükleme Rehberi
+# Kuafora Web Sitesi — Görsel İhtiyaçları
 
-## 📸 İhtiyaç Duyulan Görseller
+Bu doküman, kuafora.com ve partner sayfalarında **nerede hangi görsellerin** kullanılacağını ve teknik beklentileri açıklar. Görsel temin ederken bu listeye göre hazırlamanız yeterlidir.
 
-### 1. SEO ve Social Media Görselleri
+---
 
-#### Open Graph Image (og-image.jpg)
-- **Boyut**: 1200x630px (1.91:1 oran)
-- **Format**: JPG (optimize edilmiş)
-- **Maksimum Boyut**: 1MB
-- **Konum**: `static/img/og-image.jpg`
-- **İçerik Önerisi**:
-  - Kuafora logosu (sol üst)
-  - "Kuaförünü Keşfet" başlığı
-  - Uygulama mockup'ı veya harita görseli
-  - Arka plan: Beyaz veya açık gri gradient
+## 1. Ana sayfa (marketing/home.html)
 
-#### Twitter Card Image (twitter-card.jpg)
-- **Boyut**: 1200x675px (16:9 oran)
-- **Format**: JPG (optimize edilmiş)
-- **Maksimum Boyut**: 1MB
-- **Konum**: `static/img/twitter-card.jpg`
-- **İçerik Önerisi**:
-  - Kuafora logosu (merkez)
-  - Kısa açıklama metni
-  - Uygulama özellikleri ikonları
+### 1.1 Hero — Telefon mockup (ana ekran)
+- **Dosya yolu (static):** `img/screens/home-screen.png`
+- **Kullanım:** Hero bölümünde, sağ tarafta tek telefon mockup içinde gösterilen “Kuafora ana ekran” görseli.
+- **Beklenti:** Müşteri uygulamasının ana ekranının ekran görüntüsü veya tasarım görseli (telefon çerçevesi template’e otomatik ekleniyor).
+- **Önerilen boyut:** 1170×2532 px (veya 9:19.5 benzeri oran). Dikey, net, okunaklı.
+- **Yoksa:** Şu an placeholder (gradient + “K” logosu + “Ana Ekran Görseli” metni) gösteriliyor.
 
-#### Apple Touch Icon (apple-touch-icon.png)
-- **Boyut**: 180x180px
-- **Format**: PNG (şeffaf arka plan)
-- **Konum**: `static/img/apple-touch-icon.png`
-- **İçerik**: Kuafora logosu (kare, merkezde)
+### 1.2 Diğer hero / CTA bölümleri
+- Şu an ek metin/bloklar için **ek görsel zorunluluğu yok**. İsterseniz:
+  - “Keşfet” veya “Nasıl çalışır” bölümüne: harita veya uygulama keşif ekranı (opsiyonel).
+  - “Üniversite öğrencileri” vurgusu için ayrı bir görsel talep edilmedi; metin ile veriliyor.
 
-### 2. Ana Uygulama Ekran Görüntüleri
+---
 
-Tüm ekran görüntüleri **iPhone 14 Pro** veya **Samsung Galaxy S23** boyutunda olmalı.
+## 2. Müşteri uygulaması sayfası (marketing/customer_app.html)
 
-#### Home Screen (home-screen.png)
-- **Boyut**: 1170x2532px (iPhone 14 Pro) veya 1080x2340px (Android)
-- **Format**: PNG
-- **Konum**: `static/img/screens/home-screen.png`
-- **İçerik**: Ana sayfa - kuaför listesi, arama çubuğu, filtreler
+- Sayfada **uygulama ekranları** veya **kullanım senaryosu** görselleri kullanılıyorsa:
+  - **Öneri:** Müşteri uygulamasından 3–5 ekran: harita, salon listesi, salon detay, randevu, profil.
+- **Dosya yolu önerisi:** `img/screens/customer-*.png` (örn. `customer-map.png`, `customer-salon-detail.png`).
+- **Boyut:** 1170×2532 px veya aynı oran; tutarlılık için hepsi aynı çözünürlük.
+- Şu an template’te bu sayfa için **zorunlu görsel alanı** yok; eklenirse bu path’ler kullanılabilir.
 
-#### Map View (map-view.png)
-- **Boyut**: 1170x2532px veya 1080x2340px
-- **Format**: PNG
-- **Konum**: `static/img/screens/map-view.png`
-- **İçerik**: Harita görünümü - kuaförler harita üzerinde pin'lerle
+---
 
-#### Barbershop Detail (barbershop-detail.png)
-- **Boyut**: 1170x2532px veya 1080x2340px
-- **Format**: PNG
-- **Konum**: `static/img/screens/barbershop-detail.png`
-- **İçerik**: Kuaför detay sayfası - fotoğraflar, yorumlar, çalışma saatleri
+## 3. Partner sayfası (partner/partner_landing.html)
 
-#### Reviews (reviews.png)
-- **Boyut**: 1170x2532px veya 1080x2340px
-- **Format**: PNG
-- **Konum**: `static/img/screens/reviews.png`
-- **İçerik**: Yorumlar listesi - kullanıcı yorumları, puanlar
+- **Tüm yönetim ve keşif sadece mobil uygulamada** vurgulandığı için görseller **telefon ekranı** odaklı olmalı.
 
-#### Favorites (favorites.png)
-- **Boyut**: 1170x2532px veya 1080x2340px
-- **Format**: PNG
-- **Konum**: `static/img/screens/favorites.png`
-- **İçerik**: Favoriler sayfası - kaydedilmiş kuaförler
+### 3.1 Partner uygulaması — Takvim / bilgi yönetimi
+- **Yer:** “İşletme bilgileri yönetimi” bölümü, sol/sağ phone mockup.
+- **İçerik:** Partner uygulamasında takvim veya “işletme bilgileri” ekranı (hizmetler, saatler, personel).
+- **Dosya yolu önerisi:** `img/screens/partner-calendar.png` veya `partner-info.png`.
+- **Boyut:** 1170×2532 px (dikey).
+- **Yoksa:** Şu an gri gradient + takvim ikonu + “Takvim” metni placeholder.
 
-#### Search (search.png)
-- **Boyut**: 1170x2532px veya 1080x2340px
-- **Format**: PNG
-- **Konum**: `static/img/screens/search.png`
-- **İçerik**: Arama sonuçları - filtreler, sonuç listesi
+### 3.2 Partner uygulaması — Personel / hizmet yönetimi
+- **Yer:** “Personel ve hizmet yönetimi” bölümü, phone mockup.
+- **İçerik:** Personel listesi veya hizmet/kategori ekranı.
+- **Dosya yolu önerisi:** `img/screens/partner-staff.png` veya `partner-services.png`.
+- **Boyut:** 1170×2532 px.
+- **Yoksa:** Placeholder (personel ikonu + “Personel” metni).
 
-### 3. Partner Uygulaması Ekran Görüntüleri
+### 3.3 Partner uygulaması — İletişim / analiz
+- **Yer:** “İletişim ve analiz” bölümü, phone mockup.
+- **İçerik:** Chat/mesajlaşma ekranı veya basit istatistik ekranı.
+- **Dosya yolu önerisi:** `img/screens/partner-chat.png` veya `partner-stats.png`.
+- **Boyut:** 1170×2532 px.
+- **Yoksa:** Placeholder (istatistik ikonu + “İstatistikler” metni).
 
-#### Dashboard (dashboard.png)
-- **Boyut**: 1170x2532px veya 1080x2340px
-- **Format**: PNG
-- **Konum**: `static/img/screens/partner/dashboard.png`
-- **İçerik**: Partner dashboard - istatistikler, hızlı erişim
+### 3.4 Partner hero — Ana görsel
+- **Yer:** Sayfa başındaki büyük phone mockup.
+- **İçerik:** Partner uygulamasının ana ekranı veya dashboard benzeri bir ekran.
+- **Dosya yolu önerisi:** `img/screens/partner-home.png`.
+- **Yoksa:** “Partner Mobil Uygulaması” placeholder.
 
-#### Appointments (appointments.png)
-- **Boyut**: 1170x2532px veya 1080x2340px
-- **Format**: PNG
-- **Konum**: `static/img/screens/partner/appointments.png`
-- **İçerik**: Randevu yönetimi - takvim görünümü, randevu listesi
+---
 
-#### Staff (staff.png)
-- **Boyut**: 1170x2532px veya 1080x2340px
-- **Format**: PNG
-- **Konum**: `static/img/screens/partner/staff.png`
-- **İçerik**: Personel yönetimi - personel listesi, çalışma saatleri
+## 4. Genel / site çapında
 
-#### Reviews Management (reviews.png)
-- **Boyut**: 1170x2532px veya 1080x2340px
-- **Format**: PNG
-- **Konum**: `static/img/screens/partner/reviews.png`
-- **İçerik**: Yorum yönetimi - yorumlar listesi, yanıt verme
+### 4.1 Open Graph & Twitter Card
+- **Dosya yolları (base.html):**
+  - `img/og-image.jpg` — Sosyal medyada paylaşımda çıkan büyük görsel (önerilen: 1200×630 px).
+  - `img/twitter-card.jpg` — Twitter kartı (önerilen: 1200×630 px veya aynı dosya).
+- **İçerik:** Kuafora logosu + kısa slogan veya uygulama mockup’ı; okunaklı ve düşük boyutlu.
 
-#### Analytics (analytics.png)
-- **Boyut**: 1170x2532px veya 1080x2340px
-- **Format**: PNG
-- **Konum**: `static/img/screens/partner/analytics.png`
-- **İçerik**: İstatistikler - gelir grafikleri, performans metrikleri
+### 4.2 Favicon / ikonlar
+- **Apple Touch Icon:** `img/apple-touch-icon.png` (180×180 px önerilir).
+- Favicon şu an SVG (K logosu) ile veriliyor; ek PNG gerekmez.
 
-## 🎨 Görsel Tasarım Kılavuzu
+---
 
-### Renkler
-- **Primary**: #0A0A0A (Siyah)
-- **Accent Rose**: #F43F5E
-- **Accent Violet**: #8B5CF6
-- **Accent Emerald**: #10B981
-- **Accent Amber**: #F59E0B
-- **Accent Sky**: #0EA5E9
+## 5. Özet tablo
 
-### Tipografi
-- **Display Font**: Cabinet Grotesk (başlıklar)
-- **Body Font**: Satoshi (metin)
+| Konum | Dosya (static/) | Açıklama | Önerilen boyut |
+|-------|------------------|----------|-----------------|
+| Ana sayfa hero | `img/screens/home-screen.png` | Müşteri uygulaması ana ekran | 1170×2532 px |
+| Partner hero | `img/screens/partner-home.png` | Partner uygulaması ana ekran | 1170×2532 px |
+| Partner — Takvim | `img/screens/partner-calendar.png` | Takvim / bilgi yönetimi ekranı | 1170×2532 px |
+| Partner — Personel | `img/screens/partner-staff.png` | Personel / hizmet ekranı | 1170×2532 px |
+| Partner — İstatistik | `img/screens/partner-stats.png` | Chat veya istatistik ekranı | 1170×2532 px |
+| OG / Twitter | `img/og-image.jpg`, `img/twitter-card.jpg` | Paylaşım önizleme | 1200×630 px |
+| Apple Touch | `img/apple-touch-icon.png` | Mobil bookmark ikonu | 180×180 px |
 
-### Stil
-- Modern, minimal tasarım
-- Yumuşak gölgeler
-- Yuvarlatılmış köşeler (border-radius: 12-24px)
-- Gradient arka planlar (opsiyonel)
+---
 
-## 📤 Görselleri Yükleme
+## 6. Görselleri nereye koyacaksınız?
 
-### Yöntem 1: Manuel Yükleme (AWS Console)
-1. AWS Console'a giriş yap
-2. S3 servisine git
-3. `kuafora-website` bucket'ını aç
-4. `static/img/` klasörüne git
-5. Görselleri sürükle-bırak ile yükle
-6. Her görsel için "Make public" seçeneğini işaretle
+- Proje kökünde `static/img/` altına:
+  - `static/img/screens/` — uygulama ekran görselleri.
+  - `static/img/og-image.jpg`, `static/img/twitter-card.jpg`, `static/img/apple-touch-icon.png`.
+- Django’da `collectstatic` çalıştırıldığında bu dosyalar `staticfiles` (veya S3) içine alınır; şablonlar `{% static 'img/...' %}` ile kullanır.
+- **home-screen.png** için şablon zaten `{% if 'img/screens/home-screen.png'|static_exists %}` ile kontrol ediyor: dosya yoksa placeholder gösteriliyor. Diğer ekranlar için de aynı mantık eklenebilir (path’ler yukarıdaki gibi).
 
-### Yöntem 2: AWS CLI ile Yükleme
-```bash
-# AWS CLI kurulumu
-pip install awscli
-
-# Yapılandırma
-aws configure
-# AWS Access Key ID: [gir]
-# AWS Secret Access Key: [gir]
-# Default region: eu-west-1
-# Default output format: json
-
-# Görselleri yükle
-aws s3 cp static/img/og-image.jpg s3://kuafora-website/static/img/og-image.jpg --acl public-read
-aws s3 cp static/img/twitter-card.jpg s3://kuafora-website/static/img/twitter-card.jpg --acl public-read
-aws s3 cp static/img/apple-touch-icon.png s3://kuafora-website/static/img/apple-touch-icon.png --acl public-read
-
-# Tüm ekran görüntülerini yükle
-aws s3 sync static/img/screens/ s3://kuafora-website/static/img/screens/ --acl public-read
-```
-
-### Yöntem 3: Django Management Command
-```bash
-# Static files'ı topla ve S3'e yükle
-python manage.py collectstatic --noinput
-```
-
-## ✅ Kontrol Listesi
-
-### Görsel Hazırlığı
-- [ ] Open Graph image hazır (1200x630px)
-- [ ] Twitter Card image hazır (1200x675px)
-- [ ] Apple Touch Icon hazır (180x180px)
-- [ ] Ana uygulama ekran görüntüleri hazır (6 adet)
-- [ ] Partner uygulama ekran görüntüleri hazır (5 adet)
-
-### Optimizasyon
-- [ ] Tüm görseller optimize edildi (TinyPNG veya Squoosh)
-- [ ] Dosya boyutları kontrol edildi (<2MB)
-- [ ] Görsel kalitesi kontrol edildi (Retina için yeterli)
-
-### Yükleme
-- [ ] S3 bucket oluşturuldu
-- [ ] Görseller S3'e yüklendi
-- [ ] Public access ayarları yapıldı
-- [ ] URL'ler test edildi
-
-### Test
-- [ ] Website'de görseller görünüyor
-- [ ] Open Graph test edildi (https://www.opengraph.xyz/)
-- [ ] Twitter Card test edildi (https://cards-dev.twitter.com/validator)
-- [ ] Mobile'da görseller düzgün görünüyor
-
-## 🔗 Faydalı Linkler
-
-- **Görsel Optimizasyonu**: https://tinypng.com/ veya https://squoosh.app/
-- **Open Graph Test**: https://www.opengraph.xyz/
-- **Twitter Card Validator**: https://cards-dev.twitter.com/validator
-- **Facebook Sharing Debugger**: https://developers.facebook.com/tools/debug/
-
-## 📝 Notlar
-
-- Tüm görselleri **sRGB** renk profili ile kaydet
-- Ekran görüntüleri için **PNG** formatı kullan (şeffaf arka plan için)
-- Social media görselleri için **JPG** formatı kullan (daha küçük dosya boyutu)
-- Görselleri yüklerken **lazy loading** kullan (performans için)
-- **WebP** formatı da destekleniyor (modern tarayıcılar için)
-
+Bu liste, mevcut şablon yapısına göre güncellenmiş durumdadır. Yeni bir bölüm veya sayfa eklendiğinde bu dokümana satır ekleyebilirsiniz.
