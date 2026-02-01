@@ -5,10 +5,41 @@ from django.db.models.functions import Lower, Replace
 from .models import Barbershop, ShopCategory
 
 
+def _normalize_tr(s: str) -> str:
+    """Türkçe/Latince ve büyük/küçük harf duyarsız arama için metni normalize et."""
+    s = (s or "").strip().lower()
+    # Türkçe büyük İ (U+0130) Python default locale'de .lower() ile 'i' olmayabilir; açıkça dönüştür
+    s = s.replace("\u0130", "i").replace("İ", "i")
+    s = (
+        s.replace("ı", "i")
+        .replace("ş", "s")
+        .replace("ğ", "g")
+        .replace("ü", "u")
+        .replace("ö", "o")
+        .replace("ç", "c")
+    )
+    s = " ".join(s.split())
+    return s
+
+
+def _norm_db_expr(field_name: str):
+    """Veritabanı alanını arama için normalize eden annotate ifadesi (büyük/küçük harf + Türkçe/Latin)."""
+    # Önce Türkçe büyük İ'yi dönüştür (Lower bazı locale'lerde İ'yi farklı işleyebilir)
+    expr = Replace(F(field_name), Value("İ"), Value("i"))
+    expr = Lower(expr)
+    expr = Replace(expr, Value("ı"), Value("i"))
+    expr = Replace(expr, Value("ş"), Value("s"))
+    expr = Replace(expr, Value("ğ"), Value("g"))
+    expr = Replace(expr, Value("ü"), Value("u"))
+    expr = Replace(expr, Value("ö"), Value("o"))
+    expr = Replace(expr, Value("ç"), Value("c"))
+    return expr
+
+
 class BarbershopFilter(filters.FilterSet):
     q = filters.CharFilter(method="filter_q")
-    city = filters.CharFilter(field_name="city", lookup_expr="iexact")
-    district = filters.CharFilter(field_name="district", lookup_expr="iexact")
+    city = filters.CharFilter(method="filter_city")
+    district = filters.CharFilter(method="filter_district")
     gender = filters.CharFilter(method="filter_gender")
     categories = filters.ModelMultipleChoiceFilter(
         field_name="categories",
@@ -23,53 +54,27 @@ class BarbershopFilter(filters.FilterSet):
     def filter_q(self, queryset, name, value):
         """
         Robust search:
-        - Turkish character tolerant: i/ı, s/ş, g/ğ, u/ü, o/ö, c/ç
+        - İl/ilçe, büyük/küçük harf, Latince/Türkçe karakter duyarsız
+        - Turkish character tolerant: i/ı, İ, s/ş, g/ğ, u/ü, o/ö, c/ç
         - Tokenized search across: name, city, district, category name, service name
-        - Supports "istanbul kadikoy berber" style queries.
         """
         raw = (value or "").strip()
         if not raw:
             return queryset
 
-        def normalize_tr(s: str) -> str:
-            s = (s or "").strip().lower()
-            # Remove Turkish-specific chars to ASCII equivalents
-            s = (
-                s.replace("ı", "i")
-                .replace("ş", "s")
-                .replace("ğ", "g")
-                .replace("ü", "u")
-                .replace("ö", "o")
-                .replace("ç", "c")
-            )
-            # keep only single spaces
-            s = " ".join(s.split())
-            return s
-
-        def norm_db(field_name: str):
-            expr = Lower(F(field_name))
-            expr = Replace(expr, Value("ı"), Value("i"))
-            expr = Replace(expr, Value("ş"), Value("s"))
-            expr = Replace(expr, Value("ğ"), Value("g"))
-            expr = Replace(expr, Value("ü"), Value("u"))
-            expr = Replace(expr, Value("ö"), Value("o"))
-            expr = Replace(expr, Value("ç"), Value("c"))
-            return expr
-
-        q_norm = normalize_tr(raw)
+        q_norm = _normalize_tr(raw)
         tokens = [t for t in q_norm.split(" ") if t]
         if not tokens:
             return queryset
 
         qs = queryset.annotate(
-            _n_name=norm_db("name"),
-            _n_city=norm_db("city"),
-            _n_district=norm_db("district"),
-            _n_category=norm_db("categories__name"),
-            _n_service=norm_db("services__name"),
+            _n_name=_norm_db_expr("name"),
+            _n_city=_norm_db_expr("city"),
+            _n_district=_norm_db_expr("district"),
+            _n_category=_norm_db_expr("categories__name"),
+            _n_service=_norm_db_expr("services__name"),
         )
 
-        # Each token must match at least one of the searchable fields (AND across tokens).
         for t in tokens:
             qs = qs.filter(
                 Q(_n_name__contains=t)
@@ -80,6 +85,24 @@ class BarbershopFilter(filters.FilterSet):
             )
 
         return qs.distinct()
+
+    def filter_city(self, queryset, name, value):
+        """İl filtresi: büyük/küçük harf ve Türkçe/Latince duyarsız (örn. istanbul = İstanbul)."""
+        raw = (value or "").strip()
+        if not raw:
+            return queryset
+        norm = _normalize_tr(raw)
+        qs = queryset.annotate(_n_city=_norm_db_expr("city"))
+        return qs.filter(_n_city=norm).distinct()
+
+    def filter_district(self, queryset, name, value):
+        """İlçe filtresi: büyük/küçük harf ve Türkçe/Latince duyarsız."""
+        raw = (value or "").strip()
+        if not raw:
+            return queryset
+        norm = _normalize_tr(raw)
+        qs = queryset.annotate(_n_district=_norm_db_expr("district"))
+        return qs.filter(_n_district=norm).distinct()
 
     def filter_gender(self, queryset, name, value):
         """

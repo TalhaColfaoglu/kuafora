@@ -375,7 +375,8 @@ class BarbershopViewSet(viewsets.ReadOnlyModelViewSet):
                         "category_id": svc.category_id,
                         "category_name": svc.category.name if svc.category else None,
                         "is_active": True,
-                        "price_range": {'min': float(ss.price), 'max': float(ss.price)}
+                        "price_range": {'min': float(ss.price), 'max': float(ss.price)},
+                        "target_gender": getattr(svc, 'target_gender', None),
                     })
                 return Response(data)
 
@@ -891,13 +892,32 @@ def _compute_shop_status(barbershop_id: int, ts: datetime) -> dict:
             "breaks": [],
         }
         return _cache_and_return(data)
-    # 2) SpecialDay (Override - sadece tek gün etkilerini değerlendiriyoruz)
-    ov = Override.objects.filter(barbershop_id=barbershop_id, start_date__lte=date, end_date__gte=date, is_active=True).order_by('-created_at')
-    
-    # NEW: Check if NOW is inside any time_range_closed override (Break System)
+    # 2) SpecialDay (Override) - dükkan seviyesinde sadece shop_global override'lar sayılır
+    ov_shop = Override.objects.filter(
+        barbershop_id=barbershop_id,
+        override_type='shop_global',
+        start_date__lte=date,
+        end_date__gte=date,
+        is_active=True,
+    ).order_by('-created_at')
+
+    # Dükkan tam gün kapalı: sadece salon izin günü (shop_global full_day_closed)
+    shop_full_day = ov_shop.filter(override_scope='full_day_closed').first()
+    if shop_full_day:
+        data = {
+            "status": "closed",
+            "source": "SPECIAL_DAY",
+            "message": shop_full_day.reason or "Bugün kapalı",
+            "next_change": None,
+            "open_interval": None,
+            "breaks": [],
+        }
+        return _cache_and_return(data)
+
+    # Şu an mola (sadece salon seviyesi time_range_closed)
     now_time = local_ts.time()
     active_break_override = None
-    for o in ov:
+    for o in ov_shop:
         if o.override_scope == 'time_range_closed' and o.start_time and o.end_time:
             if o.start_time <= now_time <= o.end_time:
                 active_break_override = o
@@ -950,31 +970,23 @@ def _compute_shop_status(barbershop_id: int, ts: datetime) -> dict:
         }
         return _cache_and_return(data)
 
-    if ov.exists():
-        top = ov.first()
-        if top.override_scope == 'full_day_closed':
-            data = {
-                "status": "closed",
-                "source": "SPECIAL_DAY",
-                "message": top.reason or "Bugün kapalı",
-                "next_change": None,
-                "open_interval": None,
-                "breaks": [],
-            }
-            return _cache_and_return(data)
-        if top.override_scope == 'time_range_closed':
-            # Basit yaklaşım: gün açık kabul; kapalı aralığı mola gibi göster
-            open_interval, breaks = _effective_shop_hours_with_breaks(shop, date, extra_closed=[(top.start_time, top.end_time)])
-            msg, next_change = _message_for_state(open_interval, breaks, local_ts)
-            data = {
-                "status": _open_closed_now(open_interval, breaks, local_ts),
-                "source": "SPECIAL_DAY",
-                "message": msg,
-                "next_change": next_change,
-                "open_interval": _to_dict_interval(open_interval),
-                "breaks": _to_list_breaks(breaks),
-            }
-            return _cache_and_return(data)
+    # Salon seviyesi saat aralığı kapalı (time_range_closed) - mola gibi göster
+    top = ov_shop.filter(override_scope='time_range_closed').first() or ov_shop.first()
+    if top and top.override_scope == 'time_range_closed' and top.start_time and top.end_time:
+        open_interval, breaks = _effective_shop_hours_with_breaks(
+            shop, date, extra_closed=[(top.start_time, top.end_time)]
+        )
+        msg, next_change = _message_for_state(open_interval, breaks, local_ts)
+        data = {
+            "status": _open_closed_now(open_interval, breaks, local_ts),
+            "source": "SPECIAL_DAY",
+            "message": msg,
+            "next_change": next_change,
+            "open_interval": _to_dict_interval(open_interval),
+            "breaks": _to_list_breaks(breaks),
+        }
+        return _cache_and_return(data)
+
     # 3) OfficialHoliday (shop decision)
     shov = ShopHolidayOverride.objects.filter(barbershop_id=barbershop_id, date=date).first()
     if shov:
@@ -2079,18 +2091,41 @@ class PartnerServiceViewSet(viewsets.ModelViewSet):
         if not admin_staff:
             from rest_framework.exceptions import PermissionDenied
             raise PermissionDenied("No admin barbershop for this user")
+        shop = admin_staff.barbershop
+        # Unisex: target_gender zorunlu (male/female/both). Erkek/kadın: otomatik.
+        if getattr(shop, "gender", None) == "male":
+            serializer.validated_data["target_gender"] = "male"
+        elif getattr(shop, "gender", None) == "female":
+            serializer.validated_data["target_gender"] = "female"
+        else:
+            tg = serializer.validated_data.get("target_gender") or (request.data.get("target_gender") if isinstance(request.data, dict) else None)
+            if tg not in ("male", "female", "both"):
+                from rest_framework.exceptions import ValidationError
+                raise ValidationError({"target_gender": ["Unisex kuaförde Kadın, Erkek veya Kadın ve Erkek seçilmelidir."]})
+            serializer.validated_data["target_gender"] = tg
         try:
-            serializer.save(barbershop=admin_staff.barbershop)
+            serializer.save(barbershop=shop)
         except Exception as e:
             from django.db import IntegrityError
             if isinstance(e, IntegrityError):
                 return Response({"detail": str(e)}, status=400)
             raise
         headers = self.get_success_headers(serializer.data)
-        # Otomatik duyuru devre dışı
         return Response(serializer.data, status=201, headers=headers)
 
     def perform_update(self, serializer):
+        instance = serializer.instance
+        shop = instance.barbershop
+        if getattr(shop, "gender", None) == "male":
+            serializer.validated_data["target_gender"] = "male"
+        elif getattr(shop, "gender", None) == "female":
+            serializer.validated_data["target_gender"] = "female"
+        else:
+            tg = serializer.validated_data.get("target_gender") or (self.request.data.get("target_gender") if isinstance(self.request.data, dict) else None)
+            if tg not in ("male", "female", "both"):
+                from rest_framework.exceptions import ValidationError
+                raise ValidationError({"target_gender": ["Unisex kuaförde Kadın, Erkek veya Kadın ve Erkek seçilmelidir."]})
+            serializer.validated_data["target_gender"] = tg
         super().perform_update(serializer)
         # Otomatik duyuru devre dışı
 
@@ -4202,13 +4237,14 @@ class CalendarStatusViewSet(viewsets.ReadOnlyModelViewSet):
         weekday_code_map = {0: "MON", 1: "TUE", 2: "WED", 3: "THU", 4: "FRI", 5: "SAT", 6: "SUN"}
         day_code = weekday_code_map.get(date.weekday())
         
-        # Salon izin günü kontrolü (tüm personeller izinli)
+        # Salon izin günü kontrolü (tüm personeller izinli) - sadece aktif override
         shop_override = Override.objects.filter(
             barbershop=staff.barbershop,
             override_type='shop_global',
             override_scope='full_day_closed',
             start_date__lte=date,
-            end_date__gte=date
+            end_date__gte=date,
+            is_active=True,
         ).first()
         
         if shop_override:
@@ -4225,11 +4261,12 @@ class CalendarStatusViewSet(viewsets.ReadOnlyModelViewSet):
                 'active_overrides': [shop_override]
             }
         
-        # Personel override'larını kontrol et
+        # Personel override'larını kontrol et - sadece aktif override
         staff_overrides = Override.objects.filter(
             staff=staff,
             start_date__lte=date,
-            end_date__gte=date
+            end_date__gte=date,
+            is_active=True,
         ).order_by('-created_at')
         
         if staff_overrides.exists():
@@ -5682,11 +5719,12 @@ class PartnerHolidayOverrideViewSet(viewsets.ModelViewSet):
         # Haftanın günü kodu (MON..SUN)
         weekday_code_map = {0: "MON", 1: "TUE", 2: "WED", 3: "THU", 4: "FRI", 5: "SAT", 6: "SUN"}
         day_code = weekday_code_map.get(date.weekday())
-        # Personel override'larını kontrol et
+        # Personel override'larını kontrol et - sadece aktif override
         staff_overrides = Override.objects.filter(
             staff=staff,
             start_date__lte=date,
-            end_date__gte=date
+            end_date__gte=date,
+            is_active=True,
         ).order_by('-created_at')
         
         if staff_overrides.exists():

@@ -121,15 +121,16 @@ class HomeDashboardApi(APIView):
         newest_data = [serialize_shop(s) for s in newest]
         top_rated_data = [serialize_shop(s) for s in top_rated]
 
-        # 4. Campaigns - Sadece aktif subscription'ı olan, banlı olmayan ve ismi olan barbershop'ların kampanyaları
+        # 4. Campaigns - Sadece onaylı, aktif aboneliği olan ve banlı olmayan barbershop'ların kampanyaları (detay 404 önlemi)
         from app.subscriptions.models import Subscription
         active_campaigns = Campaign.objects.filter(
-            is_active=True, 
-            start_date__lte=today, 
+            is_active=True,
+            start_date__lte=today,
             end_date__gte=today,
             barbershop__subscription__status__in=['trial', 'active', 'lifetime', 'grace_period'],
-            barbershop__is_verified=True,  # Banlı kuaförlerin kampanyalarını filtrele
-            barbershop__name__isnull=False  # İsimsiz kuaförlerin kampanyalarını filtrele
+            barbershop__is_verified=True,
+            barbershop__is_approved=True,  # Sadece onaylı kuaförler; aksi halde detay isteği 404 döner
+            barbershop__name__isnull=False
         ).exclude(barbershop__name='').select_related('barbershop')
         
         if city:
@@ -148,13 +149,14 @@ class HomeDashboardApi(APIView):
                 "image": c.barbershop.main_image.url if c.barbershop.main_image else None
             })
 
-        # 5. Announcements - Son 30 günün aktif duyuruları (tüm salonlar için)
+        # 5. Announcements - Son 30 günün aktif duyuruları; sadece onaylı kuaförler (detay 404 önlemi)
         from .models import SpecialMessage
         thirty_days_ago = timezone.now() - timedelta(days=30)
         announcements_qs = SpecialMessage.objects.filter(
             is_active=True,
             barbershop__subscription__status__in=['trial', 'active', 'lifetime', 'grace_period'],
             barbershop__is_verified=True,
+            barbershop__is_approved=True,  # Sadece onaylı kuaförler; aksi halde detay isteği 404 döner
             barbershop__name__isnull=False,
             created_at__gte=thirty_days_ago
         ).exclude(barbershop__name='').select_related('barbershop').order_by('-created_at')

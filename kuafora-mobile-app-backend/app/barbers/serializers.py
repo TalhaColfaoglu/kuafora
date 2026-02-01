@@ -469,7 +469,7 @@ class ServiceSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = Service
-        fields = ("id", "barbershop", "category", "category_name", "name", "price", "duration", "is_active", "created_at", "price_range")
+        fields = ("id", "barbershop", "category", "category_name", "name", "price", "duration", "is_active", "target_gender", "created_at", "price_range")
         read_only_fields = ("barbershop", "created_at", "price_range")
     
     def get_price_range(self, obj):

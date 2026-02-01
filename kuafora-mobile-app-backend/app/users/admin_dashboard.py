@@ -18,6 +18,9 @@ from app.users.email_tracking import (
 from app.barbers.models import Barbershop, Favorite, Review
 from app.appointments.models import Appointment
 
+# Sadece uygulama kullanıcıları (admin/staff hariç) - dashboard metrikleri gerçek kullanıcı verisini göstersin
+APP_USER_FILTER = Q(is_staff=False, is_superuser=False)
+
 
 def _period_dates(period, month_param, today):
     """
@@ -68,16 +71,17 @@ def _period_dates(period, month_param, today):
 
 
 def _period_stats(period_start, period_end, now):
-    """Seçili tarih aralığında kayıt, aktif kullanıcı, randevu, e-posta, yeni kuaför sayıları."""
+    """Seçili tarih aralığında kayıt, aktif kullanıcı, randevu, e-posta, yeni kuaför sayıları (uygulama kullanıcıları = staff hariç)."""
     start_dt = timezone.make_aware(datetime.combine(period_start, datetime.min.time()))
     end_dt = timezone.make_aware(datetime.combine(period_end, datetime.max.time()))
     if end_dt > now:
         end_dt = now
-    registrations = User.objects.filter(
+    base_users = User.objects.filter(APP_USER_FILTER)
+    registrations = base_users.filter(
         created_at__date__gte=period_start,
         created_at__date__lte=period_end,
     ).count()
-    active_users = User.objects.filter(
+    active_users = base_users.filter(
         is_active=True,
         last_login__gte=start_dt,
         last_login__lte=end_dt,
@@ -178,7 +182,7 @@ def admin_dashboard_view(request):
     
     # ==================== KULLANICI İSTATİSTİKLERİ ====================
     
-    # Temel kullanıcı sayıları (optimize edilmiş - tek sorgu)
+    # Temel kullanıcı sayıları (tüm hesaplar - staff dahil)
     user_stats = User.objects.aggregate(
         total=Count('id'),
         active=Count('id', filter=Q(is_active=True)),
@@ -186,69 +190,78 @@ def admin_dashboard_view(request):
         verified=Count('id', filter=Q(email_verified=True)),
         unverified=Count('id', filter=Q(email_verified=False)),
     )
-    
     total_users = user_stats['total']
     active_users = user_stats['active']
     banned_users = user_stats['banned']
     verified_users = user_stats['verified']
     unverified_users = user_stats['unverified']
+
+    # Uygulama kullanıcıları (staff/superuser hariç - gerçek mobil kullanıcı metrikleri)
+    app_users_qs = User.objects.filter(APP_USER_FILTER)
+    app_user_stats = app_users_qs.aggregate(
+        total=Count('id'),
+        active=Count('id', filter=Q(is_active=True)),
+    )
+    app_users_total = app_user_stats['total']
+    app_users_active = app_user_stats['active']
     
-    # Aktif kullanıcı metrikleri (last_login bazlı)
-    daily_active_users = User.objects.filter(
+    # Aktif kullanıcı metrikleri (last_login bazlı - sadece uygulama kullanıcıları)
+    daily_active_users = app_users_qs.filter(
         last_login__gte=now - timedelta(hours=24),
         is_active=True
     ).count()
     
-    weekly_active_users = User.objects.filter(
+    weekly_active_users = app_users_qs.filter(
         last_login__gte=now - timedelta(days=7),
         is_active=True
     ).count()
     
-    monthly_active_users = User.objects.filter(
+    monthly_active_users = app_users_qs.filter(
         last_login__gte=now - timedelta(days=30),
         is_active=True
     ).count()
     
-    yearly_active_users = User.objects.filter(
+    yearly_active_users = app_users_qs.filter(
         last_login__gte=now - timedelta(days=365),
         is_active=True
     ).count()
     
-    # Son 1 ay içerisinde uygulamaya girmeyen aktif kullanıcılar
-    inactive_last_month = User.objects.filter(
+    # Son 1 ay içerisinde uygulamaya girmeyen aktif kullanıcılar (uygulama kullanıcıları)
+    inactive_last_month = app_users_qs.filter(
         Q(is_active=True) &
         (Q(last_login__lt=now - timedelta(days=30)) | Q(last_login__isnull=True))
     ).count()
     
-    # Hiç giriş yapmamış aktif kullanıcılar
-    never_logged_in = User.objects.filter(
+    # Hiç giriş yapmamış aktif kullanıcılar (uygulama kullanıcıları)
+    never_logged_in = app_users_qs.filter(
         last_login__isnull=True,
         is_active=True
     ).count()
     
-    # Kayıt istatistikleri (DOĞRU TARİH HESAPLAMALARI)
+    # Kayıt istatistikleri (sadece uygulama kullanıcıları - staff hariç)
     week_start = timezone.make_aware(datetime.combine(week_ago, datetime.min.time()))
     month_start = timezone.make_aware(datetime.combine(month_ago, datetime.min.time()))
     
-    today_registrations = User.objects.filter(
+    today_registrations = app_users_qs.filter(
         created_at__date=today
     ).count()
     
-    week_registrations = User.objects.filter(
+    week_registrations = app_users_qs.filter(
         created_at__gte=week_start
     ).count()
     
-    month_registrations = User.objects.filter(
+    month_registrations = app_users_qs.filter(
         created_at__gte=month_start
     ).count()
     
-    # Yüzdeler hesaplama
-    daily_active_percentage = calculate_percentage(daily_active_users, total_users)
-    weekly_active_percentage = calculate_percentage(weekly_active_users, total_users)
-    monthly_active_percentage = calculate_percentage(monthly_active_users, total_users)
-    yearly_active_percentage = calculate_percentage(yearly_active_users, total_users)
-    inactive_percentage = calculate_percentage(inactive_last_month, total_users)
-    never_logged_percentage = calculate_percentage(never_logged_in, total_users)
+    # Yüzdeler hesaplama (payda: uygulama kullanıcı sayısı, böylece gerçek oran görünür)
+    _denom = app_users_total if app_users_total > 0 else 1
+    daily_active_percentage = calculate_percentage(daily_active_users, _denom)
+    weekly_active_percentage = calculate_percentage(weekly_active_users, _denom)
+    monthly_active_percentage = calculate_percentage(monthly_active_users, _denom)
+    yearly_active_percentage = calculate_percentage(yearly_active_users, _denom)
+    inactive_percentage = calculate_percentage(inactive_last_month, _denom)
+    never_logged_percentage = calculate_percentage(never_logged_in, _denom)
     
     # ==================== GRAFİKLER (OPTİMİZE EDİLMİŞ) ====================
     
@@ -256,8 +269,8 @@ def admin_dashboard_view(request):
     registration_chart = []
     max_registration_count = 0
     
-    # Tek sorgu ile tüm günlerin kayıt sayılarını al
-    registration_data = User.objects.filter(
+    # Tek sorgu ile tüm günlerin kayıt sayılarını al (sadece uygulama kullanıcıları)
+    registration_data = app_users_qs.filter(
         created_at__gte=timezone.make_aware(datetime.combine(today - timedelta(days=6), datetime.min.time()))
     ).annotate(
         date=TruncDate('created_at')
@@ -282,14 +295,13 @@ def admin_dashboard_view(request):
     daily_active_chart = []
     max_daily_active = 0
     
-    # Her gün için aktif kullanıcı sayısını database'den al (doğru ve hızlı)
+    # Her gün için aktif kullanıcı sayısını database'den al (sadece uygulama kullanıcıları)
     for i in range(30):
         date = today - timedelta(days=29-i)
         date_start = timezone.make_aware(datetime.combine(date, datetime.min.time()))
         date_end = timezone.make_aware(datetime.combine(date, datetime.max.time()))
         
-        # Database sorgusu ile (in-memory filtering yerine)
-        count = User.objects.filter(
+        count = app_users_qs.filter(
             is_active=True,
             last_login__gte=date_start,
             last_login__lte=date_end
@@ -356,26 +368,26 @@ def admin_dashboard_view(request):
     # Önceki dönem karşılaştırması (büyüme oranı için)
     prev_week_start = timezone.make_aware(datetime.combine(week_ago - timedelta(days=7), datetime.min.time()))
     prev_week_end = week_start
-    prev_week_registrations = User.objects.filter(
+    prev_week_registrations = app_users_qs.filter(
         created_at__gte=prev_week_start,
         created_at__lt=prev_week_end
     ).count()
     
     prev_month_start = timezone.make_aware(datetime.combine(month_ago - timedelta(days=30), datetime.min.time()))
     prev_month_end = month_start
-    prev_month_registrations = User.objects.filter(
+    prev_month_registrations = app_users_qs.filter(
         created_at__gte=prev_month_start,
         created_at__lt=prev_month_end
     ).count()
     
-    # Önceki dönem aktif kullanıcı sayıları
-    prev_week_daily_active = User.objects.filter(
+    # Önceki dönem aktif kullanıcı sayıları (uygulama kullanıcıları)
+    prev_week_daily_active = app_users_qs.filter(
         last_login__gte=prev_week_start,
         last_login__lt=prev_week_end,
         is_active=True
     ).count()
     
-    prev_month_daily_active = User.objects.filter(
+    prev_month_daily_active = app_users_qs.filter(
         last_login__gte=prev_month_start,
         last_login__lt=prev_month_end,
         is_active=True
@@ -388,8 +400,8 @@ def admin_dashboard_view(request):
     
     # ==================== RETENTION VE CHURN METRİKLERİ ====================
     
-    # Retention Rate (Tutma Oranı) - Bu hafta kayıt olanların kaçı hala aktif
-    week_retention_users = User.objects.filter(
+    # Retention Rate (Tutma Oranı) - Bu hafta kayıt olanların kaçı hala aktif (uygulama kullanıcıları)
+    week_retention_users = app_users_qs.filter(
         created_at__gte=week_start,
         last_login__gte=now - timedelta(days=7),
         is_active=True
@@ -397,7 +409,7 @@ def admin_dashboard_view(request):
     week_retention_rate = calculate_percentage(week_retention_users, week_registrations) if week_registrations > 0 else 0.0
     
     # Churn Rate (Ayrılma Oranı) - Son 30 günde kayıt olup son 7 günde giriş yapmayanlar
-    churned_users = User.objects.filter(
+    churned_users = app_users_qs.filter(
         Q(created_at__gte=month_start) &
         (Q(last_login__lt=now - timedelta(days=7)) | Q(last_login__isnull=True)) &
         Q(is_active=True)
@@ -405,7 +417,7 @@ def admin_dashboard_view(request):
     churn_rate = calculate_percentage(churned_users, month_registrations) if month_registrations > 0 else 0.0
     
     # Conversion Rate - Kayıt olanların aktif kullanıcıya dönüşme oranı
-    converted_users = User.objects.filter(
+    converted_users = app_users_qs.filter(
         created_at__gte=month_start,
         last_login__isnull=False,
         is_active=True
@@ -414,8 +426,8 @@ def admin_dashboard_view(request):
     
     # ==================== DEMOGRAFİK ANALİZ ====================
     
-    # Cinsiyet dağılımı (sadece aktif kullanıcılar)
-    gender_stats = User.objects.filter(is_active=True).values('gender').annotate(
+    # Cinsiyet dağılımı (sadece uygulama kullanıcıları, aktif)
+    gender_stats = app_users_qs.filter(is_active=True).values('gender').annotate(
         count=Count('id')
     ).order_by('-count')
     gender_distribution = {}
@@ -423,13 +435,15 @@ def admin_dashboard_view(request):
         gender_key = item['gender'] if item['gender'] else 'belirtilmemiş'
         gender_distribution[gender_key] = item['count']
     
-    # Şehir dağılımı (UserAddress'ten - optimize edilmiş)
+    # Şehir dağılımı (UserAddress - sadece uygulama kullanıcıları)
     city_stats = UserAddress.objects.filter(
         user__is_active=True,
+        user__is_staff=False,
+        user__is_superuser=False,
         city__isnull=False
     ).exclude(city='').values('city').annotate(
         count=Count('user', distinct=True)
-    ).order_by('-count')[:10]  # Top 10 şehir
+    ).order_by('-count')[:10]
     city_distribution = [{'city': item['city'], 'count': item['count']} for item in city_stats]
     
     # ==================== ENGAGEMENT METRİKLERİ ====================
@@ -458,8 +472,8 @@ def admin_dashboard_view(request):
     
     # ==================== TOP KULLANICILAR ====================
     
-    # En aktif kullanıcılar (son giriş zamanına göre - gerçek aktivite tracking yok)
-    top_active_users = User.objects.filter(
+    # En aktif uygulama kullanıcıları (son girişe göre)
+    top_active_users = app_users_qs.filter(
         is_active=True,
         last_login__isnull=False
     ).order_by('-last_login')[:10].values('email', 'full_name', 'last_login', 'created_at')
@@ -474,7 +488,7 @@ def admin_dashboard_view(request):
         week_start_dt = timezone.make_aware(datetime.combine(week_start, datetime.min.time()))
         week_end_dt = timezone.make_aware(datetime.combine(week_end, datetime.max.time()))
         
-        count = User.objects.filter(
+        count = app_users_qs.filter(
             last_login__gte=week_start_dt,
             last_login__lte=week_end_dt,
             is_active=True
@@ -516,6 +530,8 @@ def admin_dashboard_view(request):
                 'total': total_users,
                 'active': active_users,
                 'banned': banned_users,
+                'app_users_total': app_users_total,
+                'app_users_active': app_users_active,
                 'daily_active': daily_active_users,
                 'weekly_active': weekly_active_users,
                 'monthly_active': monthly_active_users,

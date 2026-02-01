@@ -457,12 +457,25 @@ class ServiceCategory(models.Model):
 
 
 class Service(models.Model):
+    """Hizmet; unisex kuaförlerde target_gender ile kadın/erkek/her ikisi ayrımı."""
+    class TargetGender(models.TextChoices):
+        MALE = "male", "Erkek"
+        FEMALE = "female", "Kadın"
+        BOTH = "both", "Kadın ve Erkek"
+
     barbershop = models.ForeignKey(Barbershop, on_delete=models.CASCADE, related_name="services")
     category = models.ForeignKey(ServiceCategory, on_delete=models.CASCADE, related_name="services", null=True, blank=True)
     name = models.CharField(max_length=150)
     price = models.DecimalField(max_digits=10, decimal_places=2)
     duration = models.PositiveIntegerField(help_text="Duration in minutes")
     is_active = models.BooleanField(default=True)
+    target_gender = models.CharField(
+        max_length=10,
+        choices=TargetGender.choices,
+        null=True,
+        blank=True,
+        help_text="Unisex kuaförde: male/female/both. Erkek/kadın kuaförde otomatik.",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self) -> str:

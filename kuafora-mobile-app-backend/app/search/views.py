@@ -9,14 +9,14 @@ from django.db import ProgrammingError
 from .models import SearchHistory
 from .serializers import SearchHistorySerializer
 
-# Uygulama tarafıyla uyumlu: 1 yıl saklama, en fazla 50 son arama
-SEARCH_HISTORY_MAX_ITEMS = 50
+# En son 7 arama backend'de saklanır; arama ekranında gösterilir
+SEARCH_HISTORY_MAX_ITEMS = 7
 SEARCH_HISTORY_MAX_AGE_DAYS = 365
 
 
 class SearchHistoryListCreateApi(generics.ListCreateAPIView):
     """
-    Auth'lu kullanıcı için son arama geçmişini döner / yeni kayıt ekler.
+    Auth'lu kullanıcı için son 7 arama geçmişini döner / yeni kayıt ekler.
     Backend'de saklanır; uygulama açılışında buradan yüklenir.
     """
 
@@ -39,12 +39,17 @@ class SearchHistoryListCreateApi(generics.ListCreateAPIView):
         return qs[:SEARCH_HISTORY_MAX_ITEMS]
 
     def perform_create(self, serializer):
-        # Kullanıcının yaptığı her yeni aramayı kaydet
+        # Yeni aramayı kaydet; en son 7 aramayı tut (eskileri sil)
         try:
             serializer.save(user=self.request.user)
+            u = self.request.user
+            ids_to_keep = list(
+                SearchHistory.objects.filter(user=u)
+                .order_by("-created_at")[:SEARCH_HISTORY_MAX_ITEMS]
+                .values_list("id", flat=True)
+            )
+            SearchHistory.objects.filter(user=u).exclude(id__in=ids_to_keep).delete()
         except ProgrammingError:
-            # Tablo henüz yoksa (migration uygulanmadı) 500 atma
-            # Kalıcı çözüm: migrate
             return
 
 

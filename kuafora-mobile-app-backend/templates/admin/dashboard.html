@@ -8,8 +8,77 @@
         box-sizing: border-box;
     }
     
+    /* Dashboard her zaman açık arka plan ve koyu yazı (admin dark tema ile uyum) */
     body {
-        background: #F9FAFB;
+        background: #F9FAFB !important;
+        color: #1f2937 !important;
+    }
+    #content {
+        background: #F9FAFB !important;
+        color: #1f2937 !important;
+    }
+    .kuafora-dashboard-wrap {
+        background: #F9FAFB !important;
+        color: #1f2937 !important;
+        min-height: 100%;
+    }
+    .kuafora-dashboard-wrap h1,
+    .kuafora-dashboard-wrap h2,
+    .kuafora-dashboard-wrap h3,
+    .kuafora-dashboard-wrap h4,
+    .kuafora-dashboard-wrap p,
+    .kuafora-dashboard-wrap label,
+    .kuafora-dashboard-wrap span,
+    .kuafora-dashboard-wrap a {
+        color: inherit;
+    }
+    .kuafora-dashboard-wrap .section-title {
+        color: #1F2937 !important;
+    }
+    .kuafora-dashboard-wrap .stat-card h3,
+    .kuafora-dashboard-wrap .stat-card .stat-value,
+    .kuafora-dashboard-wrap .stat-card .stat-percentage,
+    .kuafora-dashboard-wrap .stat-card .stat-subtitle {
+        color: #1F2937 !important;
+    }
+    .kuafora-dashboard-wrap .stat-card h3 {
+        color: #6B7280 !important;
+    }
+    .kuafora-dashboard-wrap .stat-card .stat-subtitle {
+        color: #6b7280 !important;
+    }
+    .kuafora-dashboard-wrap .chart-title,
+    .kuafora-dashboard-wrap .chart-bar-label {
+        color: #1F2937 !important;
+    }
+    .kuafora-dashboard-wrap .distribution-label,
+    .kuafora-dashboard-wrap .distribution-value,
+    .kuafora-dashboard-wrap .user-email,
+    .kuafora-dashboard-wrap .user-name {
+        color: #1F2937 !important;
+    }
+    .kuafora-dashboard-wrap .user-name {
+        color: #6B7280 !important;
+    }
+    .kuafora-dashboard-wrap .period-tab {
+        color: #374151 !important;
+    }
+    .kuafora-dashboard-wrap .period-tab.active {
+        color: #fff !important;
+    }
+    .kuafora-dashboard-wrap .month-picker-wrap label,
+    .kuafora-dashboard-wrap .month-picker-wrap select {
+        color: #1f2937 !important;
+    }
+    .kuafora-dashboard-wrap .month-picker-wrap select {
+        background: #fff !important;
+    }
+    .kuafora-dashboard-wrap .info-note,
+    .kuafora-dashboard-wrap .info-note.success {
+        color: #92400E !important;
+    }
+    .kuafora-dashboard-wrap .info-note.success {
+        color: #065F46 !important;
     }
     
     .dashboard-header {
@@ -33,6 +102,16 @@
         font-size: 16px;
         margin: 0;
         opacity: 0.95;
+    }
+
+    .dashboard-note {
+        font-size: 13px;
+        color: #6b7280;
+        margin: -8px 0 16px 0;
+        padding: 8px 12px;
+        background: #f0f9ff;
+        border-left: 4px solid #0ea5e9;
+        border-radius: 6px;
     }
 
     .period-selector-wrap {
@@ -475,6 +554,7 @@
 {% endblock %}
 
 {% block content %}
+<div class="kuafora-dashboard-wrap">
 <div class="dashboard-header">
     <h1>📊 Kuafora Analytics Dashboard</h1>
     <p>Kullanıcı aktiviteleri, büyüme metrikleri ve sistem istatistikleri — Günlük / Haftalık / Aylık / Yıllık</p>
@@ -635,22 +715,24 @@
     <span>👥</span>
     <span>Kullanıcı İstatistikleri</span>
 </h2>
+<p class="dashboard-note">Tüm sayılar veritabanından gerçek verilerle hesaplanır. DAU/WAU/MAU ve kayıt metrikleri yalnızca uygulama kullanıcılarını (admin/personel hariç) kapsar.</p>
 <div class="dashboard-stats">
     <div class="stat-card info">
         <div class="stat-card-header">
-            <h3>Toplam Kullanıcı</h3>
+            <h3>Toplam Hesap</h3>
             <div class="stat-card-icon">👤</div>
         </div>
         <p class="stat-value">{{ stats.users.total|floatformat:0 }}</p>
+        <div class="stat-subtitle">Tüm hesaplar (staff dahil)</div>
     </div>
     
     <div class="stat-card success">
         <div class="stat-card-header">
-            <h3>Aktif Kullanıcı</h3>
+            <h3>Uygulama Kullanıcıları</h3>
             <div class="stat-card-icon">✓</div>
         </div>
-        <p class="stat-value">{{ stats.users.active|floatformat:0 }}</p>
-        <div class="stat-percentage">{% widthratio stats.users.active stats.users.total 100 %}%</div>
+        <p class="stat-value">{{ stats.users.app_users_total|floatformat:0 }}</p>
+        <div class="stat-subtitle">Staff hariç, hesabı açık: {{ stats.users.app_users_active|floatformat:0 }}</div>
     </div>
     
     <div class="stat-card danger">
@@ -683,7 +765,7 @@
             </span>
             {% endif %}
         </div>
-        <div class="stat-subtitle">Son 24 saatte giriş yapan kullanıcılar</div>
+        <div class="stat-subtitle">Son 24 saatte giriş yapan (uygulama kullanıcıları)</div>
     </div>
     
     <div class="stat-card success">
@@ -729,7 +811,7 @@
         </div>
         <p class="stat-value">{{ stats.users.inactive_last_month|floatformat:0 }}</p>
         <div class="stat-percentage">{{ stats.users.inactive_percentage|floatformat:1 }}%</div>
-        <div class="stat-subtitle">Son 30 günde giriş yapmayan aktif kullanıcılar</div>
+        <div class="stat-subtitle">Son 30 günde giriş yapmayan (uygulama kullanıcıları)</div>
     </div>
     
     <div class="stat-card danger">
@@ -739,7 +821,7 @@
         </div>
         <p class="stat-value">{{ stats.users.never_logged_in|floatformat:0 }}</p>
         <div class="stat-percentage">{{ stats.users.never_logged_percentage|floatformat:1 }}%</div>
-        <div class="stat-subtitle">Kayıt oldu ama hiç giriş yapmadı</div>
+        <div class="stat-subtitle">Kayıt oldu ama hiç giriş yapmadı (uygulama kullanıcıları)</div>
     </div>
 </div>
 
@@ -1128,4 +1210,5 @@
 {% endif %}
 {% endif %}
 
+</div><!-- .kuafora-dashboard-wrap -->
 {% endblock %}

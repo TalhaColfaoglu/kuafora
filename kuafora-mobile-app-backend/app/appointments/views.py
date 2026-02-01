@@ -11,7 +11,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status, permissions, serializers
 
-from app.barbers.models import Barbershop, Staff
+from app.barbers.models import Barbershop, Staff, Service
 # CustomerBan is now in app.appointments.models
 from .models import Appointment, AppointmentStatus, Hold, ShopSystemSwitchHistory, CancelledBy, CustomerBan
 from drf_spectacular.utils import extend_schema, inline_serializer
@@ -122,6 +122,42 @@ class HoldCreateApi(APIView):
         if getattr(shop, "system_type", "info") != "booking":
             return Response({"detail": "BOOKING_DISABLED"}, status=status.HTTP_403_FORBIDDEN)
 
+        # Cinsiyet uyumu: erkek kadın kuaföründe, kadın erkek kuaföründe randevu alamaz; unisex'te hizmet hedefi uyumlu olmalı
+        user_gender = getattr(request.user, "gender", None)
+        shop_gender = getattr(shop, "gender", None)
+        if shop_gender == "female" and user_gender == "male":
+            return Response(
+                {"detail": "Bu kuaför sadece kadın müşterilere hizmet vermektedir.", "code": "SERVICE_GENDER_MISMATCH"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if shop_gender == "male" and user_gender == "female":
+            return Response(
+                {"detail": "Bu kuaför sadece erkek müşterilere hizmet vermektedir.", "code": "SERVICE_GENDER_MISMATCH"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if shop_gender == "unisex" and user_gender:
+            for item in data["service_items"]:
+                sid = item.get("service_id") or item.get("id") or item.get("service")
+                if not sid:
+                    continue
+                try:
+                    svc = Service.objects.filter(id=int(sid), barbershop=shop).first()
+                except (TypeError, ValueError):
+                    continue
+                if not svc:
+                    continue
+                tg = getattr(svc, "target_gender", None)
+                if tg == "female" and user_gender == "male":
+                    return Response(
+                        {"detail": "Seçtiğiniz hizmetlerden biri sadece kadın müşterilere yöneliktir.", "code": "SERVICE_GENDER_MISMATCH"},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
+                if tg == "male" and user_gender == "female":
+                    return Response(
+                        {"detail": "Seçtiğiniz hizmetlerden biri sadece erkek müşterilere yöneliktir.", "code": "SERVICE_GENDER_MISMATCH"},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
+
         # Smart Allocation Logic
         staff_id = data.get("staff_id")
         date = data["date"]
@@ -134,10 +170,12 @@ class HoldCreateApi(APIView):
         service_ids = []
         for item in data["service_items"]:
             duration += int(item.get("duration", 0))
-            if "service_id" in item: # Assuming service_id is passed or inferred
-                service_ids.append(item["service_id"])
-            elif "id" in item:
-                service_ids.append(item["id"])
+            sid = item.get("service_id") or item.get("id") or item.get("service")
+            if sid is not None and sid != 0:
+                try:
+                    service_ids.append(int(sid))
+                except (TypeError, ValueError):
+                    pass
 
         if duration <= 0:
              return Response({"code": "400_INVALID_DURATION"}, status=status.HTTP_400_BAD_REQUEST)
@@ -257,9 +295,12 @@ class HoldCreateApi(APIView):
                 # Frontend should send 'id' or 'service_id' in items.
                 cart_ids = set()
                 for item in service_items_payload:
-                    sid = item.get("service_id") or item.get("id")
+                    sid = item.get("service_id") or item.get("id") or item.get("service")
                     if sid:
-                        cart_ids.add(int(sid))
+                        try:
+                            cart_ids.add(int(sid))
+                        except (TypeError, ValueError):
+                            pass
                 
                 if required_ids and required_ids.issubset(cart_ids):
                     is_match = True
@@ -364,6 +405,42 @@ class AppointmentCreateApi(APIView):
         shop = hold.shop
         if getattr(shop, "system_type", "info") != "booking":
             return Response({"detail": "BOOKING_DISABLED"}, status=status.HTTP_403_FORBIDDEN)
+
+        # Cinsiyet uyumu (hold eski client ile oluşturulmuş olabilir)
+        user_gender = getattr(request.user, "gender", None)
+        shop_gender = getattr(shop, "gender", None)
+        if shop_gender == "female" and user_gender == "male":
+            return Response(
+                {"detail": "Bu kuaför sadece kadın müşterilere hizmet vermektedir.", "code": "SERVICE_GENDER_MISMATCH"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if shop_gender == "male" and user_gender == "female":
+            return Response(
+                {"detail": "Bu kuaför sadece erkek müşterilere hizmet vermektedir.", "code": "SERVICE_GENDER_MISMATCH"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if shop_gender == "unisex" and user_gender and hold.service_items:
+            for item in hold.service_items:
+                sid = item.get("service_id") or item.get("id") or item.get("service")
+                if not sid:
+                    continue
+                try:
+                    svc = Service.objects.filter(id=int(sid), barbershop=shop).first()
+                except (TypeError, ValueError):
+                    continue
+                if not svc:
+                    continue
+                tg = getattr(svc, "target_gender", None)
+                if tg == "female" and user_gender == "male":
+                    return Response(
+                        {"detail": "Seçtiğiniz hizmetlerden biri sadece kadın müşterilere yöneliktir.", "code": "SERVICE_GENDER_MISMATCH"},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
+                if tg == "male" and user_gender == "female":
+                    return Response(
+                        {"detail": "Seçtiğiniz hizmetlerden biri sadece erkek müşterilere yöneliktir.", "code": "SERVICE_GENDER_MISMATCH"},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
 
         # Create appointment (unique constraint protects double booking)
         duration = int((hold.end_datetime - hold.start_datetime).total_seconds() // 60)
