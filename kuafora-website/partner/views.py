@@ -1,8 +1,15 @@
 from django.shortcuts import render
 
+try:
+    from django.contrib.staticfiles.finders import find as static_find
+except ImportError:
+    def static_find(path):
+        return None
+
 
 def partner_landing(request):
-    return render(request, 'partner/partner_landing.html')
+    has_partner_home_image = static_find('img/screens/partner-home.png') is not None
+    return render(request, 'partner/partner_landing.html', {'has_partner_home_image': has_partner_home_image})
 
 
 def partner_features(request):

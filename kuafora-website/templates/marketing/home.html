@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% load static static_tags %}
+{% load static %}
 
 {% block title %}Kuafora — Kuaförünü Keşfet | Türkiye'nin Kuaför Keşif Platformu{% endblock %}
 
@@ -84,7 +84,7 @@
           <div class="phone-mockup animate-float" style="animation-delay: 0s;">
             <div class="phone-mockup-inner">
               <div class="phone-mockup-notch"></div>
-              {% if 'img/screens/home-screen.png'|static_exists %}
+              {% if has_home_screen_image %}
               <img src="{% static 'img/screens/home-screen.png' %}" alt="Kuafora Ana Ekran" class="phone-mockup-screen" width="1170" height="2532" loading="eager" fetchpriority="high" decoding="async">
               {% else %}
               <div class="absolute inset-0 bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">

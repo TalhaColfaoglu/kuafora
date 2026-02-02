@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% load static static_tags %}
+{% load static %}
 
 {% block title %}Kuafora Partner — İşletmenizi Dijitalde Yönetin{% endblock %}
 
@@ -36,7 +36,7 @@
       <div class="phone-mockup">
         <div class="phone-mockup-inner">
           <div class="phone-mockup-notch"></div>
-          {% if 'img/screens/partner-home.png'|static_exists %}
+          {% if has_partner_home_image %}
           <img src="{% static 'img/screens/partner-home.png' %}" alt="Kuafora Partner Uygulaması" class="phone-mockup-screen" width="1170" height="2532" loading="eager" fetchpriority="high" decoding="async">
           {% else %}
           <div class="absolute inset-0 bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center text-muted">

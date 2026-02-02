@@ -5,9 +5,16 @@ import urllib.error
 from django.conf import settings
 from django.shortcuts import render
 
+try:
+    from django.contrib.staticfiles.finders import find as static_find
+except ImportError:
+    def static_find(path):
+        return None
+
 
 def home(request):
-    return render(request, 'marketing/home.html')
+    has_home_screen_image = static_find('img/screens/home-screen.png') is not None
+    return render(request, 'marketing/home.html', {'has_home_screen_image': has_home_screen_image})
 
 
 def customer_app(request):
