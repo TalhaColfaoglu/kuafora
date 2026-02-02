@@ -203,6 +203,7 @@ class ProfilePhotoUploadView(generics.GenericAPIView):
     """POST: upload profile photo. GET: serve current user's profile photo (avoids CloudFront 403)."""
     permission_classes = [permissions.IsAuthenticated]
     parser_classes = [MultiPartParser, FormParser]
+    http_method_names = ["get", "post", "head"]
 
     def get(self, request, *args, **kwargs):
         """Serve the current user's profile photo (main or thumb). ?thumb=1 for thumbnail."""
@@ -341,6 +342,41 @@ class ProfilePhotoUploadView(generics.GenericAPIView):
                 {"detail": f"Upload failed: {str(e)}", "error_type": str(type(e).__name__)}, 
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+
+
+class ProfilePhotoServeView(generics.GenericAPIView):
+    """GET-only: serve current user's profile photo. Use /api/auth/me/photo/serve/ to avoid 405 on deploy."""
+    permission_classes = [permissions.IsAuthenticated]
+    http_method_names = ["get", "head"]
+
+    def get(self, request, *args, **kwargs):
+        user = request.user
+        use_thumb = request.GET.get("thumb", "").strip().lower() in ("1", "true", "yes")
+        file_field = user.image_thumb if use_thumb else user.image
+        if not file_field:
+            return Response({"detail": "No photo"}, status=status.HTTP_404_NOT_FOUND)
+        try:
+            f = file_field.open("rb")
+            content = f.read()
+            f.close()
+        except Exception as e:
+            logger.warning("Profile photo serve error: %s", e)
+            return Response({"detail": "Could not read photo"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        name = getattr(file_field, "name", "") or ""
+        if name.endswith(".png"):
+            content_type = "image/png"
+        elif name.endswith(".gif"):
+            content_type = "image/gif"
+        elif name.endswith(".webp"):
+            content_type = "image/webp"
+        else:
+            content_type = "image/jpeg"
+        resp = HttpResponse(content, content_type=content_type)
+        resp["Cache-Control"] = "private, max-age=300"
+        return resp
+
+    def head(self, request, *args, **kwargs):
+        return self.get(request, *args, **kwargs)
 
 
 class UserUpdateView(generics.UpdateAPIView):

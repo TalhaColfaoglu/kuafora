@@ -19,6 +19,7 @@ from .views import (
     UserAddressViewSet,
     BarbershopStatsView,
     ProfilePhotoUploadView,
+    ProfilePhotoServeView,
     ResolveUserView,
 )
 
@@ -36,6 +37,7 @@ urlpatterns = [
     path('me', MeView.as_view(), name='me-no-slash'),  # Alias without trailing slash
     path('users/me/', MeView.as_view(), name='me-legacy'),
     path('me/photo/', ProfilePhotoUploadView.as_view(), name='profile-photo-upload'),
+    path('me/photo/serve/', ProfilePhotoServeView.as_view(), name='profile-photo-serve'),
     path('update/', UserUpdateView.as_view(), name='user-update'),
     path('change-password/', ChangePasswordView.as_view(), name='change-password'),
     path('verify-email/', VerifyEmailView.as_view(), name='verify-email'),

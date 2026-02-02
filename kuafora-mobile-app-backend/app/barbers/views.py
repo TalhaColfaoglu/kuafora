@@ -242,6 +242,25 @@ class BarbershopViewSet(viewsets.ReadOnlyModelViewSet):
             return BarbershopDetailSerializer
         return super().get_serializer_class()
 
+    def retrieve(self, request, *args, **kwargs):
+        """Detay yanıtına is_open ekle (En Son Bakılanlar kartları için)."""
+        response = super().retrieve(request, *args, **kwargs)
+        if response.status_code != 200 or not response.data:
+            return response
+        try:
+            instance = self.get_object()
+            from django.utils import timezone as dj_tz
+            ts = dj_tz.now()
+            data = _compute_shop_status(instance.id, ts)
+            response.data["is_open"] = data.get("status") == "open"
+            open_interval = data.get("open_interval") or {}
+            if open_interval:
+                response.data["opening_time"] = open_interval.get("start")
+                response.data["closing_time"] = open_interval.get("end")
+        except Exception:
+            response.data["is_open"] = False
+        return response
+
     def list(self, request, *args, **kwargs):
         """
         Override list to add caching and dynamic pagination for frequently accessed barbershop lists.
@@ -5721,25 +5740,7 @@ class PartnerHolidayOverrideViewSet(viewsets.ModelViewSet):
                     'active_messages': []
                 }
         
-        # 2. Personel saatlerini kontrol et
-        working_staff = StaffWorkingHours.objects.filter(
-            staff__barbershop=barbershop,
-            day_of_week=day_code,
-            is_closed=False
-        )
-        
-        if not working_staff.exists():
-            return {
-                'date': date,
-                'is_open': False,
-                'opening_time': None,
-                'closing_time': None,
-                'status_message': "Bugün çalışan personel yok",
-                'active_overrides': [],
-                'active_messages': []
-            }
-        
-        # 3. Dükkan saatlerini al
+        # 2. Dükkan saatlerini al (personel saati yoksa dükkan saatine göre açık/kapalı göster)
         shop_hours = ShopWorkingHours.objects.filter(
             barbershop=barbershop,
             day_of_week=day_code
@@ -5756,9 +5757,19 @@ class PartnerHolidayOverrideViewSet(viewsets.ModelViewSet):
                 'active_messages': []
             }
         
-        # 4. Personel saatlerine göre dükkan saatlerini ayarla
-        earliest_start = min([swh.start_time or shop_hours.start_time for swh in working_staff])
-        latest_end = max([swh.end_time or shop_hours.end_time for swh in working_staff])
+        # 3. Personel saatleri varsa onlara göre aralık; yoksa sadece dükkan saatleri
+        working_staff = StaffWorkingHours.objects.filter(
+            staff__barbershop=barbershop,
+            day_of_week=day_code,
+            is_closed=False
+        )
+        
+        if working_staff.exists():
+            earliest_start = min([swh.start_time or shop_hours.start_time for swh in working_staff])
+            latest_end = max([swh.end_time or shop_hours.end_time for swh in working_staff])
+        else:
+            earliest_start = shop_hours.start_time
+            latest_end = shop_hours.end_time
         
         # 5. Aktif mesajları al (ilgili tarih için)
         active_messages = SpecialMessage.objects.filter(
