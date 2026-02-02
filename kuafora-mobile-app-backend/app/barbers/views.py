@@ -3006,20 +3006,28 @@ class PartnerStaffWorkingHoursViewSet(viewsets.ModelViewSet):
         if errors:
             return Response({"detail": "invalid_payload", "errors": errors}, status=400)
 
-        # Conflict validation against shop hours
+        # Conflict validation: personel saatleri dükkan saatleri içinde olmalı (dükkan saati varsa)
+        # Dükkan o gün kapalıysa veya dükkan saati yoksa personel yine de kendi saatini girebilir
         conflict_errors = {}
         for it in normalized:
             if it["is_closed"]:
                 continue
             shop_hours = ShopWorkingHours.objects.filter(barbershop=staff.barbershop, day_of_week=it["day"]).first()
             if not shop_hours or shop_hours.is_closed:
-                conflict_errors[it["day"]] = "invalid_time_shop_closed"
                 continue
             sh_start = shop_hours.start_time
             sh_end = shop_hours.end_time
             if sh_start and sh_end:
-                if (it["open"] < sh_start) or (it["close"] > sh_end):
-                    conflict_errors[it["day"]] = "out_of_shop_hours"
+                if it["open"] < sh_start:
+                    conflict_errors[it["day"]] = {
+                        "code": "open_before_shop",
+                        "message": f"Açılış dükkan açılışından ({sh_start.strftime('%H:%M')}) önce olamaz.",
+                    }
+                elif it["close"] > sh_end:
+                    conflict_errors[it["day"]] = {
+                        "code": "close_after_shop",
+                        "message": f"Kapanış dükkan kapanışından ({sh_end.strftime('%H:%M')}) sonra olamaz.",
+                    }
         if conflict_errors:
             return Response({"detail": "conflict", "errors": conflict_errors}, status=400)
 

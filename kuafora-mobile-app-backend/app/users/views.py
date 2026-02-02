@@ -379,6 +379,88 @@ class ProfilePhotoServeView(generics.GenericAPIView):
         return self.get(request, *args, **kwargs)
 
 
+class UserPhotoServeView(generics.GenericAPIView):
+    """GET-only: serve a user's profile photo by user_id. Avoids CloudFront 403 for staff/reviewer avatars."""
+    permission_classes = [permissions.IsAuthenticated]
+    http_method_names = ["get", "head"]
+
+    def get(self, request, user_id, *args, **kwargs):
+        user = User.objects.filter(id=user_id).first()
+        if not user:
+            return Response({"detail": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+        use_thumb = request.GET.get("thumb", "").strip().lower() in ("1", "true", "yes")
+        file_field = user.image_thumb if use_thumb else user.image
+        if not file_field:
+            return Response({"detail": "No photo"}, status=status.HTTP_404_NOT_FOUND)
+        try:
+            f = file_field.open("rb")
+            content = f.read()
+            f.close()
+        except Exception as e:
+            logger.warning("User photo serve error: %s", e)
+            return Response({"detail": "Could not read photo"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        name = getattr(file_field, "name", "") or ""
+        if name.endswith(".png"):
+            content_type = "image/png"
+        elif name.endswith(".gif"):
+            content_type = "image/gif"
+        elif name.endswith(".webp"):
+            content_type = "image/webp"
+        else:
+            content_type = "image/jpeg"
+        resp = HttpResponse(content, content_type=content_type)
+        resp["Cache-Control"] = "private, max-age=300"
+        return resp
+
+    def head(self, request, user_id, *args, **kwargs):
+        return self.get(request, user_id, *args, **kwargs)
+
+
+# Signed URL expiry in seconds (5 min) – client loads image from S3/CloudFront, no EC2 stream
+USER_PHOTO_SIGNED_URL_EXPIRES = 300
+
+
+class UserPhotoUrlView(generics.GenericAPIView):
+    """GET: return a short-lived signed URL for a user's profile photo. Client loads image from S3/CloudFront, not through EC2."""
+    permission_classes = [permissions.IsAuthenticated]
+    http_method_names = ["get"]
+
+    def get(self, request, user_id, *args, **kwargs):
+        user = User.objects.filter(id=user_id).first()
+        if not user:
+            return Response({"detail": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+        use_thumb = request.GET.get("thumb", "").strip().lower() in ("1", "true", "yes")
+        file_field = user.image_thumb if use_thumb else user.image
+        if not file_field:
+            return Response({"detail": "No photo"}, status=status.HTTP_404_NOT_FOUND)
+
+        bucket_name = getattr(settings, "AWS_STORAGE_BUCKET_NAME", None)
+        key = getattr(file_field, "name", None) or ""
+
+        if bucket_name and key and getattr(settings, "AWS_ACCESS_KEY_ID", None) and getattr(settings, "AWS_SECRET_ACCESS_KEY", None):
+            try:
+                import boto3
+                s3_client = boto3.client(
+                    "s3",
+                    region_name=getattr(settings, "AWS_S3_REGION_NAME", "eu-central-1"),
+                    aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
+                    aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
+                )
+                url = s3_client.generate_presigned_url(
+                    "get_object",
+                    Params={"Bucket": bucket_name, "Key": key},
+                    ExpiresIn=USER_PHOTO_SIGNED_URL_EXPIRES,
+                )
+                return Response({"url": url, "expires_in": USER_PHOTO_SIGNED_URL_EXPIRES})
+            except Exception as e:
+                logger.warning("User photo signed URL error: %s", e)
+                # Fallback: return serve URL (client will use token)
+        # Local storage or S3 error: return serve endpoint URL (client must send Authorization)
+        path = f"/api/auth/users/{user_id}/photo/serve/?thumb={'1' if use_thumb else '0'}"
+        url = request.build_absolute_uri(path)
+        return Response({"url": url, "expires_in": USER_PHOTO_SIGNED_URL_EXPIRES, "auth_required": True})
+
+
 class UserUpdateView(generics.UpdateAPIView):
     serializer_class = UserUpdateSerializer
     permission_classes = [permissions.IsAuthenticated]

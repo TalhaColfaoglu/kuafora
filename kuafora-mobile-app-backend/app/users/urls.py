@@ -20,6 +20,8 @@ from .views import (
     BarbershopStatsView,
     ProfilePhotoUploadView,
     ProfilePhotoServeView,
+    UserPhotoServeView,
+    UserPhotoUrlView,
     ResolveUserView,
 )
 
@@ -38,6 +40,8 @@ urlpatterns = [
     path('users/me/', MeView.as_view(), name='me-legacy'),
     path('me/photo/', ProfilePhotoUploadView.as_view(), name='profile-photo-upload'),
     path('me/photo/serve/', ProfilePhotoServeView.as_view(), name='profile-photo-serve'),
+    path('users/<uuid:user_id>/photo/serve/', UserPhotoServeView.as_view(), name='user-photo-serve'),
+    path('users/<uuid:user_id>/photo/url/', UserPhotoUrlView.as_view(), name='user-photo-url'),
     path('update/', UserUpdateView.as_view(), name='user-update'),
     path('change-password/', ChangePasswordView.as_view(), name='change-password'),
     path('verify-email/', VerifyEmailView.as_view(), name='verify-email'),
