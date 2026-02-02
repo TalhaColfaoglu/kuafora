@@ -85,6 +85,7 @@ class HomeDashboardApi(APIView):
         # Açık/kapalı tek kaynak: _compute_shop_status (DailyOverride, izin günü, mola, haftalık saat hepsi dahil)
         serializer = BarbershopHomeSerializer(context={"request": request})
         now_utc = timezone.now()
+        today = now_utc.date()
 
         def serialize_shop(shop: Barbershop):
           base = serializer.to_representation(shop)
