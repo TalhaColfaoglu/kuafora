@@ -1985,7 +1985,8 @@ class PartnerWorkScheduleViewSet(viewsets.ModelViewSet):
 class FavoriteListView(generics.ListAPIView):
     serializer_class = BarbershopWithFavoriteSerializer
     permission_classes = [permissions.IsAuthenticated]
-    
+    pagination_class = None  # Ham liste dön; mobil uygulama tek sayfa bekliyor
+
     def get_queryset(self):
         # Schema jenerasyonu veya anonim isteklerde güvenli boş queryset dön
         if getattr(self, "swagger_fake_view", False) or not self.request or self.request.user.is_anonymous:
