@@ -22,7 +22,7 @@
     <meta property="og:url" content="https://kuafora.com{{ request.path }}" />
     <meta property="og:title" content="{% block og_title %}Kuafora — Kuaförünü Keşfet{% endblock %}" />
     <meta property="og:description" content="{% block og_description %}Kuafora, kuaför keşif platformu. Yakınındaki salonları keşfet, karşılaştır ve favorine ekle.{% endblock %}" />
-    <meta property="og:image" content="{% block og_image %}https://kuafora.com{% static 'img/og-image.jpg' %}{% endblock %}" />
+    <meta property="og:image" content="{% block og_image %}https://kuafora.com/static/img/og-image.jpg{% endblock %}" />
     <meta property="og:locale" content="tr_TR" />
     <meta property="og:site_name" content="Kuafora" />
     
@@ -31,14 +31,14 @@
     <meta name="twitter:url" content="https://kuafora.com{{ request.path }}" />
     <meta name="twitter:title" content="{% block twitter_title %}Kuafora — Kuaförünü Keşfet{% endblock %}" />
     <meta name="twitter:description" content="{% block twitter_description %}Kuafora, kuaför keşif platformu. Yakınındaki salonları keşfet, karşılaştır ve favorine ekle.{% endblock %}" />
-    <meta name="twitter:image" content="{% block twitter_image %}https://kuafora.com{% static 'img/twitter-card.jpg' %}{% endblock %}" />
+    <meta name="twitter:image" content="{% block twitter_image %}https://kuafora.com/static/img/twitter-card.jpg{% endblock %}" />
     
     <!-- Canonical URL -->
     <link rel="canonical" href="https://kuafora.com{{ request.path }}" />
     
     <!-- Favicon - K logo as SVG data URI -->
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23000'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='central' text-anchor='middle' fill='white' font-family='system-ui' font-weight='700' font-size='18'%3EK%3C/text%3E%3C/svg%3E">
-    <link rel="apple-touch-icon" href="{% static 'img/apple-touch-icon.png' %}" />
+    <link rel="apple-touch-icon" href="/static/img/apple-touch-icon.png" />
 
     <!-- Fonts - Optimized Loading -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
