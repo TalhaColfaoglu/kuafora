@@ -31,6 +31,10 @@ class JWTAuthenticationWithEmailGate(JWTAuthentication):
         "/api/auth/me",
         "/api/auth/users/me/",
     )
+    # Partner uygulaması: e-posta doğrulanmamış kullanıcı da bildirim listesini görebilsin (403 engeli kalkar).
+    _ALLOWED_PREFIXES_EXTRA = (
+        "/api/notifications/",
+    )
 
     def authenticate(self, request):
         out = super().authenticate(request)
@@ -49,6 +53,8 @@ class JWTAuthenticationWithEmailGate(JWTAuthentication):
             if path in self._ALLOWED_EXACT:
                 return out
             if any(path.startswith(p.rstrip("/")) for p in self._ALLOWED_PREFIXES):
+                return out
+            if any(path.startswith(p.rstrip("/")) for p in self._ALLOWED_PREFIXES_EXTRA):
                 return out
             raise PermissionDenied(detail={"detail": "E-posta doğrulaması gerekli.", "reason": "email_verification_required"})
 
