@@ -4303,13 +4303,31 @@ class CalendarStatusViewSet(viewsets.ReadOnlyModelViewSet):
                     'active_overrides': [override]
                 }
         
-        # Personel saatlerini al
+        # Dükkan saatlerini al (personel yoksa dükkan saatine göre çalışıyor say)
+        shop_hours = ShopWorkingHours.objects.filter(
+            barbershop=staff.barbershop,
+            day_of_week=day_code
+        ).first()
+        
+        # Personel saatlerini al (yoksa veya kapalı değilse dükkan saatine düş)
         staff_hours = StaffWorkingHours.objects.filter(
             staff=staff,
             day_of_week=day_code
         ).first()
         
-        if not staff_hours or staff_hours.is_closed:
+        # Saatleri belirle: personel kaydı varsa onu kullan (yoksa dükkan saatine düş)
+        if staff_hours and not staff_hours.is_closed:
+            start_time = staff_hours.start_time or (shop_hours.start_time if shop_hours else None)
+            end_time = staff_hours.end_time or (shop_hours.end_time if shop_hours else None)
+            break_start_time = staff_hours.break_start_time or (shop_hours.break_start_time if shop_hours else None)
+            break_end_time = staff_hours.break_end_time or (shop_hours.break_end_time if shop_hours else None)
+        elif shop_hours and not shop_hours.is_closed:
+            # Personel o gün kendi kaydı yok veya kapalı; dükkan açıksa dükkan saatine göre çalışıyor kabul et
+            start_time = shop_hours.start_time
+            end_time = shop_hours.end_time
+            break_start_time = shop_hours.break_start_time
+            break_end_time = shop_hours.break_end_time
+        else:
             return {
                 'staff_id': staff.id,
                 'staff_name': getattr(staff.user, 'full_name', None) or staff.user.email,
@@ -4323,23 +4341,52 @@ class CalendarStatusViewSet(viewsets.ReadOnlyModelViewSet):
                 'active_overrides': []
             }
         
-        # Dükkan saatlerini devral
-        shop_hours = ShopWorkingHours.objects.filter(
-            barbershop=staff.barbershop,
-            day_of_week=day_code
-        ).first()
+        if not start_time or not end_time:
+            return {
+                'staff_id': staff.id,
+                'staff_name': getattr(staff.user, 'full_name', None) or staff.user.email,
+                'date': date,
+                'is_working': False,
+                'is_on_leave': False,
+                'is_on_break': False,
+                'start_time': None,
+                'end_time': None,
+                'status_message': "Bu gün çalışmıyor",
+                'active_overrides': []
+            }
         
-        start_time = staff_hours.start_time or (shop_hours.start_time if shop_hours else None)
-        end_time = staff_hours.end_time or (shop_hours.end_time if shop_hours else None)
-        # Haftalık periyodik mola (personel veya dükkan)
-        break_start_time = staff_hours.break_start_time or (shop_hours.break_start_time if shop_hours else None)
-        break_end_time = staff_hours.break_end_time or (shop_hours.break_end_time if shop_hours else None)
-        
+        now = dj_tz.now()
+        current_time = now.time()
+        # Bugün değilse veya şu an çalışma saatleri dışındaysa çalışmıyor
+        if date != now.date():
+            return {
+                'staff_id': staff.id,
+                'staff_name': getattr(staff.user, 'full_name', None) or staff.user.email,
+                'date': date,
+                'is_working': False,
+                'is_on_leave': False,
+                'is_on_break': False,
+                'start_time': start_time,
+                'end_time': end_time,
+                'status_message': None,
+                'active_overrides': []
+            }
+        if current_time < start_time or current_time >= end_time:
+            return {
+                'staff_id': staff.id,
+                'staff_name': getattr(staff.user, 'full_name', None) or staff.user.email,
+                'date': date,
+                'is_working': False,
+                'is_on_leave': False,
+                'is_on_break': False,
+                'start_time': start_time,
+                'end_time': end_time,
+                'status_message': f"Çalışma saatleri {start_time.strftime('%H:%M')} - {end_time.strftime('%H:%M')}",
+                'active_overrides': []
+            }
         # Mola kontrolü: 1) Haftalık periyodik mola 2) İleri tarihe atanmış BreakWindow
         is_on_break = False
         break_ends_in = None
-        now = dj_tz.now()
-        current_time = now.time()
         if date == now.date():
             # 1) Haftalık periyodik mola (StaffWorkingHours break_start_time/break_end_time)
             if break_start_time and break_end_time and break_start_time <= current_time <= break_end_time:
