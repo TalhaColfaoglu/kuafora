@@ -467,6 +467,24 @@ details[open] summary ~ * {
   outline-offset: 2px;
 }
 
+/* Dark nav: white focus ring for contrast */
+.dynamic-nav a:focus-visible,
+.dynamic-nav button:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.9);
+  outline-offset: 2px;
+}
+
+/* Buttons: stronger focus for a11y */
+.btn-primary:focus-visible,
+.btn-secondary:focus-visible,
+.btn-bubble:focus-visible,
+.btn-bubble-secondary:focus-visible,
+a[class*="bg-primary"]:focus-visible,
+a[class*="bg-white"]:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 3px;
+}
+
 /* ===== Selection ===== */
 ::selection {
   background: var(--color-primary);
@@ -652,5 +670,15 @@ html {
   
   .stat-number {
     font-size: 2.25rem;
+  }
+}
+
+/* ===== Footer: tighter grid on small screens ===== */
+@media (max-width: 480px) {
+  #contact .grid {
+    gap: 2rem;
+  }
+  #contact h4 {
+    margin-top: 1rem;
   }
 }

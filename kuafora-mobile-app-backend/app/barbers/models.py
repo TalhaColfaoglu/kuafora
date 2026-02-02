@@ -190,6 +190,53 @@ class Barbershop(models.Model):
         return self.name
 
 
+class BarbershopAppeal(models.Model):
+    """Kuaför reddedildiğinde salonun gönderdiği itiraz; admin panelde görüntülenir ve tekrar değerlendirilir."""
+    class Status(models.TextChoices):
+        PENDING = "pending", "Beklemede"
+        REVIEWED = "reviewed", "İncelendi"
+
+    barbershop = models.ForeignKey(
+        Barbershop,
+        on_delete=models.CASCADE,
+        related_name="appeals",
+        help_text="Itirazı yapan salon",
+    )
+    message = models.TextField(help_text="Kuaförün itiraz metni")
+    status = models.CharField(
+        max_length=20,
+        choices=Status.choices,
+        default=Status.PENDING,
+        db_index=True,
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+    reviewed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="reviewed_appeals",
+    )
+
+    class Meta:
+        ordering = ["-created_at"]
+        verbose_name = "Salon itirazı"
+        verbose_name_plural = "Salon itirazları"
+
+    def __str__(self):
+        return f"{self.barbershop.name} – {self.get_status_display()} ({self.created_at.date()})"
+
+    def save(self, *args, **kwargs):
+        from django.utils import timezone
+        if self.pk and self.status == self.Status.REVIEWED:
+            existing = BarbershopAppeal.objects.filter(pk=self.pk).first()
+            if existing and existing.status != self.Status.REVIEWED:
+                if not self.reviewed_at:
+                    self.reviewed_at = timezone.now()
+        super().save(*args, **kwargs)
+
+
 class BarbershopImage(models.Model):
     barbershop = models.ForeignKey(Barbershop, on_delete=models.CASCADE, related_name="images")
     image = models.ImageField(upload_to="barbershops/extra/")

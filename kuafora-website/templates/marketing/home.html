@@ -85,7 +85,7 @@
             <div class="phone-mockup-inner">
               <div class="phone-mockup-notch"></div>
               {% if 'img/screens/home-screen.png'|static_exists %}
-              <img src="{% static 'img/screens/home-screen.png' %}" alt="Kuafora Ana Ekran" class="phone-mockup-screen" loading="lazy">
+              <img src="{% static 'img/screens/home-screen.png' %}" alt="Kuafora Ana Ekran" class="phone-mockup-screen" width="1170" height="2532" loading="eager" fetchpriority="high" decoding="async">
               {% else %}
               <div class="absolute inset-0 bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
                 <div class="text-center p-6">
@@ -517,7 +517,7 @@
       </div>
       
       <!-- Pro Plan -->
-      <div class="bg-primary text-white rounded-3xl p-8 relative overflow-hidden scale-105 shadow-2xl" data-reveal>
+      <div class="bg-primary text-white rounded-3xl p-8 relative overflow-hidden md:scale-105 shadow-2xl" data-reveal>
         <div class="absolute top-0 right-0 bg-accent-rose text-white text-xs font-bold px-4 py-1 rounded-bl-xl">
           POPÜLER
         </div>

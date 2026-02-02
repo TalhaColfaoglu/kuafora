@@ -366,6 +366,26 @@
         transition: all 0.3s;
         cursor: pointer;
     }
+    /* Veri olan çubuklar en az %15 yükseklikte görünsün (küçük sayılar da okunabilsin) */
+    .chart-bar.has-value {
+        min-height: 15% !important;
+    }
+    .chart-empty-msg {
+        text-align: center;
+        padding: 48px 24px;
+        color: #6B7280;
+        font-size: 15px;
+        line-height: 1.5;
+        background: #F9FAFB;
+        border-radius: 12px;
+        margin: 0 0 16px 0;
+        border: 1px dashed #E5E7EB;
+    }
+    .chart-empty-msg strong {
+        display: block;
+        color: #374151;
+        margin-bottom: 8px;
+    }
     
     .chart-bar:hover {
         opacity: 0.9;
@@ -712,6 +732,96 @@
 </div>
 
 <h2 class="section-title">
+    <span>🗺️</span>
+    <span>Kullanım — Harita Yükleme & Uygulama Açılma</span>
+</h2>
+<p class="dashboard-note">Veriler uygulama analytics’ten gelir (FeatureUsage / AppEvent). Harita yükleme = MapTiler kullanımına yakın sayı; uygulama açılma = app_open event sayısı.</p>
+<div class="dashboard-stats">
+    <div class="stat-card info">
+        <div class="stat-card-header">
+            <h3>Harita yükleme (bugün)</h3>
+            <div class="stat-card-icon">🗺️</div>
+        </div>
+        <p class="stat-value">{{ stats.usage.map_loads_today|floatformat:0 }}</p>
+        <div class="stat-subtitle">Bugün harita görüntüleme (map_view)</div>
+    </div>
+    <div class="stat-card info">
+        <div class="stat-card-header">
+            <h3>Harita yükleme (bu hafta)</h3>
+            <div class="stat-card-icon">📅</div>
+        </div>
+        <p class="stat-value">{{ stats.usage.map_loads_week|floatformat:0 }}</p>
+        <div class="stat-subtitle">Son 7 günde harita görüntüleme</div>
+    </div>
+    <div class="stat-card info">
+        <div class="stat-card-header">
+            <h3>Harita yükleme (bu ay)</h3>
+            <div class="stat-card-icon">🗓️</div>
+        </div>
+        <p class="stat-value">{{ stats.usage.map_loads_month|floatformat:0 }}</p>
+        <div class="stat-subtitle">Son 30 günde harita görüntüleme</div>
+    </div>
+    <div class="stat-card success">
+        <div class="stat-card-header">
+            <h3>Uygulama açılma (bugün)</h3>
+            <div class="stat-card-icon">📱</div>
+        </div>
+        <p class="stat-value">{{ stats.usage.app_opens_today|floatformat:0 }}</p>
+        <div class="stat-subtitle">Bugün app_open event</div>
+    </div>
+    <div class="stat-card success">
+        <div class="stat-card-header">
+            <h3>Uygulama açılma (bu hafta)</h3>
+            <div class="stat-card-icon">📆</div>
+        </div>
+        <p class="stat-value">{{ stats.usage.app_opens_week|floatformat:0 }}</p>
+        <div class="stat-subtitle">Son 7 günde app_open</div>
+    </div>
+    <div class="stat-card success">
+        <div class="stat-card-header">
+            <h3>Uygulama açılma (bu ay)</h3>
+            <div class="stat-card-icon">📊</div>
+        </div>
+        <p class="stat-value">{{ stats.usage.app_opens_month|floatformat:0 }}</p>
+        <div class="stat-subtitle">Son 30 günde app_open</div>
+    </div>
+</div>
+{% if stats.usage.top_features %}
+<h3 class="chart-title" style="margin-top: 24px;">En çok kullanılan özellikler (son 30 gün)</h3>
+<div class="distribution-list">
+    {% for item in stats.usage.top_features %}
+    <div class="distribution-item">
+        <span class="distribution-label">
+            {% if item.feature_type == 'map_view' %}🗺️ Harita görünümü
+            {% elif item.feature_type == 'search' %}🔍 Arama
+            {% elif item.feature_type == 'filter' %}🔧 Filtreleme
+            {% elif item.feature_type == 'favorite_toggle' %}❤️ Favori
+            {% elif item.feature_type == 'review_create' %}⭐ Yorum
+            {% elif item.feature_type == 'appointment_create' %}📅 Randevu
+            {% elif item.feature_type == 'campaign_view' %}🎯 Kampanya
+            {% elif item.feature_type == 'chat_send' %}💬 Mesaj
+            {% elif item.feature_type == 'profile_edit' %}👤 Profil düzenleme
+            {% elif item.feature_type == 'settings_change' %}⚙️ Ayar
+            {% else %}{{ item.feature_type }}{% endif %}
+        </span>
+        <span class="distribution-value">{{ item.count|floatformat:0 }}</span>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+{% if stats.usage.top_screens %}
+<h3 class="chart-title" style="margin-top: 24px;">En çok görüntülenen ekranlar (son 30 gün)</h3>
+<div class="distribution-list">
+    {% for item in stats.usage.top_screens %}
+    <div class="distribution-item">
+        <span class="distribution-label">{{ item.screen_name }}</span>
+        <span class="distribution-value">{{ item.count|floatformat:0 }}</span>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<h2 class="section-title">
     <span>👥</span>
     <span>Kullanıcı İstatistikleri</span>
 </h2>
@@ -829,6 +939,7 @@
     <span>📊</span>
     <span>Büyüme & Tutma Metrikleri</span>
 </h2>
+<p class="dashboard-note">Tüm oranlar veritabanındaki gerçek kullanıcı verisine göre hesaplanır. Kayıt yoksa oran 0% veya N/A gösterilir.</p>
 <div class="dashboard-stats">
     <div class="stat-card success">
         <div class="stat-card-header">
@@ -837,6 +948,9 @@
         </div>
         <p class="stat-value">{{ stats.users.week_retention_rate|floatformat:1 }}%</p>
         <div class="stat-subtitle">Bu hafta kayıt olanların aktif kalma oranı</div>
+        {% if stats.users.week_registrations == 0 %}
+        <div class="stat-subtitle" style="color: #9CA3AF; font-size: 12px; margin-top: 4px;">Bu hafta kayıt yok → oran hesaplanamadı</div>
+        {% endif %}
     </div>
     
     <div class="stat-card info">
@@ -845,7 +959,10 @@
             <div class="stat-card-icon">🔄</div>
         </div>
         <p class="stat-value">{{ stats.users.conversion_rate|floatformat:1 }}%</p>
-        <div class="stat-subtitle">Kayıt olanların aktif kullanıcıya dönüşme oranı</div>
+        <div class="stat-subtitle">Kayıt olanların aktif kullanıcıya dönüşme oranı (son 30 gün)</div>
+        {% if stats.users.month_registrations == 0 %}
+        <div class="stat-subtitle" style="color: #9CA3AF; font-size: 12px; margin-top: 4px;">Bu ay kayıt yok → oran hesaplanamadı</div>
+        {% endif %}
     </div>
     
     <div class="stat-card danger">
@@ -855,6 +972,9 @@
         </div>
         <p class="stat-value">{{ stats.users.churn_rate|floatformat:1 }}%</p>
         <div class="stat-subtitle">Son 30 günde kayıt olup son 7 günde giriş yapmayanlar</div>
+        {% if stats.users.month_registrations == 0 %}
+        <div class="stat-subtitle" style="color: #9CA3AF; font-size: 12px; margin-top: 4px;">Bu ay kayıt yok → oran hesaplanamadı</div>
+        {% endif %}
     </div>
 </div>
 
@@ -927,9 +1047,12 @@
 
 <div class="chart-container">
     <h3 class="chart-title">Son 30 Günlük Aktif Kullanıcı Trendi</h3>
+    {% if not stats.has_daily_active_trend %}
+    <p class="chart-empty-msg"><strong>Henüz yeterli veri yok</strong> Bu grafik veritabanındaki gerçek aktif kullanıcı verisini gösterir. Son 30 günde giriş yapan kullanıcı olmadığında alan boş görünür.</p>
+    {% endif %}
     <div class="chart-bars">
         {% for item in stats.daily_active_chart %}
-        <div class="chart-bar" style="height: {% if stats.max_daily_active > 0 %}{% widthratio item.count stats.max_daily_active 100 %}{% else %}0{% endif %}%;" title="{{ item.date }}: {{ item.count }} kullanıcı">
+        <div class="chart-bar {% if item.count > 0 %}has-value{% endif %}" style="height: {% if stats.max_daily_active > 0 %}{% widthratio item.count stats.max_daily_active 100 %}{% else %}0{% endif %}%;" title="{{ item.date }}: {{ item.count }} kullanıcı">
             {% if item.count > 0 %}
             <span class="chart-bar-value">{{ item.count }}</span>
             {% endif %}
@@ -1007,9 +1130,12 @@
 
 <div class="chart-container">
     <h3 class="chart-title">Son 7 Günlük Kayıt Grafiği</h3>
+    {% if not stats.has_registration_trend %}
+    <p class="chart-empty-msg"><strong>Henüz yeterli veri yok</strong> Bu grafik son 7 gündeki kayıt sayısını gösterir. Veriler veritabanından canlı gelir.</p>
+    {% endif %}
     <div class="chart-bars">
         {% for item in stats.registration_chart %}
-        <div class="chart-bar" style="height: {% if stats.max_registration_count > 0 %}{% widthratio item.count stats.max_registration_count 100 %}{% else %}0{% endif %}%;" title="{{ item.date }}: {{ item.count }} kayıt">
+        <div class="chart-bar {% if item.count > 0 %}has-value{% endif %}" style="height: {% if stats.max_registration_count > 0 %}{% widthratio item.count stats.max_registration_count 100 %}{% else %}0{% endif %}%;" title="{{ item.date }}: {{ item.count }} kayıt">
             {% if item.count > 0 %}
             <span class="chart-bar-value">{{ item.count }}</span>
             {% endif %}
@@ -1021,9 +1147,12 @@
 
 <div class="chart-container">
     <h3 class="chart-title">Son 4 Haftalık Aktif Kullanıcı Trendi</h3>
+    {% if not stats.users.has_weekly_active_trend %}
+    <p class="chart-empty-msg"><strong>Henüz yeterli veri yok</strong> Bu grafik son 4 haftalık aktif kullanıcı sayısını gösterir. Veriler veritabanından canlı gelir.</p>
+    {% endif %}
     <div class="chart-bars">
         {% for item in stats.users.weekly_active_trend %}
-        <div class="chart-bar" style="height: {% if stats.users.max_weekly_active > 0 %}{% widthratio item.count stats.users.max_weekly_active 100 %}{% else %}0{% endif %}%;" title="{{ item.week }}: {{ item.count }} kullanıcı">
+        <div class="chart-bar {% if item.count > 0 %}has-value{% endif %}" style="height: {% if stats.users.max_weekly_active > 0 %}{% widthratio item.count stats.users.max_weekly_active 100 %}{% else %}0{% endif %}%;" title="{{ item.week }}: {{ item.count }} kullanıcı">
             {% if item.count > 0 %}
             <span class="chart-bar-value">{{ item.count }}</span>
             {% endif %}

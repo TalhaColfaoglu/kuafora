@@ -4,6 +4,8 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#0A0A0A" />
+    <meta name="color-scheme" content="light" />
     <title>{% block title %}Kuafora — Kuaförünü Keşfet{% endblock %}</title>
     <meta name="description" content="{% block meta_description %}Kuafora, kuaför keşif platformu. Yakınındaki salonları keşfet, karşılaştır ve favorine ekle. Uygulama yakında yayında.{% endblock %}" />
     
@@ -97,8 +99,10 @@
       }
       
       .dynamic-nav:hover {
-        transform: scale(1.02);
         box-shadow: 0 20px 40px -12px rgba(0, 0, 0, 0.35);
+      }
+      @media (prefers-reduced-motion: no-preference) {
+        .dynamic-nav:hover { transform: scale(1.02); }
       }
       
       .dynamic-nav .nav-pill {
@@ -177,12 +181,31 @@
       .pulse-dot {
         animation: pulse-dot 2s ease-in-out infinite;
       }
+      .skip-link {
+        position: absolute;
+        top: -100px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 9999;
+        padding: 12px 24px;
+        background: #0A0A0A;
+        color: #fff;
+        font-weight: 600;
+        border-radius: 8px;
+        transition: top 0.2s ease;
+      }
+      .skip-link:focus {
+        top: 16px;
+        outline: 2px solid #fff;
+        outline-offset: 2px;
+      }
     </style>
 
     {% block head %}{% endblock %}
   </head>
   <body class="h-full antialiased bg-white text-primary font-sans">
-    
+    <a href="#top" class="skip-link">İçeriğe atla</a>
+
     <!-- Dynamic Island Navigation -->
     <header class="fixed top-0 inset-x-0 z-50 pointer-events-none">
       <div class="flex justify-center pt-4 px-4">
@@ -395,45 +418,6 @@
         const top = target.getBoundingClientRect().top + window.pageYOffset - offset;
         window.scrollTo({ top, behavior: prefersReduced ? 'auto' : 'smooth' });
       });
-      
-      // Reveal on scroll - improved version
-      const revealElements = document.querySelectorAll('[data-reveal]');
-      
-      if(!prefersReduced && revealElements.length > 0){
-      const observer = new IntersectionObserver((entries)=>{
-        entries.forEach(entry=>{
-            if(entry.isIntersecting){ 
-              // Add delay based on data attribute or index
-              const delay = entry.target.dataset.delay || 0;
-              setTimeout(() => {
-                entry.target.style.opacity = '1';
-                entry.target.style.transform = 'translateY(0)';
-              }, delay);
-              observer.unobserve(entry.target);
-            }
-        })
-        },{threshold:0.05, rootMargin: '50px'});
-        
-        revealElements.forEach((el, index) => {
-          // Set initial state with inline styles for reliability
-          el.style.opacity = '0';
-          el.style.transform = 'translateY(20px)';
-          el.style.transition = 'opacity 0.6s ease-out, transform 0.6s ease-out';
-          el.style.transitionDelay = (index * 0.1) + 's';
-          observer.observe(el);
-        });
-        
-        // Force check after a small delay for elements already in viewport
-        setTimeout(() => {
-          revealElements.forEach(el => {
-            const rect = el.getBoundingClientRect();
-            if(rect.top < window.innerHeight && rect.bottom > 0) {
-              el.style.opacity = '1';
-              el.style.transform = 'translateY(0)';
-            }
-          });
-        }, 100);
-      }
     </script>
   </body>
 </html>

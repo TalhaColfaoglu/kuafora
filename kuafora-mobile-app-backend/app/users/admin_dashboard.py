@@ -22,6 +22,58 @@ from app.appointments.models import Appointment
 APP_USER_FILTER = Q(is_staff=False, is_superuser=False)
 
 
+def _usage_stats(now, today, week_ago, month_ago):
+    """Analytics tablolarından kullanım metrikleri: harita yükleme, uygulama açılma, en çok kullanılan özellikler/ekranlar."""
+    try:
+        from app.analytics.models import FeatureUsage, AppEvent, ScreenView
+    except Exception:
+        return {
+            "map_loads_today": 0,
+            "map_loads_week": 0,
+            "map_loads_month": 0,
+            "app_opens_today": 0,
+            "app_opens_week": 0,
+            "app_opens_month": 0,
+            "top_features": [],
+            "top_screens": [],
+        }
+    today_start = timezone.make_aware(datetime.combine(today, datetime.min.time()))
+    week_start = timezone.make_aware(datetime.combine(week_ago, datetime.min.time()))
+    month_start = timezone.make_aware(datetime.combine(month_ago, datetime.min.time()))
+    # Harita yükleme (map_view) – FeatureUsage
+    map_today = FeatureUsage.objects.filter(feature_type="map_view", timestamp__gte=today_start).count()
+    map_week = FeatureUsage.objects.filter(feature_type="map_view", timestamp__gte=week_start).count()
+    map_month = FeatureUsage.objects.filter(feature_type="map_view", timestamp__gte=month_start).count()
+    # Uygulama açılma – AppEvent
+    app_open_today = AppEvent.objects.filter(event_type="app_open", timestamp__gte=today_start).count()
+    app_open_week = AppEvent.objects.filter(event_type="app_open", timestamp__gte=week_start).count()
+    app_open_month = AppEvent.objects.filter(event_type="app_open", timestamp__gte=month_start).count()
+    # En çok kullanılan özellikler (son 30 gün)
+    top_features = (
+        FeatureUsage.objects.filter(timestamp__gte=month_start)
+        .values("feature_type")
+        .annotate(count=Count("id"))
+        .order_by("-count")[:10]
+    )
+    # En çok görüntülenen ekranlar (son 30 gün)
+    top_screens = (
+        ScreenView.objects.filter(timestamp__gte=month_start)
+        .values("screen_name")
+        .annotate(count=Count("id"))
+        .order_by("-count")[:10]
+    )
+    return {
+        "map_loads_today": map_today,
+        "map_loads_week": map_week,
+        "map_loads_month": map_month,
+        "app_opens_today": app_open_today,
+        "app_opens_week": app_open_week,
+        "app_opens_month": app_open_month,
+        "top_features": list(top_features),
+        "top_screens": list(top_screens),
+    }
+
+
 def _period_dates(period, month_param, today):
     """
     period: 'daily' | 'weekly' | 'monthly' | 'yearly'
@@ -508,6 +560,9 @@ def admin_dashboard_view(request):
     month_email_count = get_monthly_email_count()
     year_email_count = get_yearly_email_count()
     daily_email_alert_threshold = 400
+
+    # ==================== KULLANIM / ANALYTICS (Harita, uygulama açılma, özellik/ekran) ====================
+    usage_stats = _usage_stats(now, today, week_ago, month_ago)
     
     # ==================== CONTEXT OLUŞTURMA ====================
 
@@ -570,6 +625,7 @@ def admin_dashboard_view(request):
                 # Trend
                 'weekly_active_trend': weekly_active_trend,
                 'max_weekly_active': max_weekly_active,
+                'has_weekly_active_trend': any(w['count'] > 0 for w in weekly_active_trend),
                 # Top kullanıcılar
                 'top_active_users': list(top_active_users),
             },
@@ -589,8 +645,10 @@ def admin_dashboard_view(request):
             },
             'registration_chart': registration_chart,
             'max_registration_count': max_registration_count if max_registration_count > 0 else 1,
+            'has_registration_trend': max_registration_count > 0,
             'daily_active_chart': daily_active_chart,
             'max_daily_active': max_daily_active if max_daily_active > 0 else 1,
+            'has_daily_active_trend': max_daily_active > 0,
             'emails': {
                 'today_count': today_email_count,
                 'week_count': week_email_count,
@@ -599,6 +657,7 @@ def admin_dashboard_view(request):
                 'alert_threshold': daily_email_alert_threshold,
                 'over_threshold': today_email_count > daily_email_alert_threshold,
             },
+            'usage': usage_stats,
         }
     }
     

@@ -21,8 +21,8 @@ from datetime import timedelta, datetime
 
 from .models import (
     Favorite,
-    
     Barbershop,
+    BarbershopAppeal,
     Staff,
     StaffService,
     StaffServiceCategory,
@@ -1523,6 +1523,24 @@ class PartnerBarbershopViewSet(viewsets.ModelViewSet):
                 {'detail': f'Dükkanlar yüklenirken hata oluştu: {str(e)}'}, 
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+
+    @action(detail=True, methods=["post"], url_path="appeal")
+    def appeal(self, request, pk=None):
+        """Reddedilen salon için itiraz gönderir; admin panelde görüntülenir ve tekrar değerlendirilir."""
+        bs = self.get_object()
+        if not (bs.rejection_reason or bs.rejected_at):
+            return Response(
+                {"detail": "Sadece reddedilmiş salonlar itiraz gönderebilir."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        message = (request.data.get("message") or "").strip()
+        if not message:
+            return Response(
+                {"detail": "İtiraz metni (message) zorunludur."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        BarbershopAppeal.objects.create(barbershop=bs, message=message, status=BarbershopAppeal.Status.PENDING)
+        return Response({"detail": "İtirazınız alındı; en kısa sürede değerlendirilecektir."}, status=status.HTTP_201_CREATED)
 
     @action(detail=True, methods=["post"], url_path="images")
     def upload_image(self, request, pk=None):

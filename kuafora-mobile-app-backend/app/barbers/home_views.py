@@ -139,15 +139,21 @@ class HomeDashboardApi(APIView):
 
         campaign_data = []
         for c in active_campaigns[:10]:
+            img_url = None
+            if c.barbershop.main_image:
+                raw_url = c.barbershop.main_image.url
+                img_url = request.build_absolute_uri(raw_url) if raw_url else None
             campaign_data.append({
                 "id": c.id,
                 "title": c.name,
                 "type": c.type,
                 "shop_id": c.barbershop.id,
                 "shop_name": c.barbershop.name,
+                "city": c.barbershop.city or "",
+                "district": c.barbershop.district or "",
                 "discount_value": c.discount_value,
                 "discount_type": c.discount_type,
-                "image": c.barbershop.main_image.url if c.barbershop.main_image else None
+                "image": img_url
             })
 
         # 5. Announcements - Son 30 günün aktif duyuruları; sadece onaylı kuaförler (detay 404 önlemi)

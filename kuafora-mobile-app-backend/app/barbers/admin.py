@@ -1,3 +1,5 @@
+from datetime import timedelta
+
 from django.contrib import admin
 from django.urls import reverse
 from django.utils import timezone
@@ -9,6 +11,7 @@ from unfold.admin import ModelAdmin, TabularInline
 from unfold.decorators import action
 from .models import (
     Barbershop,
+    BarbershopAppeal,
     BarbershopImage,
     Staff,
     StaffCatalogImage,
@@ -117,6 +120,35 @@ class BarbershopImageInline(TabularInline):
     tab = True
 
 
+class BarbershopAppealInline(TabularInline):
+    model = BarbershopAppeal
+    extra = 0
+    readonly_fields = ("created_at", "message", "reviewed_at", "reviewed_by")
+    can_delete = True
+    show_change_link = True
+    verbose_name = "İtiraz"
+    verbose_name_plural = "Salon itirazları"
+    ordering = ["-created_at"]
+    fields = ("message", "status", "created_at", "reviewed_at", "reviewed_by")
+
+    def has_add_permission(self, request, obj=None):
+        return False  # İtirazlar sadece partner uygulamasından eklenir
+
+
+def _absolute_media_url(request, url):
+    """Relative media URL'yi mevcut site adresiyle mutlak URL'ye çevirir; proxy/alt yol sorunlarını giderir."""
+    if not url:
+        return url
+    if not request:
+        return url
+    try:
+        if url.startswith("http://") or url.startswith("https://"):
+            return url
+        return request.build_absolute_uri(url)
+    except Exception:
+        return url
+
+
 @admin.register(Barbershop)
 class BarbershopAdmin(ModelAdmin):
     list_display = (
@@ -155,7 +187,7 @@ class BarbershopAdmin(ModelAdmin):
     date_hierarchy = "created_at"
     list_select_related = ("subscription",)
     list_per_page = 50
-    inlines = [BarbershopImageInline]
+    inlines = [BarbershopAppealInline, BarbershopImageInline]
     actions = ["verify_barbershops", "unverify_barbershops", "approve_barbershops", "reject_barbershops", "resubmit_for_review"]
     change_form_template = "admin/barbers/barbershop/change_form.html"
     change_list_template = "admin/barbers/barbershop/change_list.html"
@@ -222,6 +254,14 @@ class BarbershopAdmin(ModelAdmin):
         }),
     )
 
+    def changelist_view(self, request, *args, **kwargs):
+        self._request = request
+        return super().changelist_view(request, *args, **kwargs)
+
+    def changeform_view(self, request, *args, **kwargs):
+        self._request = request
+        return super().changeform_view(request, *args, **kwargs)
+
     def get_queryset(self, request):
         qs = super().get_queryset(request)
         qs = qs.annotate(
@@ -264,10 +304,17 @@ class BarbershopAdmin(ModelAdmin):
     preview_link.short_description = "Detay önizleme"
 
     def thumbnail_preview(self, obj):
+        req = getattr(self, "_request", None)
         if obj.main_image:
-            image_url = obj.main_image_thumb.url if obj.main_image_thumb else obj.main_image.url
+            try:
+                image_url = obj.main_image_thumb.url if obj.main_image_thumb else obj.main_image.url
+                full_url = obj.main_image.url
+            except (ValueError, OSError):
+                return format_html('<span style="display: inline-block; width: 60px; height: 60px; background: #fef2f2; border-radius: 8px; text-align: center; line-height: 60px; color: #dc2626; font-size: 11px;" title="Görsel yüklenemedi">Hata</span>')
+            image_url = _absolute_media_url(req, image_url)
+            full_url = _absolute_media_url(req, full_url)
             return format_html(
-                f'<a href="{obj.main_image.url}" class="admin-barbershop-img-link" target="_blank" style="display: inline-block; cursor: pointer;" title="Tıklayarak görseli büyüt">'
+                f'<a href="{full_url}" class="admin-barbershop-img-link" target="_blank" style="display: inline-block; cursor: pointer;" title="Tıklayarak görseli büyüt">'
                 f'<img src="{image_url}" style="width: 60px; height: 60px; object-fit: cover; border-radius: 8px; border: 2px solid #e5e7eb; transition: transform 0.2s;" '
                 f'onmouseover="this.style.transform=\'scale(1.1)\'; this.style.boxShadow=\'0 4px 8px rgba(0,0,0,0.2)\';" '
                 f'onmouseout="this.style.transform=\'scale(1)\'; this.style.boxShadow=\'none\';" />'
@@ -412,18 +459,25 @@ class BarbershopAdmin(ModelAdmin):
         return None
 
     def main_image_preview(self, obj):
+        req = getattr(self, "_request", None)
         if obj.main_image:
-            thumbnail_url = obj.main_image_thumb.url if obj.main_image_thumb else obj.main_image.url
+            try:
+                thumbnail_url = obj.main_image_thumb.url if obj.main_image_thumb else obj.main_image.url
+                full_url = obj.main_image.url
+            except (ValueError, OSError):
+                return format_html('<div style="padding: 20px; background: #fef2f2; border-radius: 8px; color: #dc2626; text-align: center;">📷 Görsel dosyası bulunamadı veya yüklenemedi</div>')
+            thumbnail_url = _absolute_media_url(req, thumbnail_url)
+            full_url = _absolute_media_url(req, full_url)
             return format_html(
                 f'''
                 <div style="margin: 10px 0;">
-                    <a href="{obj.main_image.url}" class="admin-barbershop-img-link" style="display: inline-block; cursor: pointer;" title="Tıklayarak görseli büyüt">
+                    <a href="{full_url}" class="admin-barbershop-img-link" style="display: inline-block; cursor: pointer;" title="Tıklayarak görseli büyüt" target="_blank">
                         <img src="{thumbnail_url}" style="max-width: 400px; max-height: 400px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 10px; transition: transform 0.2s;" 
                              onmouseover="this.style.transform='scale(1.02)'; this.style.boxShadow='0 8px 12px rgba(0,0,0,0.15)';" 
                              onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='0 4px 6px rgba(0,0,0,0.1)';" />
                     </a>
                     <br>
-                    <a href="{obj.main_image.url}" class="admin-barbershop-img-link" style="color: #3b82f6; text-decoration: none; font-size: 12px; display: inline-block; margin-top: 8px;">🔗 Tam boyutu aç / büyüt</a>
+                    <a href="{full_url}" class="admin-barbershop-img-link" style="color: #3b82f6; text-decoration: none; font-size: 12px; display: inline-block; margin-top: 8px;">🔗 Tam boyutu aç / büyüt</a>
                 </div>
                 '''
             )
@@ -431,6 +485,7 @@ class BarbershopAdmin(ModelAdmin):
     main_image_preview.short_description = "Ana Görsel Önizleme"
 
     def images_preview(self, obj):
+        req = getattr(self, "_request", None)
         images = list(obj.images.all())
         total_count = len(images)
         if not images:
@@ -440,10 +495,16 @@ class BarbershopAdmin(ModelAdmin):
         html += '<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; margin-top: 10px;">'
         
         for img in images[:12]:  # İlk 12 görseli göster
-            thumbnail_url = img.image_thumb.url if img.image_thumb else img.image.url
+            try:
+                thumbnail_url = img.image_thumb.url if img.image_thumb else img.image.url
+                full_url = img.image.url
+            except (ValueError, OSError):
+                thumbnail_url = full_url = "#"
+            thumbnail_url = _absolute_media_url(req, thumbnail_url)
+            full_url = _absolute_media_url(req, full_url)
             html += f'''
                 <div style="position: relative;">
-                    <a href="{img.image.url}" class="admin-barbershop-img-link" style="display: block; cursor: pointer;" title="Tıklayarak görseli büyüt">
+                    <a href="{full_url}" class="admin-barbershop-img-link" style="display: block; cursor: pointer;" title="Tıklayarak görseli büyüt" target="_blank">
                         <img src="{thumbnail_url}" style="width: 100%; height: 150px; object-fit: cover; border-radius: 8px; border: 2px solid #e5e7eb; transition: transform 0.2s;" 
                              onmouseover="this.style.transform='scale(1.05)'; this.style.boxShadow='0 4px 8px rgba(0,0,0,0.2)';" 
                              onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='none';" />
@@ -586,6 +647,50 @@ class BarbershopAdmin(ModelAdmin):
     categories_display.short_description = "Seçili Kategoriler"
 
 
+@admin.register(BarbershopAppeal)
+class BarbershopAppealAdmin(ModelAdmin):
+    list_display = ("id", "barbershop_link", "message_snippet", "status_badge", "created_at", "reviewed_at", "reviewed_by")
+    list_display_links = ("id", "barbershop_link", "message_snippet")
+    list_filter = ("status", "created_at")
+    search_fields = ("message", "barbershop__name")
+    readonly_fields = ("barbershop", "message", "created_at", "reviewed_at", "reviewed_by")
+    date_hierarchy = "created_at"
+    list_per_page = 25
+    ordering = ["-created_at"]
+
+    fieldsets = (
+        ("İtiraz", {"fields": ("barbershop", "message", "status", "created_at")}),
+        ("İnceleme", {"fields": ("reviewed_at", "reviewed_by"), "classes": ("collapse",)}),
+    )
+
+    def barbershop_link(self, obj):
+        if not obj.barbershop_id:
+            return "-"
+        url = reverse("admin:barbers_barbershop_change", args=[obj.barbershop_id])
+        return format_html('<a href="{}">{}</a>', url, obj.barbershop.name)
+    barbershop_link.short_description = "Salon"
+
+    def message_snippet(self, obj):
+        if not obj.message:
+            return "-"
+        return (obj.message[:80] + "…") if len(obj.message) > 80 else obj.message
+    message_snippet.short_description = "İtiraz metni"
+
+    def status_badge(self, obj):
+        if obj.status == "pending":
+            return format_html('<span style="color: #d97706; font-weight: 600;">Beklemede</span>')
+        return format_html('<span style="color: #059669;">İncelendi</span>')
+    status_badge.short_description = "Durum"
+
+    def save_model(self, request, obj, form, change):
+        if change and form.cleaned_data.get("status") == BarbershopAppeal.Status.REVIEWED:
+            if not obj.reviewed_at:
+                obj.reviewed_at = timezone.now()
+            if not obj.reviewed_by_id:
+                obj.reviewed_by = request.user
+        super().save_model(request, obj, form, change)
+
+
 @admin.register(Staff)
 class StaffAdmin(ModelAdmin):
     list_display = ("id", "user_email", "barbershop_link", "role_badge", "experience_display", "rating_display")
@@ -654,10 +759,24 @@ class StaffAdmin(ModelAdmin):
 @admin.register(StaffCatalogImage)
 class StaffCatalogImageAdmin(ModelAdmin):
     list_display = ("staff", "image_preview")
-    
+
+    def changelist_view(self, request, *args, **kwargs):
+        self._request = request
+        return super().changelist_view(request, *args, **kwargs)
+
+    def changeform_view(self, request, *args, **kwargs):
+        self._request = request
+        return super().changeform_view(request, *args, **kwargs)
+
     def image_preview(self, obj):
         if obj.image:
-            return format_html(f'<img src="{obj.image.url}" style="height: 50px; border-radius: 4px;" />')
+            try:
+                url = obj.image.url
+            except (ValueError, OSError):
+                return format_html('<span style="color: #dc2626;">Yüklenemedi</span>')
+            req = getattr(self, "_request", None)
+            url = _absolute_media_url(req, url)
+            return format_html(f'<img src="{url}" style="height: 50px; border-radius: 4px;" alt="" />')
         return "-"
     image_preview.short_description = "Görsel"
 

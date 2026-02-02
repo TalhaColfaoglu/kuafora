@@ -9,15 +9,27 @@
 - ✅ Canonical URL eklendi
 - ✅ Geo-location meta tags eklendi
 - ✅ Robots meta tag eklendi
+- ✅ theme-color ve color-scheme meta (mobil tarayıcı çubuğu)
 
 ### 2. Performans İyileştirmeleri
 - ✅ Font loading optimizasyonu (lazy load)
 - ✅ CSS lazy loading
 - ✅ Script defer attribute
 - ✅ Preload critical resources
-- ✅ Image lazy loading hazırlığı
+- ✅ Hero görsel: fetchpriority="high", loading="eager", width/height (CLS azaltma)
+- ✅ Reveal animasyonu tek kaynak (animate.js), duplicate script kaldırıldı
 
-### 3. Bug Düzeltmeleri
+### 3. Erişilebilirlik
+- ✅ Skip link ("İçeriğe atla") eklendi
+- ✅ Focus-visible: nav ve butonlarda belirgin odak halkası (dark nav’da beyaz)
+- ✅ prefers-reduced-motion: nav hover scale ve animasyonlar kısıtlandı
+
+### 4. Tasarım Düzeltmeleri
+- ✅ Fiyat kartı: mobilde scale-105 kaldırıldı (md:scale-105), taşma önlendi
+- ✅ Footer: küçük ekranlarda grid boşlukları iyileştirildi
+- ✅ Partner landing: partner-home.png desteği (varsa hero’da gerçek görsel)
+
+### 5. Bug Düzeltmeleri
 - ✅ Mobile menu toggle düzeltildi
 - ✅ Console.error'lar production'da kaldırıldı
 - ✅ Animation performance iyileştirildi

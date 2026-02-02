@@ -35,7 +35,7 @@ def custom_exception_handler(exc, context):
         # Return generic error to client (don't expose internal details)
         return Response(
             {
-                "detail": "Bir hata oluştu. Lütfen daha sonra tekrar deneyin.",
+                "detail": "Uygulama bakımda. Lütfen daha sonra tekrar deneyin.",
                 "error_code": "INTERNAL_ERROR"
             },
             status=500

@@ -770,25 +770,31 @@ class SystemSwitchApi(APIView):
         target = request.data.get("target")
         reason = request.data.get("reason", "")
         forced = bool(request.data.get("forced", False))
-        if target not in ("info", "booking"):
+        if target not in ("info", "booking", "external"):
             return Response({"detail": "INVALID_TARGET"}, status=status.HTTP_400_BAD_REQUEST)
 
         now = timezone.now()
+        from_type = shop.system_type or "info"
+
         if target == "info":
-            # enforce <24h rule
-            within24 = Appointment.objects.filter(shop=shop, status__in=[AppointmentStatus.PENDING, AppointmentStatus.CONFIRMED, AppointmentStatus.SUGGESTED], start_datetime__lte=now + timezone.timedelta(hours=24))
-            if within24.exists() and not forced:
-                return Response({"code": "409_SWITCH_WINDOW"}, status=status.HTTP_409_CONFLICT)
-            # cancel all future active appointments
-            qs = Appointment.objects.select_for_update().filter(shop=shop, status__in=[AppointmentStatus.PENDING, AppointmentStatus.CONFIRMED, AppointmentStatus.SUGGESTED], start_datetime__gte=now)
-            for ap in qs:
-                ap.status = AppointmentStatus.CANCELLED
-                ap.cancelled_by = "system_switch"
-                ap.save(update_fields=["status", "cancelled_by"])
+            # enforce <24h rule only when leaving booking mode
+            if from_type == "booking":
+                within24 = Appointment.objects.filter(shop=shop, status__in=[AppointmentStatus.PENDING, AppointmentStatus.CONFIRMED, AppointmentStatus.SUGGESTED], start_datetime__lte=now + timezone.timedelta(hours=24))
+                if within24.exists() and not forced:
+                    return Response({"code": "409_SWITCH_WINDOW"}, status=status.HTTP_409_CONFLICT)
+                qs = Appointment.objects.select_for_update().filter(shop=shop, status__in=[AppointmentStatus.PENDING, AppointmentStatus.CONFIRMED, AppointmentStatus.SUGGESTED], start_datetime__gte=now)
+                for ap in qs:
+                    ap.status = AppointmentStatus.CANCELLED
+                    ap.cancelled_by = "system_switch"
+                    ap.save(update_fields=["status", "cancelled_by"])
             shop.system_type = "info"
             shop.save(update_fields=["system_type"])
+        elif target == "external":
+            # Randevulu bilgi sistemi: harici randevu (WhatsApp, Instagram vb.)
+            shop.system_type = "external"
+            shop.save(update_fields=["system_type"])
         else:
-            # booking target: require working hours presence for at least one staff
+            # booking target (Kuafora randevu): require working hours
             has_hours = (
                 Staff.objects.filter(barbershop=shop, work_schedules__isnull=False).exists()
                 or Staff.objects.filter(barbershop=shop, staff_working_hours__isnull=False).exists()
@@ -798,7 +804,7 @@ class SystemSwitchApi(APIView):
             shop.system_type = "booking"
             shop.save(update_fields=["system_type"])
 
-        ShopSystemSwitchHistory.objects.create(shop=shop, from_type="booking" if target == "info" else "info", to_type=target, reason=reason, actor=str(request.user.pk), idempotency_key=idem_key)
+        ShopSystemSwitchHistory.objects.create(shop=shop, from_type=from_type, to_type=target, reason=reason, actor=str(request.user.pk), idempotency_key=idem_key)
         resp = {"system_type": shop.system_type}
         store_idempotent_response(key=idem_key, response_json=resp)
         return Response(resp)
