@@ -2009,32 +2009,27 @@ class FavoriteListView(generics.ListAPIView):
         Favoriler listesini dönerken her kayıt için açık/kapalı bilgisini de ekle.
         Ana sayfadaki 'Favorilerim' bölümünün En Son Bakılanlar ile tutarlı şekilde
         'Açık' / 'Kapalı' etiketi göstermesi için _compute_shop_status kullanılır.
+        Yeni liste döndürülür ki JSON çıktısında is_open kesin yer alsın.
         """
-        # Standart ListAPIView davranışı ile serialize edilmiş veriyi al
         response = super().list(request, *args, **kwargs)
-
-        # pagination_class = None olduğu için response.data ham liste beklenir.
         data = response.data
-        try:
-            # Beklenmeyen bir durumda serializers.ListSerializer vs. gelebilir; sadece list ise işle.
-            if isinstance(data, list):
-                now_ts = timezone.now()
-                for item in data:
-                    try:
-                        shop_id = item.get("id")
-                        if not shop_id:
-                            item["is_open"] = False
-                            continue
-                        status_data = _compute_shop_status(int(shop_id), now_ts)
-                        item["is_open"] = status_data.get("status") == "open"
-                    except Exception:
-                        # Herhangi bir hesaplama hatasında kapalı varsay
-                        item["is_open"] = False
-        except Exception:
-            # Güvenlik için: beklenmedik bir durumda yanıt yapısını bozmadan devam et
-            pass
-
-        return response
+        if not isinstance(data, list):
+            return response
+        now_ts = timezone.now()
+        out = []
+        for item in data:
+            row = dict(item)
+            try:
+                shop_id = row.get("id")
+                if shop_id is not None:
+                    status_data = _compute_shop_status(int(shop_id), now_ts)
+                    row["is_open"] = status_data.get("status") == "open"
+                else:
+                    row["is_open"] = False
+            except Exception:
+                row["is_open"] = False
+            out.append(row)
+        return Response(out)
 
 
 @extend_schema(exclude=True)
