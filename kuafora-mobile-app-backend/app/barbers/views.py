@@ -1985,7 +1985,8 @@ class PartnerWorkScheduleViewSet(viewsets.ModelViewSet):
 class FavoriteListView(generics.ListAPIView):
     serializer_class = BarbershopWithFavoriteSerializer
     permission_classes = [permissions.IsAuthenticated]
-    pagination_class = None  # Ham liste dön; mobil uygulama tek sayfa bekliyor
+    # Ham liste dön; mobil uygulama tek sayfa bekliyor ve kendi içinde filtreleme yapıyor.
+    pagination_class = None
 
     def get_queryset(self):
         # Schema jenerasyonu veya anonim isteklerde güvenli boş queryset dön
@@ -2002,6 +2003,38 @@ class FavoriteListView(generics.ListAPIView):
             .exclude(name='')  # Boş string isimleri de filtrele
             .order_by("-favorited_by__created_at")
         )
+
+    def list(self, request, *args, **kwargs):
+        """
+        Favoriler listesini dönerken her kayıt için açık/kapalı bilgisini de ekle.
+        Ana sayfadaki 'Favorilerim' bölümünün En Son Bakılanlar ile tutarlı şekilde
+        'Açık' / 'Kapalı' etiketi göstermesi için _compute_shop_status kullanılır.
+        """
+        # Standart ListAPIView davranışı ile serialize edilmiş veriyi al
+        response = super().list(request, *args, **kwargs)
+
+        # pagination_class = None olduğu için response.data ham liste beklenir.
+        data = response.data
+        try:
+            # Beklenmeyen bir durumda serializers.ListSerializer vs. gelebilir; sadece list ise işle.
+            if isinstance(data, list):
+                now_ts = timezone.now()
+                for item in data:
+                    try:
+                        shop_id = item.get("id")
+                        if not shop_id:
+                            item["is_open"] = False
+                            continue
+                        status_data = _compute_shop_status(int(shop_id), now_ts)
+                        item["is_open"] = status_data.get("status") == "open"
+                    except Exception:
+                        # Herhangi bir hesaplama hatasında kapalı varsay
+                        item["is_open"] = False
+        except Exception:
+            # Güvenlik için: beklenmedik bir durumda yanıt yapısını bozmadan devam et
+            pass
+
+        return response
 
 
 @extend_schema(exclude=True)
