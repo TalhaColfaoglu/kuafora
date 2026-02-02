@@ -8,6 +8,12 @@ class Notification(models.Model):
         CHAT = "chat", "Mesaj"
         REPLY = "reply", "Yorum Yanıtı"
         SYSTEM = "system", "Sistem"
+        # Partner uygulaması bildirim ağı
+        REVIEW = "review", "Yeni Yorum"
+        PAYMENT_REMINDER = "payment_reminder", "Ödeme Hatırlatması"
+        STAFF_CHANGE = "staff_change", "Personel Değişikliği"
+        SUBSCRIPTION_EXPIRY = "subscription_expiry", "Abonelik Bitişi"
+        PROMO = "promo", "Kampanya / Fırsat"
 
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -16,7 +22,7 @@ class Notification(models.Model):
     )
     title = models.CharField(max_length=255)
     body = models.TextField()
-    type = models.CharField(max_length=20, choices=NotificationType.choices)
+    type = models.CharField(max_length=24, choices=NotificationType.choices)
     reference_id = models.CharField(
         max_length=100,
         null=True,

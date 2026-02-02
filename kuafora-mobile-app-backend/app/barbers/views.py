@@ -9,7 +9,12 @@ from django.utils.encoding import force_str
 import hashlib
 import json
 from drf_spectacular.utils import extend_schema
-from app.notifications.utils import notify_shop_about_new_review, notify_customer_about_reply
+from app.notifications.utils import (
+    notify_shop_about_new_review,
+    notify_customer_about_reply,
+    notify_shop_staff_about_staff_change,
+    notify_shop_staff_about_shop_schedule_change,
+)
 from rest_framework import viewsets, mixins, permissions, generics, status, serializers as drf_serializers
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -1867,6 +1872,15 @@ class PartnerStaffViewSet(viewsets.ModelViewSet):
             serializer = self.get_serializer(staff, data=request.data, partial=True)
             serializer.is_valid(raise_exception=True)
             serializer.save()
+            try:
+                notify_shop_staff_about_staff_change(
+                    staff=staff,
+                    title="Personel bilgisi güncellendi",
+                    body=f"{getattr(staff.user, 'full_name', '') or staff.user.email} profil bilgilerini güncelledi.",
+                    exclude_user_id=request.user.id,
+                )
+            except Exception:
+                pass
             data = serializer.data
             data['barbershop_id'] = staff.barbershop.id  # Add barbershop ID
             return Response(data)
@@ -1978,6 +1992,16 @@ class PartnerWorkScheduleViewSet(viewsets.ModelViewSet):
         serializer.is_valid(raise_exception=True)
         for h in serializer.validated_data:
             WorkSchedule.objects.create(staff=staff, **h)
+        try:
+            staff_name = getattr(staff.user, "full_name", "") or staff.user.email or "Personel"
+            notify_shop_staff_about_staff_change(
+                staff=staff,
+                title="Çalışma saatleri güncellendi",
+                body=f"{staff_name} için çalışma saatleri yetkili personel tarafından güncellendi.",
+                exclude_user_id=request.user.id,
+            )
+        except Exception:
+            pass
         return Response({"detail": "Updated"})
 
 
@@ -2522,6 +2546,15 @@ class PartnerShopWorkingHoursViewSet(viewsets.ModelViewSet):
                 applied=False
             )
             count = check_and_cancel_conflicts(shop, schedule_data, effective_date)
+            try:
+                notify_shop_staff_about_shop_schedule_change(
+                    barbershop=shop,
+                    title="Salon çalışma saatleri güncellendi",
+                    body=f"Salon çalışma saatleri {effective_date} tarihi için planlandı.",
+                    exclude_user_id=request.user.id,
+                )
+            except Exception:
+                pass
             return Response({"detail": f"Değişiklikler {effective_date} tarihine planlandı. {count} çakışan randevu iptal edildi."})
         else:
             # Apply immediately
@@ -2539,7 +2572,15 @@ class PartnerShopWorkingHoursViewSet(viewsets.ModelViewSet):
                     cache.delete(f"shop_status:{shop.id}:{d.strftime('%Y-%m-%d')}")
             except Exception:
                 pass
-            
+            try:
+                notify_shop_staff_about_shop_schedule_change(
+                    barbershop=shop,
+                    title="Salon çalışma saatleri güncellendi",
+                    body="Salon çalışma saatleri yetkili personel tarafından güncellendi.",
+                    exclude_user_id=request.user.id,
+                )
+            except Exception:
+                pass
             return Response({"detail": f"Çalışma saatleri güncellendi. {count} çakışan randevu iptal edildi."})
 
     def perform_create(self, serializer):
@@ -2901,6 +2942,17 @@ class PartnerStaffWorkingHoursViewSet(viewsets.ModelViewSet):
                     except Exception:
                         # Bildirim tarafındaki bir hata, randevu iptal akışını bozmamalı
                         pass
+
+            try:
+                staff_name = getattr(staff.user, "full_name", "") or staff.user.email or "Personel"
+                notify_shop_staff_about_staff_change(
+                    staff=staff,
+                    title="Çalışma saatleri güncellendi",
+                    body=f"{staff_name} kendi çalışma saatlerini güncelledi (geçerlilik: {effective_date}).",
+                    exclude_user_id=request.user.id,
+                )
+            except Exception:
+                pass
 
         return Response({
             "detail": "Changes saved",
