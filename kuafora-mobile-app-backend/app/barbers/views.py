@@ -1069,15 +1069,9 @@ def _compute_shop_status(barbershop_id: int, ts: datetime) -> dict:
             staff__overrides__is_active=True
         ).count()
     
-    # If shop hours are open but no staff is working, shop is effectively closed
+    # Açık/kapalı = dükkan saatleri + mola; personel sayısı sadece bilgi (kartlarda "açık" dükkan saatine göre)
     final_status = _open_closed_now(open_interval, breaks, local_ts)
-    if final_status == 'open' and active_staff_count == 0:
-        final_status = 'closed'
-        if msg and 'açık' in msg.lower():
-            msg = "Şu an hiç personel çalışmıyor"
-        elif not msg:
-            msg = "Şu an hiç personel çalışmıyor"
-    
+
     data = {
         "status": final_status,
         "source": "WEEKLY_SCHEDULE",

@@ -11,7 +11,7 @@ from .models import Barbershop, ShopCategory
 from .home_serializers import ShopCategorySerializer, BarbershopHomeSerializer
 from app.campaigns.models import Campaign
 from app.core.url_utils import build_public_media_uri
-from .views import BarbershopViewSet
+from .views import _compute_shop_status
 
 class HomeDashboardApi(APIView):
     permission_classes = [permissions.AllowAny]
@@ -82,41 +82,17 @@ class HomeDashboardApi(APIView):
         # 3. Top Rated - İsimsiz kuaförleri filtrele
         top_rated = list(shops_qs.filter(rating_avg__gte=4.5).order_by('-rating_avg')[:10])
 
-        # Entegre açık/kapalı ve cinsiyet bilgisi
-        # request context ile main_image tam URL döner (ana uygulama görselleri yükleyebilir)
+        # Açık/kapalı tek kaynak: _compute_shop_status (DailyOverride, izin günü, mola, haftalık saat hepsi dahil)
         serializer = BarbershopHomeSerializer(context={"request": request})
-        status_helper = BarbershopViewSet()
         now_utc = timezone.now()
-        now_local = timezone.localtime(now_utc)
-        today = now_local.date()
-        current_time = now_local.time()
 
         def serialize_shop(shop: Barbershop):
           base = serializer.to_representation(shop)
           try:
-              status = status_helper._calculate_shop_status(shop, today)  # type: ignore[attr-defined]
-              is_open_today = bool(status.get("is_open"))
-              
-              # Eğer bugün açıksa, şu anki saatte açık mı kontrol et
-              if is_open_today:
-                  opening_time = status.get("opening_time")
-                  closing_time = status.get("closing_time")
-                  if opening_time and closing_time:
-                      # Eğer açılış saati kapanış saatinden büyükse (gece yarısını geçiyorsa)
-                      if opening_time > closing_time:
-                          # Gece yarısından sonra açılıyorsa (örn: 22:00 - 02:00)
-                          is_open = current_time >= opening_time or current_time <= closing_time
-                      else:
-                          # Normal saat aralığı (örn: 09:00 - 18:00)
-                          is_open = opening_time <= current_time <= closing_time
-                  else:
-                      is_open = True  # Saat bilgisi yoksa açık kabul et
-              else:
-                  is_open = False
-              
-              base["is_open"] = is_open
+              data = _compute_shop_status(shop.id, now_utc)
+              base["is_open"] = data.get("status") == "open"
           except Exception:
-              base["is_open"] = False  # Hata durumunda kapalı göster
+              base["is_open"] = False
           base["gender"] = getattr(shop, "gender", "unisex")
           return base
 
