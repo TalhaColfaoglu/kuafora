@@ -13,7 +13,7 @@ from django.db.models import Count
 from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiParameter
 from django.conf import settings
 from django.utils import timezone
-from django.http import HttpResponse
+from django.http import HttpResponse, FileResponse
 from django.core.mail import send_mail
 from django.views.decorators.csrf import csrf_exempt
 from app.users.email_tracking import increment_daily_email_count
@@ -200,8 +200,36 @@ class MeView(generics.RetrieveUpdateAPIView):
 
 
 class ProfilePhotoUploadView(generics.GenericAPIView):
+    """POST: upload profile photo. GET: serve current user's profile photo (avoids CloudFront 403)."""
     permission_classes = [permissions.IsAuthenticated]
     parser_classes = [MultiPartParser, FormParser]
+
+    def get(self, request, *args, **kwargs):
+        """Serve the current user's profile photo (main or thumb). ?thumb=1 for thumbnail."""
+        user = request.user
+        use_thumb = request.GET.get("thumb", "").strip().lower() in ("1", "true", "yes")
+        file_field = user.image_thumb if use_thumb else user.image
+        if not file_field:
+            return Response({"detail": "No photo"}, status=status.HTTP_404_NOT_FOUND)
+        try:
+            f = file_field.open("rb")
+            content = f.read()
+            f.close()
+        except Exception as e:
+            logger.warning("Profile photo read error: %s", e)
+            return Response({"detail": "Could not read photo"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        name = getattr(file_field, "name", "") or ""
+        if name.endswith(".png"):
+            content_type = "image/png"
+        elif name.endswith(".gif"):
+            content_type = "image/gif"
+        elif name.endswith(".webp"):
+            content_type = "image/webp"
+        else:
+            content_type = "image/jpeg"
+        resp = HttpResponse(content, content_type=content_type)
+        resp["Cache-Control"] = "private, max-age=300"
+        return resp
 
     @extend_schema(
         request={
@@ -268,20 +296,19 @@ class ProfilePhotoUploadView(generics.GenericAPIView):
             # Update user's profile photo
             user = request.user
             
-            # Delete old images first
+            # Delete old images first (S3'te .path yok; delete(save=False) yeterli)
             if user.image:
                 try:
-                    old_image_path = user.image.path
+                    if hasattr(user.image, "path"):
+                        print(f"🗑️ Deleted old image: {user.image.path}")
                     user.image.delete(save=False)
-                    print(f"🗑️ Deleted old image: {old_image_path}")
                 except Exception as e:
                     print(f"⚠️ Could not delete old image: {e}")
-            
             if user.image_thumb:
                 try:
-                    old_thumb_path = user.image_thumb.path
+                    if hasattr(user.image_thumb, "path"):
+                        print(f"🗑️ Deleted old thumbnail: {user.image_thumb.path}")
                     user.image_thumb.delete(save=False)
-                    print(f"🗑️ Deleted old thumbnail: {old_thumb_path}")
                 except Exception as e:
                     print(f"⚠️ Could not delete old thumbnail: {e}")
             
