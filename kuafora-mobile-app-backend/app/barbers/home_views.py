@@ -10,6 +10,7 @@ import math
 from .models import Barbershop, ShopCategory
 from .home_serializers import ShopCategorySerializer, BarbershopHomeSerializer
 from app.campaigns.models import Campaign
+from app.core.url_utils import build_public_media_uri
 from .views import BarbershopViewSet
 
 class HomeDashboardApi(APIView):
@@ -142,7 +143,7 @@ class HomeDashboardApi(APIView):
             img_url = None
             if c.barbershop.main_image:
                 raw_url = c.barbershop.main_image.url
-                img_url = request.build_absolute_uri(raw_url) if raw_url else None
+                img_url = build_public_media_uri(request, raw_url) if raw_url else None
             campaign_data.append({
                 "id": c.id,
                 "title": c.name,
