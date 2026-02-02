@@ -13,7 +13,11 @@ except ImportError:
 
 
 def home(request):
-    has_home_screen_image = static_find('img/screens/home-screen.png') is not None
+    # Görsel yoksa veya manifest'te yoksa placeholder göster; {% static %} kullanılmadığı için 500 olmaz
+    try:
+        has_home_screen_image = static_find('img/screens/home-screen.png') is not None
+    except Exception:
+        has_home_screen_image = False
     return render(request, 'marketing/home.html', {'has_home_screen_image': has_home_screen_image})
 
 
