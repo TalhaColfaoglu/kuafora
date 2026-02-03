@@ -54,7 +54,11 @@ class ChatRoomViewSet(viewsets.ModelViewSet):
         shop_id = request.data.get("shop_id")
         shop = get_object_or_404(Barbershop, id=shop_id)
         
-        if ChatBan.objects.filter(barbershop=shop, user=request.user).exists():
+        # Aktif ban kontrolü (süresiz veya süresi henüz dolmamış)
+        if ChatBan.objects.filter(
+            barbershop=shop,
+            user=request.user,
+        ).filter(models.Q(expires_at__isnull=True) | models.Q(expires_at__gt=timezone.now())).exists():
             return Response({"detail": "You are banned from chatting with this shop."}, status=status.HTTP_403_FORBIDDEN)
 
         # IMPORTANT: Without a DB uniqueness constraint, duplicates can happen (race conditions / legacy data),
@@ -87,7 +91,10 @@ class ChatRoomViewSet(viewsets.ModelViewSet):
         shop_id = request.data.get("shop_id")
         shop = get_object_or_404(Barbershop, id=shop_id)
         
-        if ChatBan.objects.filter(barbershop=shop, user=request.user).exists():
+        if ChatBan.objects.filter(
+            barbershop=shop,
+            user=request.user,
+        ).filter(models.Q(expires_at__isnull=True) | models.Q(expires_at__gt=timezone.now())).exists():
             return Response({"detail": "You are banned from chatting with this shop."}, status=status.HTTP_403_FORBIDDEN)
 
         # Public room should be unique per shop. Canonicalize duplicates if any exist.
@@ -130,8 +137,11 @@ class ChatRoomViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        # Check ban status
-        if request.user and ChatBan.objects.filter(barbershop=room.barbershop, user=request.user).exists():
+        # Check ban status (aktif ban: süresiz veya henüz süresi dolmamış)
+        if request.user and ChatBan.objects.filter(
+            barbershop=room.barbershop,
+            user=request.user,
+        ).filter(models.Q(expires_at__isnull=True) | models.Q(expires_at__gt=timezone.now())).exists():
             return Response({"detail": "Bu kuaförle sohbet edemezsiniz (engellendiniz)."}, status=status.HTTP_403_FORBIDDEN)
 
         is_staff = room.barbershop.staff.filter(user=request.user).exists()
@@ -200,7 +210,46 @@ class ChatRoomViewSet(viewsets.ModelViewSet):
             msg.is_hidden = True
             msg.hidden_at = timezone.now()
             msg.save(update_fields=["is_hidden", "hidden_at"])
-        return Response({"detail": "Şikayetiniz alındı.", "hidden": count >= CHAT_REPORT_AUTO_HIDE_THRESHOLD})
+
+        # ESCALATING BAN LOGIC:
+        # Aynı kuaförde aynı gönderene gelen toplam şikayet sayısına göre süreli ban:
+        #  - >=3 şikayet: 1 gün yazamaz
+        #  - >=6 şikayet: 1 hafta yazamaz
+        #  - >=9 şikayet: 1 ay yazamaz
+        # (Sayım: bu kuaförde, bu kullanıcının gönderdiği tüm mesajlara gelen şikayetlerin toplamı)
+        total_reports_for_sender = ChatMessageReport.objects.filter(
+            message__room__barbershop=room.barbershop,
+            message__sender=msg.sender,
+        ).count()
+
+        ban_duration = None
+        if total_reports_for_sender >= 9:
+            ban_duration = timedelta(days=30)
+        elif total_reports_for_sender >= 6:
+            ban_duration = timedelta(days=7)
+        elif total_reports_for_sender >= 3:
+            ban_duration = timedelta(days=1)
+
+        if ban_duration is not None:
+            now = timezone.now()
+            expires_at = now + ban_duration
+            # Aynı kuaför + kullanıcı için tek kayıt: varsa güncelle, yoksa oluştur
+            ChatBan.objects.update_or_create(
+                barbershop=room.barbershop,
+                user=msg.sender,
+                defaults={
+                    "reason": "Otomatik ban (şikayet sayısı)",
+                    "expires_at": expires_at,
+                },
+            )
+
+        return Response(
+            {
+                "detail": "Şikayetiniz alındı.",
+                "hidden": count >= CHAT_REPORT_AUTO_HIDE_THRESHOLD,
+                "total_reports_for_sender": total_reports_for_sender,
+            }
+        )
 
     @action(detail=True, methods=["delete"], url_path=r"messages/(?P<message_id>[^/.]+)")
     def delete_message(self, request, pk=None, message_id=None):

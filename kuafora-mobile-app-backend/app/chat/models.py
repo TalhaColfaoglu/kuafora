@@ -91,6 +91,8 @@ class ChatBan(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="chat_bans")
     reason = models.CharField(max_length=255, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    # Süreli ban desteği: null ise süresiz, dolu ise expires_at sonrasında otomatik olarak geçersiz sayılır
+    expires_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         unique_together = ("barbershop", "user")
