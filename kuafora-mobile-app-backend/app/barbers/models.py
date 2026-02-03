@@ -4,11 +4,21 @@ from django.db import models
 from django.conf import settings
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.core.exceptions import ValidationError
+from django.core.files.storage import default_storage
 from datetime import date
 from PIL import Image, ImageOps
 from io import BytesIO
 from django.core.files.base import ContentFile
 import os
+
+
+def _barbershop_media_storage():
+    """Barbershop görselleri her zaman CloudFront’tan yüklensin: AWS varken S3 kullan."""
+    if getattr(settings, "AWS_ACCESS_KEY_ID", None) and getattr(settings, "AWS_SECRET_ACCESS_KEY", None):
+        from storages.backends.s3boto3 import S3Boto3Storage
+        return S3Boto3Storage()
+    return default_storage
+
 
 def process_image(image_field, thumb_field=None, max_size=(1080, 1080), thumb_size=(300, 300)):
     if not image_field:
@@ -101,8 +111,18 @@ class Barbershop(models.Model):
     city = models.CharField(max_length=100)
     district = models.CharField(max_length=100)
     phone_number = models.CharField(max_length=20)
-    main_image = models.ImageField(upload_to="barbershops/main/", null=True, blank=True)
-    main_image_thumb = models.ImageField(upload_to="barbershops/main/thumbs/", null=True, blank=True)
+    main_image = models.ImageField(
+        upload_to="barbershops/main/",
+        storage=_barbershop_media_storage(),
+        null=True,
+        blank=True,
+    )
+    main_image_thumb = models.ImageField(
+        upload_to="barbershops/main/thumbs/",
+        storage=_barbershop_media_storage(),
+        null=True,
+        blank=True,
+    )
     latitude = models.FloatField(null=True, blank=True)
     longitude = models.FloatField(null=True, blank=True)
     is_verified = models.BooleanField(default=False)

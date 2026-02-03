@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from django.conf import settings
 from django.core.exceptions import ValidationError
 from rest_framework import serializers
 from drf_spectacular.utils import extend_schema_field
@@ -40,6 +41,26 @@ class BarbershopImageSerializer(serializers.ModelSerializer):
         if value.size > 5 * 1024 * 1024:
             raise serializers.ValidationError("Görsel boyutu 5MB'dan büyük olamaz.")
         return value
+
+
+def _ensure_cloudfront_barbershop_images(data, obj, keys=("main_image", "main_image_thumb")):
+    """API yanıtında barbershop görsellerini her zaman CloudFront URL olarak döndür."""
+    if not getattr(settings, "AWS_ACCESS_KEY_ID", None) or not getattr(settings, "AWS_SECRET_ACCESS_KEY", None):
+        return
+    cdn = getattr(settings, "AWS_S3_CUSTOM_DOMAIN", None) or ""
+    cdn = (cdn.rstrip("/") or "").strip()
+    if not cdn:
+        return
+    if not cdn.startswith("http"):
+        cdn = f"https://{cdn}"
+    for key in keys:
+        if key not in data:
+            continue
+        val = data.get(key)
+        field = getattr(obj, key, None)
+        name = field.name if (field and hasattr(field, "name")) else None
+        if name and val and isinstance(val, str) and "cloudfront" not in val.lower():
+            data[key] = f"{cdn.rstrip('/')}/{name}"
 
 
 class BarbershopSerializer(serializers.ModelSerializer):
@@ -93,6 +114,11 @@ class BarbershopSerializer(serializers.ModelSerializer):
             'city': {'required': False, 'allow_blank': True},
             'district': {'required': False, 'allow_blank': True},
         }
+
+    def to_representation(self, obj):
+        data = super().to_representation(obj)
+        _ensure_cloudfront_barbershop_images(data, obj)
+        return data
 
     @extend_schema_field(serializers.DictField)
     def get_weekly_schedule(self, obj):
@@ -561,6 +587,7 @@ class BarbershopWithFavoriteSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
+        _ensure_cloudfront_barbershop_images(data, instance)
         try:
             status = getattr(instance, "subscription", None)
             is_active_sub = status and getattr(status, "status", None) in ['trial', 'active', 'lifetime', 'grace_period']
