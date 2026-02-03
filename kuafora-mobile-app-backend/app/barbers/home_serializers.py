@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from app.barbers.models import Barbershop, ShopCategory
-from app.barbers.serializers import _ensure_cloudfront_barbershop_images
+from app.barbers.serializers import _normalize_barbershop_image_urls
 from app.campaigns.models import Campaign
 
 class ShopCategorySerializer(serializers.ModelSerializer):
@@ -17,7 +17,7 @@ class BarbershopHomeSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
-        _ensure_cloudfront_barbershop_images(data, instance, keys=("main_image",))
+        _normalize_barbershop_image_urls(data, instance, keys=("main_image",))
         return data
 
 class CampaignHomeSerializer(serializers.ModelSerializer):

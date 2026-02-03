@@ -43,24 +43,47 @@ class BarbershopImageSerializer(serializers.ModelSerializer):
         return value
 
 
-def _ensure_cloudfront_barbershop_images(data, obj, keys=("main_image", "main_image_thumb")):
-    """API yanıtında barbershop görsellerini her zaman CloudFront URL olarak döndür."""
-    if not getattr(settings, "AWS_ACCESS_KEY_ID", None) or not getattr(settings, "AWS_SECRET_ACCESS_KEY", None):
+def _normalize_barbershop_image_urls(data, obj, keys=("main_image", "main_image_thumb")):
+    """Internal host (Docker/backend) URL'lerini PUBLIC_API_ORIGIN ile değiştir; CloudFront veya api/media zaten çalışan URL'leri dokunma."""
+    origin = (getattr(settings, "PUBLIC_API_ORIGIN", None) or "").strip().rstrip("/")
+    if not origin:
         return
-    cdn = getattr(settings, "AWS_S3_CUSTOM_DOMAIN", None) or ""
-    cdn = (cdn.rstrip("/") or "").strip()
-    if not cdn:
-        return
-    if not cdn.startswith("http"):
-        cdn = f"https://{cdn}"
+
+    def _is_internal_host(host):
+        if not host:
+            return True
+        h = host.lower()
+        if h in ("localhost", "127.0.0.1", "backend", "backend_dev", "web"):
+            return True
+        if h.startswith("172.") or h.startswith("10.") or h.startswith("192.168."):
+            return True
+        return False
+
     for key in keys:
         if key not in data:
             continue
         val = data.get(key)
-        field = getattr(obj, key, None)
-        name = field.name if (field and hasattr(field, "name")) else None
-        if name and val and isinstance(val, str) and "cloudfront" not in val.lower():
-            data[key] = f"{cdn.rstrip('/')}/{name}"
+        if not val or not isinstance(val, str):
+            continue
+        val = val.strip()
+        if not val.startswith("http://") and not val.startswith("https://"):
+            path = val if val.startswith("/") else f"/{val}"
+            if "/media/" in path or path.startswith("/barbershops/") or path.startswith("/staff/"):
+                if not path.startswith("/media/"):
+                    path = f"/media{path}" if path.startswith("/") else f"/media/{path}"
+                data[key] = f"{origin}{path}"
+            continue
+        try:
+            from urllib.parse import urlparse
+            parsed = urlparse(val)
+            host = (parsed.hostname or "").lower()
+            if _is_internal_host(host):
+                path = parsed.path or "/"
+                if parsed.query:
+                    path = f"{path}?{parsed.query}"
+                data[key] = f"{origin}{path}"
+        except Exception:
+            pass
 
 
 class BarbershopSerializer(serializers.ModelSerializer):
@@ -117,7 +140,7 @@ class BarbershopSerializer(serializers.ModelSerializer):
 
     def to_representation(self, obj):
         data = super().to_representation(obj)
-        _ensure_cloudfront_barbershop_images(data, obj)
+        _normalize_barbershop_image_urls(data, obj)
         return data
 
     @extend_schema_field(serializers.DictField)
@@ -587,7 +610,7 @@ class BarbershopWithFavoriteSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
-        _ensure_cloudfront_barbershop_images(data, instance)
+        _normalize_barbershop_image_urls(data, instance)
         try:
             status = getattr(instance, "subscription", None)
             is_active_sub = status and getattr(status, "status", None) in ['trial', 'active', 'lifetime', 'grace_period']
