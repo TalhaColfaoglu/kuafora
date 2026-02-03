@@ -458,7 +458,9 @@ class BarbershopViewSet(viewsets.ReadOnlyModelViewSet):
         original_pagination = self.pagination_class
         self.pagination_class = None
         try:
-            staff = Staff.objects.filter(barbershop_id=pk)
+            staff = Staff.objects.filter(barbershop_id=pk).prefetch_related(
+                "staff_working_hours"
+            )
             serializer = StaffSerializer(staff, many=True)
             return Response(serializer.data)
         finally:

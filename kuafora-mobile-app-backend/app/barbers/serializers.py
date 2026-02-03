@@ -261,12 +261,34 @@ class StaffSerializer(serializers.ModelSerializer):
 
     @extend_schema_field(serializers.DictField)
     def get_weekly_schedule(self, obj):
-        schedule = {}
-        # 1. Try StaffWorkingHours (new model)
-        new_hours = obj.staff_working_hours.all()
+        # Ana uygulama (barber detail) her zaman mon..sun 7 gün bekliyor; eksik günler Kapalı sayılıyor.
+        # Bu yüzden her zaman 7 gün döndürüyoruz.
+        from django.utils import timezone
+        from django.db.models import Q
+
+        WEEK_DAYS = ("mon", "tue", "wed", "thu", "fri", "sat", "sun")
+        schedule = {d: {"start": -1, "end": -1} for d in WEEK_DAYS}
+        today = timezone.localdate()
+
+        # 1. StaffWorkingHours (yeni model) — bugün geçerli segmentleri kullan
+        new_hours = obj.staff_working_hours.filter(
+            valid_from__lte=today
+        ).filter(Q(valid_until__isnull=True) | Q(valid_until__gte=today))
+        # Aynı kullanıcının aynı dükkandaki başka bir Staff kaydında saat varsa onu kullan (çift kayıt senaryosu)
+        if not new_hours.exists() and obj.user_id and obj.barbershop_id:
+            other_staff = Staff.objects.filter(
+                barbershop_id=obj.barbershop_id, user_id=obj.user_id
+            ).exclude(pk=obj.pk).first()
+            if other_staff:
+                new_hours = other_staff.staff_working_hours.filter(
+                    valid_from__lte=today
+                ).filter(Q(valid_until__isnull=True) | Q(valid_until__gte=today))
+
         if new_hours.exists():
             for h in new_hours:
                 day_code = h.day_of_week.lower()
+                if day_code not in schedule:
+                    continue
                 if h.is_closed:
                     schedule[day_code] = {"start": -1, "end": -1}
                 elif h.start_time:
@@ -274,17 +296,18 @@ class StaffSerializer(serializers.ModelSerializer):
                         "start": h.start_time.strftime("%H:%M"),
                         "end": h.end_time.strftime("%H:%M") if h.end_time else "18:00"
                     }
-                # If start_time is None, we rely on inheritance, so omit key
             return schedule
-        
-        # 2. Fallback to WorkSchedule (old model)
+
+        # 2. Fallback: WorkSchedule (eski model)
         old_hours = obj.work_schedules.all()
-        for h in old_hours:
-            day_code = h.day_of_week.lower()
-            schedule[day_code] = {
-                "start": h.start_time.strftime("%H:%M"),
-                "end": h.end_time.strftime("%H:%M")
-            }
+        if old_hours.exists():
+            for h in old_hours:
+                day_code = h.day_of_week.lower()
+                if day_code in schedule and h.start_time and h.end_time:
+                    schedule[day_code] = {
+                        "start": h.start_time.strftime("%H:%M"),
+                        "end": h.end_time.strftime("%H:%M")
+                    }
         return schedule
 
     def get_user_full_name(self, obj):
