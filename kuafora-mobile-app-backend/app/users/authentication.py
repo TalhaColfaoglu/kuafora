@@ -31,9 +31,10 @@ class JWTAuthenticationWithEmailGate(JWTAuthentication):
         "/api/auth/me",
         "/api/auth/users/me/",
     )
-    # Partner uygulaması: e-posta doğrulanmamış kullanıcı da bildirim listesini görebilsin (403 engeli kalkar).
+    # Partner / mobile uygulama: e-posta doğrulanmamış kullanıcı da bazı okuma endpoint'lerini görebilsin.
     _ALLOWED_PREFIXES_EXTRA = (
         "/api/notifications/",
+        "/api/auth/users/",  # kullanıcı profil fotoğrafları (user avatarları) için
     )
 
     def authenticate(self, request):
