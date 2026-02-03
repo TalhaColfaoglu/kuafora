@@ -1585,12 +1585,14 @@ class PartnerBarbershopViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=["post", "delete"], url_path="main-image")
     def set_main_image(self, request, pk=None):
         import traceback
+        from app.core.cache_utils import invalidate_home_dashboard_cache
         try:
             bs = self.get_object()
             if request.method.lower() == "delete":
                 bs.main_image = None
                 bs.main_image_thumb = None
                 bs.save(update_fields=["main_image", "main_image_thumb"])
+                invalidate_home_dashboard_cache()
                 return Response({'detail': 'ok'})
             image = request.FILES.get('image')
             if not image:
@@ -1598,6 +1600,7 @@ class PartnerBarbershopViewSet(viewsets.ModelViewSet):
             bs.main_image = image
             # Don't use update_fields - model save() generates thumbnail which also needs to be saved
             bs.save()
+            invalidate_home_dashboard_cache()
             return Response({'detail': 'ok'})
         except Exception as e:
             print(f"[set_main_image ERROR] {e}")
