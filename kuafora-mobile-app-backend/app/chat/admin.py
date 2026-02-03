@@ -10,6 +10,11 @@ class ChatRoomAdmin(ModelAdmin):
     search_fields = ("customer__full_name", "barbershop__name")
     list_filter = ("updated_at",)
 
+    def get_queryset(self, request):
+        # N+1 sorgularını azaltmak için ilişkileri önceden çek
+        qs = super().get_queryset(request)
+        return qs.select_related("customer", "barbershop")
+
     def last_message_preview(self, obj):
         last_msg = obj.messages.order_by("-created_at").first()
         if last_msg:
@@ -35,6 +40,11 @@ class ChatMessageAdmin(ModelAdmin):
     list_filter = ("is_staff_reply", "is_hidden", "created_at")
     search_fields = ("content", "room__customer__full_name", "room__barbershop__name")
     readonly_fields = ("hidden_at",)
+
+    def get_queryset(self, request):
+        # Oda ve gönderen bilgilerini tek seferde çek
+        qs = super().get_queryset(request)
+        return qs.select_related("room__customer", "room__barbershop", "sender")
 
     def room_link(self, obj):
         customer_name = obj.room.customer.full_name if obj.room.customer else "Anonim"
@@ -68,6 +78,10 @@ class ChatMessageReportAdmin(ModelAdmin):
 
 @admin.register(ChatBan)
 class ChatBanAdmin(ModelAdmin):
-    list_display = ("user", "barbershop", "reason", "created_at")
+    list_display = ("user", "barbershop", "reason", "created_at", "expires_at")
     search_fields = ("user__full_name", "barbershop__name", "reason")
-    list_filter = ("created_at",)
+    list_filter = ("created_at", "expires_at")
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        return qs.select_related("user", "barbershop")
