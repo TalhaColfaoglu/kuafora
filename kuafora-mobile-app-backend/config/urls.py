@@ -85,7 +85,7 @@ urlpatterns = [
     path("api/", include(("app.subscriptions.urls", "subscriptions"))),
     path("api/", include(("app.search.urls", "search"))),
     path("api/", include(("app.support.urls", "support"))),
-    path("api/", include(("app.analytics.urls", "analytics"))),
+    path("api/analytics/", include(("app.analytics.urls", "analytics"))),
     path("api/users/resolve/", ResolveUserView.as_view(), name="resolve-user"),
     # Monitoring endpoints
     path("health/", health_simple, name="health-simple"),  # Simple health check (for load balancers)

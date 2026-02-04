@@ -4,6 +4,7 @@ from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
 from django.db import models
 from django.db.models import Q, Count
+from django.db.utils import ProgrammingError
 from django.utils import timezone
 from datetime import timedelta
 from .models import ChatRoom, ChatMessage, ChatBan, ChatMessageReport
@@ -15,6 +16,23 @@ CHAT_MESSAGE_MAX_LENGTH = 200
 CHAT_MESSAGE_RATE_WINDOW_SECONDS = 30
 CHAT_MESSAGE_RATE_MAX_PER_WINDOW = 5
 CHAT_REPORT_AUTO_HIDE_THRESHOLD = 3
+
+def _active_ban_exists(*, barbershop: Barbershop, user) -> bool:
+    """
+    Check if a ban is active (permanent or not expired).
+
+    Defensive: older DBs might not have ChatBan.expires_at column yet.
+    In that case, treat any ChatBan row as an active (permanent) ban to avoid 500s.
+    """
+    try:
+        return (
+            ChatBan.objects.filter(barbershop=barbershop, user=user)
+            .filter(models.Q(expires_at__isnull=True) | models.Q(expires_at__gt=timezone.now()))
+            .exists()
+        )
+    except ProgrammingError:
+        # Likely: column chat_chatban.expires_at does not exist (migration not applied)
+        return ChatBan.objects.filter(barbershop=barbershop, user=user).exists()
 
 class ChatRoomViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
@@ -55,10 +73,7 @@ class ChatRoomViewSet(viewsets.ModelViewSet):
         shop = get_object_or_404(Barbershop, id=shop_id)
         
         # Aktif ban kontrolü (süresiz veya süresi henüz dolmamış)
-        if ChatBan.objects.filter(
-            barbershop=shop,
-            user=request.user,
-        ).filter(models.Q(expires_at__isnull=True) | models.Q(expires_at__gt=timezone.now())).exists():
+        if _active_ban_exists(barbershop=shop, user=request.user):
             return Response({"detail": "You are banned from chatting with this shop."}, status=status.HTTP_403_FORBIDDEN)
 
         # IMPORTANT: Without a DB uniqueness constraint, duplicates can happen (race conditions / legacy data),
@@ -91,10 +106,7 @@ class ChatRoomViewSet(viewsets.ModelViewSet):
         shop_id = request.data.get("shop_id")
         shop = get_object_or_404(Barbershop, id=shop_id)
         
-        if ChatBan.objects.filter(
-            barbershop=shop,
-            user=request.user,
-        ).filter(models.Q(expires_at__isnull=True) | models.Q(expires_at__gt=timezone.now())).exists():
+        if _active_ban_exists(barbershop=shop, user=request.user):
             return Response({"detail": "You are banned from chatting with this shop."}, status=status.HTTP_403_FORBIDDEN)
 
         # Public room should be unique per shop. Canonicalize duplicates if any exist.
@@ -138,10 +150,7 @@ class ChatRoomViewSet(viewsets.ModelViewSet):
             )
 
         # Check ban status (aktif ban: süresiz veya henüz süresi dolmamış)
-        if request.user and ChatBan.objects.filter(
-            barbershop=room.barbershop,
-            user=request.user,
-        ).filter(models.Q(expires_at__isnull=True) | models.Q(expires_at__gt=timezone.now())).exists():
+        if request.user and _active_ban_exists(barbershop=room.barbershop, user=request.user):
             return Response({"detail": "Bu kuaförle sohbet edemezsiniz (engellendiniz)."}, status=status.HTTP_403_FORBIDDEN)
 
         is_staff = room.barbershop.staff.filter(user=request.user).exists()
@@ -234,14 +243,24 @@ class ChatRoomViewSet(viewsets.ModelViewSet):
             now = timezone.now()
             expires_at = now + ban_duration
             # Aynı kuaför + kullanıcı için tek kayıt: varsa güncelle, yoksa oluştur
-            ChatBan.objects.update_or_create(
-                barbershop=room.barbershop,
-                user=msg.sender,
-                defaults={
-                    "reason": "Otomatik ban (şikayet sayısı)",
-                    "expires_at": expires_at,
-                },
-            )
+            try:
+                ChatBan.objects.update_or_create(
+                    barbershop=room.barbershop,
+                    user=msg.sender,
+                    defaults={
+                        "reason": "Otomatik ban (şikayet sayısı)",
+                        "expires_at": expires_at,
+                    },
+                )
+            except ProgrammingError:
+                # If expires_at column is missing, fall back to permanent ban (until migrations applied).
+                ChatBan.objects.update_or_create(
+                    barbershop=room.barbershop,
+                    user=msg.sender,
+                    defaults={
+                        "reason": "Otomatik ban (şikayet sayısı)",
+                    },
+                )
 
         return Response(
             {
