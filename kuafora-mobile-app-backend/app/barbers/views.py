@@ -2355,6 +2355,7 @@ class PartnerReviewViewSet(viewsets.ReadOnlyModelViewSet):
 class PartnerShopWorkingHoursViewSet(viewsets.ModelViewSet):
     serializer_class = ShopWorkingHoursSerializer
     permission_classes = [permissions.IsAuthenticated, IsShopAdmin]
+    pagination_class = None  # Vitrin uygulaması 7 günlük listeyi tek seferde bekliyor
 
     def get_queryset(self):
         user = self.request.user
