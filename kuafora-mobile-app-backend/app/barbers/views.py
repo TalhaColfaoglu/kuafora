@@ -1596,7 +1596,17 @@ class PartnerBarbershopViewSet(viewsets.ModelViewSet):
                 return Response({'detail': 'ok'})
             image = request.FILES.get('image')
             if not image:
-                return Response({'detail': 'No image'}, status=400)
+                # Debug: log what we received so partner app can fix multipart field name / Content-Type
+                keys = list(request.FILES.keys()) if request.FILES else []
+                import logging
+                logging.getLogger(__name__).warning(
+                    "set_main_image: no file under 'image'. FILES.keys=%s content_type=%s",
+                    keys, getattr(request, "content_type", None),
+                )
+                return Response(
+                    {'detail': "No image file. Send multipart form with field name 'image'."},
+                    status=400,
+                )
             bs.main_image = image
             # Don't use update_fields - model save() generates thumbnail which also needs to be saved
             bs.save()
