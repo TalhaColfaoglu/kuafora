@@ -5392,7 +5392,8 @@ class StaffServiceViewSet(viewsets.ModelViewSet):
         import logging
         from django.db import IntegrityError
         logger = logging.getLogger(__name__)
-        logger.error(f"[StaffService CREATE] Request data: {request.data}")
+        logger.info("[StaffService CREATE] request data: service=%s price=%s duration_minutes=%s",
+                    request.data.get('service'), request.data.get('price'), request.data.get('duration_minutes'))
 
         service_id = request.data.get('service')
         if not service_id:
