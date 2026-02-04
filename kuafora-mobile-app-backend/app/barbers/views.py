@@ -5375,7 +5375,8 @@ class StaffServiceViewSet(viewsets.ModelViewSet):
     """
     serializer_class = StaffServiceSerializer
     permission_classes = [permissions.IsAuthenticated, IsStaffMember]
-    
+    pagination_class = None  # Liste ham dizi dönsün (Hizmetlerim ekranı list/results uyumluluğu)
+
     def get_queryset(self):
         # Staff can only see their own services; optionally scope by barbershop
         user = self.request.user
