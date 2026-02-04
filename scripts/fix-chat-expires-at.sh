@@ -1,30 +1,51 @@
 #!/bin/bash
-# Sunucuda çalıştır: backend'in bağlandığı veritabanında chat_chatban.expires_at kolonunu ekler.
-# Kullanım: docker compose ile aynı dizinde (örn. ~/kuafora) çalıştır:
-#   bash scripts/fix-chat-expires-at.sh
-# veya:
-#   chmod +x scripts/fix-chat-expires-at.sh && ./scripts/fix-chat-expires-at.sh
+# Sunucuda çalıştır: chat_chatban tablosunun olduğu veritabanına expires_at kolonunu ekler.
+# Kullanım: cd ~/kuafora && bash scripts/fix-chat-expires-at.sh
 
 set -e
 COMPOSE="docker compose"
+DB_NAME=""
+DB_USER="postgres"
 
-# Backend container'dan Django DB ayarlarını al
-DB_NAME=$($COMPOSE exec -T backend python -c "
+# 1) Backend'den DB adı ve kullanıcı (manage.py shell ile Django yüklenir)
+OUT=$($COMPOSE exec -T backend python manage.py shell -c "
 from django.conf import settings
-print(settings.DATABASES['default'].get('NAME', ''))
-" 2>/dev/null | tr -d '\r\n')
+d = settings.DATABASES['default']
+print(d.get('NAME', ''))
+print(d.get('USER', 'postgres'))
+" 2>/dev/null)
+if [ -n "$OUT" ]; then
+  LINE1=$(echo "$OUT" | sed -n '1p' | tr -d '\r\n ')
+  LINE2=$(echo "$OUT" | sed -n '2p' | tr -d '\r\n ')
+  if [ -n "$LINE1" ] && [ "$LINE1" != "None" ]; then
+    DB_NAME="$LINE1"
+    [ -n "$LINE2" ] && DB_USER="$LINE2"
+  fi
+fi
 
-DB_USER=$($COMPOSE exec -T backend python -c "
-from django.conf import settings
-print(settings.DATABASES['default'].get('USER', 'postgres'))
-" 2>/dev/null | tr -d '\r\n')
+# 2) Django'dan alınamadıysa: postgres ile chat_chatban olan DB'yi bul
+if [ -z "$DB_NAME" ]; then
+  echo "Django'dan DB alınamadı; chat_chatban olan veritabanı aranıyor..."
+  DBS=$($COMPOSE exec -T db psql -U postgres -t -A -c "SELECT datname FROM pg_database WHERE datistemplate = false;" 2>/dev/null | tr -d '\r')
+  for db in $DBS; do
+    [ -z "$db" ] && continue
+    HAS=$($COMPOSE exec -T db psql -U postgres -d "$db" -t -A -c "SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='chat_chatban' LIMIT 1;" 2>/dev/null | tr -d '\r\n ')
+    if [ "$HAS" = "1" ]; then
+      DB_NAME="$db"
+      DB_USER="postgres"
+      break
+    fi
+  done
+fi
 
 if [ -z "$DB_NAME" ]; then
-  echo "Hata: Backend'den DB adı alınamadı. backend container çalışıyor mu?"
+  echo "Hata: chat_chatban tablosu hiçbir veritabanında bulunamadı."
+  echo "Manuel: docker compose exec db psql -U postgres -c \"\\l\" ile DB listesine bakıp, uygulama DB'sinde:"
+  echo "  docker compose exec db psql -U postgres -d <DB_ADI> -c \"ALTER TABLE chat_chatban ADD COLUMN IF NOT EXISTS expires_at timestamptz NULL;\""
   exit 1
 fi
 
-echo "Backend DB: name=$DB_NAME user=$DB_USER"
+echo "Veritabanı: name=$DB_NAME user=$DB_USER"
 echo "Kolon ekleniyor: chat_chatban.expires_at ..."
 
 $COMPOSE exec -T db psql -U "$DB_USER" -d "$DB_NAME" -c \
