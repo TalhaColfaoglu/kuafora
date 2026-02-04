@@ -37,6 +37,66 @@ class BarbershopImageSerializer(serializers.ModelSerializer):
         model = BarbershopImage
         fields = ("id", "image", "image_thumb")
 
+    def to_representation(self, instance):
+        """
+        Ensure extra image URLs are always reachable:
+        - Keep CloudFront URLs as-is
+        - Rewrite internal hosts to PUBLIC_API_ORIGIN
+        - Make relative /media URLs absolute using request/origin
+        """
+        data = super().to_representation(instance)
+
+        # If AWS is configured, always return CloudFront URLs (optimize delivery).
+        aws_ok = bool(getattr(settings, "AWS_ACCESS_KEY_ID", None) and getattr(settings, "AWS_SECRET_ACCESS_KEY", None))
+        cdn_domain = (getattr(settings, "AWS_S3_CUSTOM_DOMAIN", None) or "").strip()
+        cdn_origin = f"https://{cdn_domain}".rstrip("/") if (aws_ok and cdn_domain) else ""
+
+        def _to_cloudfront(raw: str) -> str:
+            raw = (raw or "").strip()
+            if not raw or not cdn_origin:
+                return raw
+            # Absolute URL
+            if raw.startswith("http://") or raw.startswith("https://"):
+                try:
+                    from urllib.parse import urlparse
+
+                    p = urlparse(raw)
+                    path = p.path or "/"
+                    q = f"?{p.query}" if p.query else ""
+                    if path.startswith("/media/"):
+                        path = path.replace("/media", "", 1)
+                    return f"{cdn_origin}{path}{q}"
+                except Exception:
+                    return raw
+            # Relative path / key
+            path = raw if raw.startswith("/") else f"/{raw}"
+            if path.startswith("/media/"):
+                path = path.replace("/media", "", 1)
+            return f"{cdn_origin}{path}"
+
+        if cdn_origin:
+            for k in ("image", "image_thumb"):
+                raw = data.get(k)
+                if raw:
+                    data[k] = _to_cloudfront(raw)
+            return data
+
+        # Fallback: local/dev → make URLs reachable via PUBLIC_API_ORIGIN when possible
+        request = self.context.get("request") if hasattr(self, "context") else None
+        if request is not None:
+            try:
+                from app.core.url_utils import build_public_media_uri
+
+                for k in ("image", "image_thumb"):
+                    raw = data.get(k)
+                    if raw:
+                        data[k] = build_public_media_uri(request, raw) or raw
+            except Exception:
+                _normalize_barbershop_image_urls(data, instance, keys=("image", "image_thumb"))
+        else:
+            _normalize_barbershop_image_urls(data, instance, keys=("image", "image_thumb"))
+        return data
+
     def validate_image(self, value):
         if value.size > 5 * 1024 * 1024:
             raise serializers.ValidationError("Görsel boyutu 5MB'dan büyük olamaz.")

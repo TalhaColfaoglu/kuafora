@@ -259,8 +259,9 @@ class BarbershopAppeal(models.Model):
 
 class BarbershopImage(models.Model):
     barbershop = models.ForeignKey(Barbershop, on_delete=models.CASCADE, related_name="images")
-    image = models.ImageField(upload_to="barbershops/extra/")
-    image_thumb = models.ImageField(upload_to="barbershops/extra/thumbs/", null=True, blank=True)
+    # Use the same dynamic storage as Barbershop main images (S3 when AWS configured)
+    image = models.ImageField(upload_to="barbershops/extra/", storage=_barbershop_media_storage())
+    image_thumb = models.ImageField(upload_to="barbershops/extra/thumbs/", storage=_barbershop_media_storage(), null=True, blank=True)
 
     def save(self, *args, **kwargs):
         if self.pk:
