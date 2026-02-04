@@ -8,20 +8,18 @@ DB_NAME=""
 DB_USER="postgres"
 
 # 1) Backend'den DB adı ve kullanıcı (manage.py shell ile Django yüklenir)
+# Not: Backend stdout'a CloudWatch vb. yazıyor; sadece "NAME " ve "USER " satırlarını al
 OUT=$($COMPOSE exec -T backend python manage.py shell -c "
 from django.conf import settings
 d = settings.DATABASES['default']
-print(d.get('NAME', ''))
-print(d.get('USER', 'postgres'))
+print('NAME', d.get('NAME', ''))
+print('USER', d.get('USER', 'postgres'))
 " 2>/dev/null)
 if [ -n "$OUT" ]; then
-  LINE1=$(echo "$OUT" | sed -n '1p' | tr -d '\r\n ')
-  LINE2=$(echo "$OUT" | sed -n '2p' | tr -d '\r\n ')
-  if [ -n "$LINE1" ] && [ "$LINE1" != "None" ]; then
-    DB_NAME="$LINE1"
-    [ -n "$LINE2" ] && DB_USER="$LINE2"
-  fi
+  DB_NAME=$(echo "$OUT" | grep '^NAME ' | sed 's/^NAME //' | tr -d '\r\n ')
+  DB_USER=$(echo "$OUT" | grep '^USER ' | sed 's/^USER //' | tr -d '\r\n ')
 fi
+[ -z "$DB_USER" ] && DB_USER="postgres"
 
 # 2) Django'dan alınamadıysa: postgres ile chat_chatban olan DB'yi bul
 if [ -z "$DB_NAME" ]; then
