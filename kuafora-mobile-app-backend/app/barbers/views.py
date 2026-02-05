@@ -4677,6 +4677,7 @@ class CalendarStatusViewSet(viewsets.ReadOnlyModelViewSet):
             now = timezone.now() # aware datetime
             today = now.date()
             current_time = now.time()
+            weekday_code_map = {0: "MON", 1: "TUE", 2: "WED", 3: "THU", 4: "FRI", 5: "SAT", 6: "SUN"}
             
             # ÖNCE DailyOverride kontrolü yap - bu en yüksek önceliğe sahip
             daily_override = DailyOverride.objects.filter(barbershop=barbershop, date=today).first()
@@ -4684,7 +4685,6 @@ class CalendarStatusViewSet(viewsets.ReadOnlyModelViewSet):
                 is_open = daily_override.status == 'open'
                 status_message = daily_override.note.strip() if daily_override.note and daily_override.note.strip() else ("Bugün açık" if is_open else "Bugün kapalı")
                 note = daily_override.note or ""
-                weekday_code_map = {0: "MON", 1: "TUE", 2: "WED", 3: "THU", 4: "FRI", 5: "SAT", 6: "SUN"}
                 day_code = weekday_code_map.get(today.weekday())
                 active_staff_count = StaffWorkingHours.objects.filter(
                     staff__barbershop=barbershop,
@@ -4780,7 +4780,6 @@ class CalendarStatusViewSet(viewsets.ReadOnlyModelViewSet):
 
             # 3. Check Regular Hours (if still open)
             if is_open:
-                weekday_code_map = {0: "MON", 1: "TUE", 2: "WED", 3: "THU", 4: "FRI", 5: "SAT", 6: "SUN"}
                 day_code = weekday_code_map.get(today.weekday())
                 shop_hours = ShopWorkingHours.objects.filter(barbershop=barbershop, day_of_week=day_code).first()
                 
@@ -4859,7 +4858,6 @@ class CalendarStatusViewSet(viewsets.ReadOnlyModelViewSet):
                 if shop_hours and shop_hours.start_time:
                     opening_time_str = shop_hours.start_time.strftime('%H:%M')
             
-            weekday_code_map = {0: "MON", 1: "TUE", 2: "WED", 3: "THU", 4: "FRI", 5: "SAT", 6: "SUN"}
             day_code = weekday_code_map.get(today.weekday())
             active_staff_count = StaffWorkingHours.objects.filter(
                 staff__barbershop=barbershop,
