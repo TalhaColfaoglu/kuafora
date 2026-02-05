@@ -21,7 +21,7 @@ def upload_file(s3_client, local_path, s3_key):
             local_path,
             BUCKET_NAME,
             s3_key,
-            ExtraArgs={'ACL': 'public-read', 'ContentType': get_content_type(local_path)}
+            ExtraArgs={'ContentType': get_content_type(local_path)}
         )
         print(f"✅ Yüklendi: {s3_key}")
         return True
