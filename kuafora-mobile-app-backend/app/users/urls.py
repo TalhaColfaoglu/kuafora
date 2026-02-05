@@ -5,6 +5,7 @@ from .views import (
     LoginView,
     LogoutView,
     MeView,
+    DeleteAccountView,
     UserUpdateView,
     ChangePasswordView,
     VerifyEmailView,
@@ -37,6 +38,7 @@ urlpatterns = [
     path('logout', LogoutView.as_view(), name='logout-no-slash'),
     path('me/', MeView.as_view(), name='me'),
     path('me', MeView.as_view(), name='me-no-slash'),  # Alias without trailing slash
+    path('delete-account/', DeleteAccountView.as_view(), name='delete-account'),
     path('users/me/', MeView.as_view(), name='me-legacy'),
     path('me/photo/', ProfilePhotoUploadView.as_view(), name='profile-photo-upload'),
     path('me/photo/serve/', ProfilePhotoServeView.as_view(), name='profile-photo-serve'),

@@ -86,7 +86,7 @@
     
     <!-- Preload Critical Resources -->
     <link rel="preload" href="{% static 'css/site.css' %}" as="style">
-    <link rel="preload" href="{% static 'js/animate.js' %}" as="script">
+    <link rel="preload" href="{% static 'js/site.js' %}" as="script">
 
     <style>
       /* Dynamic Island Navigation */
@@ -120,13 +120,7 @@
         background: rgba(255, 255, 255, 0.15);
       }
       
-      /* Gradient text */
-      .gradient-text {
-        background: linear-gradient(135deg, #F43F5E 0%, #8B5CF6 50%, #0EA5E9 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
-      }
+      /* Gradient text - moved to CSS file */
       
       /* Gradient border */
       .gradient-border {
@@ -203,8 +197,24 @@
 
     {% block head %}{% endblock %}
   </head>
-  <body class="h-full antialiased bg-white text-primary font-sans">
+  <body class="h-full antialiased bg-white text-primary font-sans overflow-hidden">
     <a href="#top" class="skip-link">İçeriğe atla</a>
+
+    <!-- Preloader / Açılış Animasyonu -->
+    <div id="preloader" class="fixed inset-0 z-[9999] bg-white flex items-center justify-center transition-opacity duration-500">
+      <div class="text-center">
+        <div class="relative w-20 h-20 mx-auto mb-6">
+          <div class="absolute inset-0 border-4 border-primary/10 rounded-full"></div>
+          <div class="absolute inset-0 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+          <div class="absolute inset-0 flex items-center justify-center">
+            <div class="w-12 h-12 bg-primary rounded-2xl flex items-center justify-center shadow-xl">
+              <span class="text-white text-2xl font-display font-bold">K</span>
+            </div>
+          </div>
+        </div>
+        <p class="text-primary font-medium text-sm animate-pulse">Kuafora</p>
+      </div>
+    </div>
 
     <!-- Dynamic Island Navigation -->
     <header class="fixed top-0 inset-x-0 z-50 pointer-events-none">
@@ -389,60 +399,17 @@
     </footer>
 
     {% block scripts %}{% endblock %}
-    <script src="{% static 'js/animate.js' %}" defer></script>
+    <script src="{% static 'js/site.js' %}" defer></script>
     <script>
       // Mobile menu toggle
-      const mobileMenuBtn = document.getElementById('mobile-menu-btn');
-      const mobileMenu = document.getElementById('mobile-menu');
-      if(mobileMenuBtn && mobileMenu) {
-        mobileMenuBtn.addEventListener('click', () => {
-          mobileMenu.classList.toggle('hidden');
-        });
-      }
-
-      const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-      
-      // Smooth anchor scrolling
-      document.addEventListener('click', function(e){
-        const link = e.target.closest('a');
-        if(!link) return;
-        const href = link.getAttribute('href') || '';
-        if(!href.includes('#')) return;
-        const url = new URL(href, window.location.href);
-        if(url.pathname !== window.location.pathname) return;
-        const hash = url.hash;
-        const target = document.querySelector(hash);
-        if(!target) return;
-        e.preventDefault();
-        const offset = 100;
-        const top = target.getBoundingClientRect().top + window.pageYOffset - offset;
-        window.scrollTo({ top, behavior: prefersReduced ? 'auto' : 'smooth' });
-      });
-
-      // Görsel yükleme kontrolü ve fallback gösterimi
       document.addEventListener('DOMContentLoaded', function() {
-        const images = document.querySelectorAll('img[src*="/static/img/"], img[src*="img/screens/"]');
-        images.forEach(function(img) {
-          // Görsel yüklenemezse fallback göster
-          img.addEventListener('error', function() {
-            this.style.display = 'none';
-            const fallback = this.nextElementSibling;
-            if(fallback && fallback.classList.contains('hidden')) {
-              fallback.classList.remove('hidden');
-              fallback.style.display = 'flex';
-            }
+        const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+        const mobileMenu = document.getElementById('mobile-menu');
+        if(mobileMenuBtn && mobileMenu) {
+          mobileMenuBtn.addEventListener('click', () => {
+            mobileMenu.classList.toggle('hidden');
           });
-          
-          // Görsel yüklendiğinde kontrol et
-          img.addEventListener('load', function() {
-            // Görsel başarıyla yüklendi
-            const fallback = this.nextElementSibling;
-            if(fallback && !fallback.classList.contains('hidden')) {
-              fallback.classList.add('hidden');
-              fallback.style.display = 'none';
-            }
-          });
-        });
+        }
       });
     </script>
   </body>

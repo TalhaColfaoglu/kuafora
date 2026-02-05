@@ -199,6 +199,35 @@ class MeView(generics.RetrieveUpdateAPIView):
         return super().update(request, *args, **kwargs)
 
 
+class DeleteAccountView(generics.GenericAPIView):
+    """Permanently delete the authenticated user's account and all associated data."""
+    permission_classes = [permissions.IsAuthenticated]
+    http_method_names = ["post", "delete"]
+
+    def post(self, request):
+        return self._delete_account(request)
+
+    def delete(self, request):
+        return self._delete_account(request)
+
+    def _delete_account(self, request):
+        user = request.user
+        user_id = str(user.pk)
+        try:
+            user.delete()
+            logger.info("[DeleteAccount] User account permanently deleted: %s", user_id)
+            return Response(
+                {"detail": "Hesabınız kalıcı olarak silindi."},
+                status=status.HTTP_200_OK,
+            )
+        except Exception as e:
+            logger.exception("[DeleteAccount] Failed to delete user %s: %s", user_id, e)
+            return Response(
+                {"detail": "Hesap silinirken bir hata oluştu. Lütfen destek ile iletişime geçin."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+
 class ProfilePhotoUploadView(generics.GenericAPIView):
     """POST: upload profile photo. GET: serve current user's profile photo (avoids CloudFront 403)."""
     permission_classes = [permissions.IsAuthenticated]
