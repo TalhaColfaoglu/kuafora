@@ -1617,44 +1617,43 @@ class PartnerBarbershopViewSet(viewsets.ModelViewSet):
             traceback.print_exc()
             return Response({'detail': str(e)}, status=500)
 
-    @action(detail=True, methods=["get"], url_path="catalog")
-    def get_catalog(self, request, pk=None):
-        """Partner için katalog listesi"""
+    @action(detail=True, methods=["get", "post"], url_path="catalog")
+    def catalog(self, request, pk=None):
+        """Katalog listesi (GET) veya yeni öğe ekle (POST)"""
         from .models import BarbershopCatalog
         from .serializers import BarbershopCatalogSerializer
         bs = self.get_object()
-        items = BarbershopCatalog.objects.filter(barbershop=bs).order_by('order', 'created_at')
-        serializer = BarbershopCatalogSerializer(items, many=True, context={'request': request})
-        return Response(serializer.data)
-
-    @action(detail=True, methods=["post"], url_path="catalog")
-    def create_catalog_item(self, request, pk=None):
-        """Katalog öğesi ekle"""
-        from .models import BarbershopCatalog
-        bs = self.get_object()
-        image = request.FILES.get('image')
-        if not image:
-            return Response({'detail': 'No image'}, status=400)
         
-        name = request.data.get('name', '').strip() or None
-        description = request.data.get('description', '').strip() or None
+        if request.method == "GET":
+            # Partner için katalog listesi
+            items = BarbershopCatalog.objects.filter(barbershop=bs).order_by('order', 'created_at')
+            serializer = BarbershopCatalogSerializer(items, many=True, context={'request': request})
+            return Response(serializer.data)
         
-        # Order: mevcut en yüksek order + 1
-        from django.db.models import Max
-        max_order = BarbershopCatalog.objects.filter(barbershop=bs).aggregate(
-            max_order=Max('order')
-        )['max_order'] or 0
-        
-        catalog_item = BarbershopCatalog.objects.create(
-            barbershop=bs,
-            image=image,
-            name=name,
-            description=description,
-            order=max_order + 1,
-        )
-        from .serializers import BarbershopCatalogSerializer
-        serializer = BarbershopCatalogSerializer(catalog_item, context={'request': request})
-        return Response(serializer.data, status=201)
+        elif request.method == "POST":
+            # Katalog öğesi ekle
+            image = request.FILES.get('image')
+            if not image:
+                return Response({'detail': 'No image'}, status=400)
+            
+            name = request.data.get('name', '').strip() or None
+            description = request.data.get('description', '').strip() or None
+            
+            # Order: mevcut en yüksek order + 1
+            from django.db.models import Max
+            max_order = BarbershopCatalog.objects.filter(barbershop=bs).aggregate(
+                max_order=Max('order')
+            )['max_order'] or 0
+            
+            catalog_item = BarbershopCatalog.objects.create(
+                barbershop=bs,
+                image=image,
+                name=name,
+                description=description,
+                order=max_order + 1,
+            )
+            serializer = BarbershopCatalogSerializer(catalog_item, context={'request': request})
+            return Response(serializer.data, status=201)
 
     @action(detail=True, methods=["patch"], url_path=r"catalog/(?P<catalog_id>[^/.]+)")
     def update_catalog_item(self, request, pk=None, catalog_id=None):
