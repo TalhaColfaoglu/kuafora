@@ -148,7 +148,7 @@ class BarbershopViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = (
         Barbershop.objects.all()
         .select_related("subscription")  # Optimize foreign key lookups (owner field doesn't exist in Barbershop model)
-        .prefetch_related("images", "services", "staff", "categories")  # Optimize many-to-many and reverse FK
+        .prefetch_related("images", "services", "staff", "categories", "catalog")  # Optimize many-to-many and reverse FK
     )
     serializer_class = BarbershopSerializer
     filterset_class = BarbershopFilter
@@ -1616,6 +1616,104 @@ class PartnerBarbershopViewSet(viewsets.ModelViewSet):
             print(f"[set_main_image ERROR] {e}")
             traceback.print_exc()
             return Response({'detail': str(e)}, status=500)
+
+    @action(detail=True, methods=["get"], url_path="catalog")
+    def get_catalog(self, request, pk=None):
+        """Partner için katalog listesi"""
+        from .models import BarbershopCatalog
+        from .serializers import BarbershopCatalogSerializer
+        bs = self.get_object()
+        items = BarbershopCatalog.objects.filter(barbershop=bs).order_by('order', 'created_at')
+        serializer = BarbershopCatalogSerializer(items, many=True, context={'request': request})
+        return Response(serializer.data)
+
+    @action(detail=True, methods=["post"], url_path="catalog")
+    def create_catalog_item(self, request, pk=None):
+        """Katalog öğesi ekle"""
+        from .models import BarbershopCatalog
+        bs = self.get_object()
+        image = request.FILES.get('image')
+        if not image:
+            return Response({'detail': 'No image'}, status=400)
+        
+        name = request.data.get('name', '').strip() or None
+        description = request.data.get('description', '').strip() or None
+        
+        # Order: mevcut en yüksek order + 1
+        from django.db.models import Max
+        max_order = BarbershopCatalog.objects.filter(barbershop=bs).aggregate(
+            max_order=Max('order')
+        )['max_order'] or 0
+        
+        catalog_item = BarbershopCatalog.objects.create(
+            barbershop=bs,
+            image=image,
+            name=name,
+            description=description,
+            order=max_order + 1,
+        )
+        from .serializers import BarbershopCatalogSerializer
+        serializer = BarbershopCatalogSerializer(catalog_item, context={'request': request})
+        return Response(serializer.data, status=201)
+
+    @action(detail=True, methods=["patch"], url_path=r"catalog/(?P<catalog_id>[^/.]+)")
+    def update_catalog_item(self, request, pk=None, catalog_id=None):
+        """Katalog öğesi güncelle"""
+        from django.shortcuts import get_object_or_404
+        from .models import BarbershopCatalog
+        from .serializers import BarbershopCatalogSerializer
+        bs = self.get_object()
+        catalog_item = get_object_or_404(BarbershopCatalog, id=catalog_id, barbershop=bs)
+        
+        # Görsel güncelleme
+        if 'image' in request.FILES:
+            catalog_item.image = request.FILES['image']
+        
+        # İsim ve açıklama güncelleme
+        if 'name' in request.data:
+            name = request.data['name'].strip() or None
+            catalog_item.name = name
+        if 'description' in request.data:
+            description = request.data['description'].strip() or None
+            catalog_item.description = description
+        if 'is_active' in request.data:
+            catalog_item.is_active = bool(request.data['is_active'])
+        if 'order' in request.data:
+            catalog_item.order = int(request.data['order'])
+        
+        catalog_item.save()
+        serializer = BarbershopCatalogSerializer(catalog_item, context={'request': request})
+        return Response(serializer.data)
+
+    @action(detail=True, methods=["delete"], url_path=r"catalog/(?P<catalog_id>[^/.]+)")
+    def delete_catalog_item(self, request, pk=None, catalog_id=None):
+        """Katalog öğesi sil"""
+        from django.shortcuts import get_object_or_404
+        from .models import BarbershopCatalog
+        bs = self.get_object()
+        catalog_item = get_object_or_404(BarbershopCatalog, id=catalog_id, barbershop=bs)
+        catalog_item.delete()
+        return Response({'detail': 'ok'})
+
+    @action(detail=True, methods=["post"], url_path="catalog/reorder")
+    def reorder_catalog(self, request, pk=None):
+        """Katalog öğelerini yeniden sırala"""
+        from django.db import models
+        from .models import BarbershopCatalog
+        bs = self.get_object()
+        ids = request.data.get('ids', [])
+        if not isinstance(ids, list):
+            return Response({'detail': 'ids must be a list'}, status=400)
+        
+        for order, catalog_id in enumerate(ids, start=1):
+            try:
+                catalog_item = BarbershopCatalog.objects.get(id=catalog_id, barbershop=bs)
+                catalog_item.order = order
+                catalog_item.save(update_fields=['order'])
+            except BarbershopCatalog.DoesNotExist:
+                continue
+        
+        return Response({'detail': 'ok'})
 
 
 class PartnerServiceViewSetSecure(viewsets.ModelViewSet):

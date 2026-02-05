@@ -276,6 +276,39 @@ class BarbershopImage(models.Model):
         super().save(*args, **kwargs)
 
 
+class BarbershopCatalog(models.Model):
+    """Saç modelleri/stilleri katalog görselleri"""
+    barbershop = models.ForeignKey(Barbershop, on_delete=models.CASCADE, related_name="catalog")
+    image = models.ImageField(upload_to="barbershops/catalog/", storage=_barbershop_media_storage())
+    image_thumb = models.ImageField(upload_to="barbershops/catalog/thumbs/", storage=_barbershop_media_storage(), null=True, blank=True)
+    name = models.CharField(max_length=200, blank=True, null=True, help_text="Model adı (opsiyonel)")
+    description = models.TextField(blank=True, null=True, help_text="Model açıklaması (opsiyonel)")
+    is_active = models.BooleanField(default=True)
+    order = models.IntegerField(default=0, help_text="Sıralama için")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['order', 'created_at']
+        verbose_name = "Salon Katalog Görseli"
+        verbose_name_plural = "Salon Katalog Görselleri"
+
+    def save(self, *args, **kwargs):
+        if self.pk:
+            try:
+                old_instance = BarbershopCatalog.objects.get(pk=self.pk)
+                if self.image != old_instance.image:
+                    process_image(self.image, self.image_thumb)
+            except BarbershopCatalog.DoesNotExist:
+                process_image(self.image, self.image_thumb)
+        else:
+            process_image(self.image, self.image_thumb)
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.barbershop.name} - {self.name or 'Katalog Görseli'}"
+
+
 class Staff(models.Model):
     barbershop = models.ForeignKey(Barbershop, on_delete=models.CASCADE, related_name="staff")
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="staff_profiles")

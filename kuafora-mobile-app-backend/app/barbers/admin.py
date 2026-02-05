@@ -13,6 +13,7 @@ from .models import (
     Barbershop,
     BarbershopAppeal,
     BarbershopImage,
+    BarbershopCatalog,
     Staff,
     StaffCatalogImage,
     WorkSchedule,
@@ -120,6 +121,14 @@ class BarbershopImageInline(TabularInline):
     tab = True
 
 
+class BarbershopCatalogInline(TabularInline):
+    model = BarbershopCatalog
+    extra = 1
+    tab = True
+    fields = ('image', 'image_thumb', 'name', 'description', 'is_active', 'order')
+    readonly_fields = ('image_thumb',)
+
+
 class BarbershopAppealInline(TabularInline):
     model = BarbershopAppeal
     extra = 0
@@ -187,7 +196,7 @@ class BarbershopAdmin(ModelAdmin):
     date_hierarchy = "created_at"
     list_select_related = ("subscription",)
     list_per_page = 50
-    inlines = [BarbershopAppealInline, BarbershopImageInline]
+    inlines = [BarbershopAppealInline, BarbershopImageInline, BarbershopCatalogInline]
     actions = ["verify_barbershops", "unverify_barbershops", "approve_barbershops", "reject_barbershops", "resubmit_for_review"]
     change_form_template = "admin/barbers/barbershop/change_form.html"
     change_list_template = "admin/barbers/barbershop/change_list.html"
@@ -861,3 +870,25 @@ class ServiceCategoryAdmin(ModelAdmin):
     search_fields = ("name", "barbershop__name")
     autocomplete_fields = ("barbershop",)
     date_hierarchy = "created_at"
+
+
+@admin.register(BarbershopCatalog)
+class BarbershopCatalogAdmin(ModelAdmin):
+    list_display = ("id", "barbershop", "name", "image_preview", "is_active", "order", "created_at")
+    list_display_links = ("id", "barbershop", "name")
+    list_filter = ("barbershop", "is_active", "created_at")
+    search_fields = ("name", "description", "barbershop__name")
+    autocomplete_fields = ("barbershop",)
+    readonly_fields = ("image_thumb", "created_at", "updated_at")
+    date_hierarchy = "created_at"
+    
+    def changelist_view(self, request, *args, **kwargs):
+        self._request = request
+        return super().changelist_view(request, *args, **kwargs)
+    
+    def image_preview(self, obj):
+        if obj.image:
+            from django.utils.html import format_html
+            return format_html('<img src="{}" style="max-width: 100px; max-height: 100px;" />', obj.image.url)
+        return "-"
+    image_preview.short_description = "Görsel"
