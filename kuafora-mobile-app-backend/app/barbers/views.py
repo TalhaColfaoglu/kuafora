@@ -1620,6 +1620,10 @@ class PartnerBarbershopViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=["get", "post"], url_path="catalog")
     def catalog(self, request, pk=None):
         """Katalog listesi (GET) veya yeni öğe ekle (POST)"""
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.info(f"[CATALOG ENDPOINT] Method: {request.method}, PK: {pk}, Path: {request.path}")
+        
         from .models import BarbershopCatalog
         from .serializers import BarbershopCatalogSerializer
         bs = self.get_object()
@@ -1627,6 +1631,7 @@ class PartnerBarbershopViewSet(viewsets.ModelViewSet):
         if request.method == "GET":
             # Partner için katalog listesi
             items = BarbershopCatalog.objects.filter(barbershop=bs).order_by('order', 'created_at')
+            logger.info(f"[CATALOG GET] Found {items.count()} items for barbershop {bs.id}")
             serializer = BarbershopCatalogSerializer(items, many=True, context={'request': request})
             return Response(serializer.data)
         
@@ -1634,6 +1639,7 @@ class PartnerBarbershopViewSet(viewsets.ModelViewSet):
             # Katalog öğesi ekle
             image = request.FILES.get('image')
             if not image:
+                logger.warning("[CATALOG POST] No image file provided")
                 return Response({'detail': 'No image'}, status=400)
             
             name = request.data.get('name', '').strip() or None
@@ -1652,6 +1658,7 @@ class PartnerBarbershopViewSet(viewsets.ModelViewSet):
                 description=description,
                 order=max_order + 1,
             )
+            logger.info(f"[CATALOG POST] Created catalog item {catalog_item.id} for barbershop {bs.id}")
             serializer = BarbershopCatalogSerializer(catalog_item, context={'request': request})
             return Response(serializer.data, status=201)
 
