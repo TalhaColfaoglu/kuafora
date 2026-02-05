@@ -8,7 +8,7 @@ from app.users.views import ResolveUserView
 from app.subscriptions.views import MySubscriptionApi, StartTrialApi, SubscriptionViewSet
 from django.http import JsonResponse, FileResponse
 from pathlib import Path
-from app.core.views import health_check, health_simple, metrics
+from app.core.views import health_check, health_simple, metrics, version_check
 
 def schema_static(request):
     # Önce statik YAML şemayı sunmayı dene; yoksa dinamik üretime düş
@@ -91,6 +91,8 @@ urlpatterns = [
     path("health/", health_simple, name="health-simple"),  # Simple health check (for load balancers)
     path("api/health/", health_check, name="health-check"),  # Comprehensive health check
     path("api/metrics/", metrics, name="metrics"),  # System and application metrics
+    # App version check endpoint
+    path("api/app/version-check/", version_check, name="version-check"),
 ]
 
 # Serve media files locally when using local storage (DEBUG or when S3 is not configured)
