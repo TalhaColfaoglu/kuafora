@@ -1694,11 +1694,24 @@ class PartnerBarbershopViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=["delete"], url_path=r"catalog/(?P<catalog_id>[^/.]+)")
     def delete_catalog_item(self, request, pk=None, catalog_id=None):
         """Katalog öğesi sil"""
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.info(f"[CATALOG DELETE] Method: {request.method}, PK: {pk}, Catalog ID: {catalog_id}, Path: {request.path}")
+        
         from django.shortcuts import get_object_or_404
         from .models import BarbershopCatalog
         bs = self.get_object()
-        catalog_item = get_object_or_404(BarbershopCatalog, id=catalog_id, barbershop=bs)
+        
+        # catalog_id'yi int'e çevir
+        try:
+            catalog_id_int = int(catalog_id) if catalog_id else None
+        except (ValueError, TypeError):
+            logger.warning(f"[CATALOG DELETE] Invalid catalog_id: {catalog_id}")
+            return Response({'detail': 'Invalid catalog ID'}, status=400)
+        
+        catalog_item = get_object_or_404(BarbershopCatalog, id=catalog_id_int, barbershop=bs)
         catalog_item.delete()
+        logger.info(f"[CATALOG DELETE] Deleted catalog item {catalog_id_int} for barbershop {bs.id}")
         return Response({'detail': 'ok'})
 
     @action(detail=True, methods=["post"], url_path="catalog/reorder")

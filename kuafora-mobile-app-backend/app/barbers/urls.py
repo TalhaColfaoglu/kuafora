@@ -83,6 +83,8 @@ urlpatterns = [
     # Note: Router should handle this automatically, but adding manual paths as fallback
     path("partner/barbershops/<int:pk>/catalog", PartnerBarbershopViewSet.as_view({'get': 'catalog', 'post': 'catalog'}), name="partner-barbershop-catalog"),
     path("partner/barbershops/<int:pk>/catalog/", PartnerBarbershopViewSet.as_view({'get': 'catalog', 'post': 'catalog'}), name="partner-barbershop-catalog-slash"),
+    path("partner/barbershops/<int:pk>/catalog/<int:catalog_id>", PartnerBarbershopViewSet.as_view({'delete': 'delete_catalog_item'}), name="partner-barbershop-catalog-delete"),
+    path("partner/barbershops/<int:pk>/catalog/<int:catalog_id>/", PartnerBarbershopViewSet.as_view({'delete': 'delete_catalog_item'}), name="partner-barbershop-catalog-delete-slash"),
     path("favorites/", FavoriteListView.as_view(), name="favorites-list"),
     path("favorites/toggle/<int:barbershop_id>/", FavoriteToggleView.as_view(), name="favorites-toggle"),
     # Public announcements for mobile app
