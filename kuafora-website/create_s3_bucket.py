@@ -10,7 +10,7 @@ import sys
 from botocore.exceptions import ClientError, BotoCoreError
 
 BUCKET_NAME = "kuafora-website"
-REGION = "eu-west-1"
+REGION = "eu-central-1"
 
 def create_bucket():
     """S3 bucket oluştur"""
@@ -20,7 +20,7 @@ def create_bucket():
         # Bucket oluştur
         print(f"📦 Bucket oluşturuluyor: {BUCKET_NAME}")
         
-        # eu-west-1 için location constraint gerekli
+        # eu-central-1 için location constraint gerekli
         s3_client.create_bucket(
             Bucket=BUCKET_NAME,
             CreateBucketConfiguration={'LocationConstraint': REGION}

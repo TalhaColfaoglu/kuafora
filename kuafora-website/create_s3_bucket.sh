@@ -4,7 +4,7 @@
 # Bu script S3 bucket'ını oluşturur ve gerekli yapılandırmaları yapar
 
 BUCKET_NAME="kuafora-website"
-REGION="eu-west-1"
+REGION="eu-central-1"
 
 echo "🚀 Kuafora Website S3 Bucket oluşturuluyor..."
 
