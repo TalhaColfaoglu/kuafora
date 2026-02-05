@@ -131,28 +131,40 @@ AWS_ACCESS_KEY_ID = os.getenv('AWS_ACCESS_KEY_ID')
 AWS_SECRET_ACCESS_KEY = os.getenv('AWS_SECRET_ACCESS_KEY')
 AWS_STORAGE_BUCKET_NAME = os.getenv('AWS_STORAGE_BUCKET_NAME')
 AWS_S3_REGION_NAME = os.getenv('AWS_S3_REGION_NAME', 'eu-central-1')
-AWS_S3_CUSTOM_DOMAIN = os.getenv('AWS_S3_CUSTOM_DOMAIN')
+AWS_S3_CUSTOM_DOMAIN = os.getenv('AWS_S3_CUSTOM_DOMAIN')  # CloudFront domain buraya gelecek
 AWS_S3_OBJECT_PARAMETERS = {
-    'CacheControl': 'max-age=31536000',  # 1 year cache
+    'CacheControl': 'max-age=31536000',  # 1 year cache - CloudFront için optimize edildi
+    'ContentType': 'auto',  # Otomatik content-type algılama
 }
 AWS_DEFAULT_ACL = 'public-read'
 AWS_S3_FILE_OVERWRITE = False
 AWS_QUERYSTRING_AUTH = False
+
+# CloudFront için optimize edilmiş ayarlar
+# CloudFront kullanıldığında görseller CDN üzerinden yüklenir (daha hızlı ve verimli)
+USE_CLOUDFRONT = bool(AWS_S3_CUSTOM_DOMAIN and 'cloudfront.net' in AWS_S3_CUSTOM_DOMAIN)
 
 # Use S3 for static files if credentials are provided, otherwise use WhiteNoise
 if AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY and AWS_STORAGE_BUCKET_NAME:
     # S3 for static files
     STATICFILES_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
     if AWS_S3_CUSTOM_DOMAIN:
+        # CloudFront veya custom domain kullanılıyor
         STATIC_URL = f'https://{AWS_S3_CUSTOM_DOMAIN}/static/'
+        if USE_CLOUDFRONT:
+            # CloudFront kullanılıyor - ek optimizasyonlar
+            AWS_S3_OBJECT_PARAMETERS['CacheControl'] = 'max-age=31536000, public'  # CloudFront için public cache
     else:
+        # Direkt S3 kullanılıyor
         STATIC_URL = f'https://{AWS_STORAGE_BUCKET_NAME}.s3.{AWS_S3_REGION_NAME}.amazonaws.com/static/'
     
     # S3 for media files
     DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
     if AWS_S3_CUSTOM_DOMAIN:
+        # CloudFront veya custom domain kullanılıyor
         MEDIA_URL = f'https://{AWS_S3_CUSTOM_DOMAIN}/media/'
     else:
+        # Direkt S3 kullanılıyor
         MEDIA_URL = f'https://{AWS_STORAGE_BUCKET_NAME}.s3.{AWS_S3_REGION_NAME}.amazonaws.com/media/'
 else:
     # WhiteNoise for production static serving (fallback)
