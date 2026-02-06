@@ -2072,41 +2072,52 @@ class PartnerStaffViewSet(viewsets.ModelViewSet):
         if already_exists:
             return Response({"detail": "Bu kullanıcı zaten bu dükkanda personel"}, status=409)
         
-        # Serializer için data hazırla - user field'ını User ID olarak gönder (UUID string veya int)
-        serializer_data = dict(request.data)
-        # User ID'yi doğru formatta gönder (UUID string veya int)
-        serializer_data['user'] = str(user.id) if hasattr(user.id, '__str__') else user.id
-        serializer_data['barbershop'] = shop.id
-        serializer_data['email'] = user.email  # Email'i user'dan al
-        
-        # Serializer'ı validate et ve kaydet
-        serializer = self.get_serializer(data=serializer_data)
-        if not serializer.is_valid():
-            # Validation hatalarını detaylı göster
-            import logging
-            logger = logging.getLogger(__name__)
-            logger.error(f"Serializer validation errors: {serializer.errors}")
-            return Response({
-                "detail": "Validation error",
-                "errors": serializer.errors
-            }, status=400)
-        
+        # Staff oluştur - serializer kullanmadan direkt oluştur
+        # Çünkü serializer validation'ı bazen UUID string'leri kabul etmeyebilir
         try:
-            # save() çağrısında user ve barbershop parametrelerini direkt geçerek
-            # serializer'ın bu alanları override etmesini sağla
-            instance = serializer.save(barbershop=shop, user=user, email=user.email)
-            headers = self.get_success_headers(serializer.data)
-            return Response(serializer.data, status=201, headers=headers)
+            from django.db import transaction
+            with transaction.atomic():
+                # Staff oluştur - request.data'dan gelen değerleri güvenli şekilde al
+                gender_pref = request.data.get('gender_preference') or 'all'
+                bio_text = request.data.get('bio') or ''
+                career_year = request.data.get('career_start_year')
+                
+                # Staff oluştur
+                staff = Staff.objects.create(
+                    barbershop=shop,
+                    user=user,
+                    email=user.email,
+                    is_admin=False,  # Yeni eklenen personel admin değil
+                    gender_preference=gender_pref,
+                    bio=bio_text,
+                    career_start_year=career_year if career_year else None,
+                )
+                
+                # Serializer ile response döndür
+                serializer = self.get_serializer(staff)
+                headers = self.get_success_headers(serializer.data)
+                return Response(serializer.data, status=201, headers=headers)
         except Exception as e:
             from django.db import IntegrityError
             import traceback
-            if isinstance(e, IntegrityError):
-                return Response({"detail": f"Personel oluşturulamadı: {str(e)}"}, status=400)
-            # Diğer hatalar için detaylı log
             import logging
             logger = logging.getLogger(__name__)
             logger.error(f"Staff creation error: {str(e)}\n{traceback.format_exc()}")
-            return Response({"detail": f"Personel oluşturulamadı: {str(e)}"}, status=500)
+            
+            if isinstance(e, IntegrityError):
+                # Integrity hatası - muhtemelen duplicate key
+                error_msg = str(e)
+                if 'unique constraint' in error_msg.lower() or 'duplicate' in error_msg.lower():
+                    return Response({
+                        "detail": "Bu kullanıcı zaten bu dükkanda personel"
+                    }, status=409)
+                return Response({
+                    "detail": f"Personel oluşturulamadı: {error_msg}"
+                }, status=400)
+            
+            return Response({
+                "detail": f"Personel oluşturulamadı: {str(e)}"
+            }, status=500)
     
     @action(detail=False, methods=["get"], url_path="my-shops")
     def my_shops(self, request):
