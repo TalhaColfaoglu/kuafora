@@ -2103,6 +2103,103 @@ class PartnerStaffViewSet(viewsets.ModelViewSet):
             pass
         return Response(StaffSerializer(staff).data, status=201)
 
+    @action(detail=False, methods=['post', 'delete'], url_path='resign', permission_classes=[permissions.IsAuthenticated])
+    def resign(self, request):
+        """
+        Personelin salondan istifa etmesi.
+        - POST: Yetkili personel için yetki transferi veya salon silme
+        - DELETE: Normal personel için basit istifa
+        """
+        from django.db import transaction
+        
+        try:
+            # Mevcut personel kaydını bul
+            staff = Staff.objects.select_related('barbershop', 'user').filter(
+                user=request.user
+            ).order_by('-is_admin', '-id').first()
+            
+            if not staff:
+                return Response({"detail": "Staff profile not found"}, status=404)
+            
+            barbershop = staff.barbershop
+            is_admin = staff.is_admin
+            
+            if request.method == 'DELETE':
+                # Basit istifa - normal personel için
+                with transaction.atomic():
+                    staff.delete()
+                    return Response({"detail": "Resigned successfully"}, status=200)
+            
+            elif request.method == 'POST':
+                # Yetkili personel için - yetki transferi veya salon silme
+                transfer_admin_to = request.data.get('transfer_admin_to')
+                delete_shop = request.data.get('delete_shop', False)
+                
+                # Sadece admin personel bu işlemleri yapabilir
+                if not is_admin:
+                    return Response(
+                        {"detail": "Only admin staff can transfer admin or delete shop"},
+                        status=403
+                    )
+                
+                # Tüm staff'ları kontrol et
+                all_staff = Staff.objects.filter(barbershop=barbershop).exclude(id=staff.id)
+                
+                if delete_shop:
+                    # Salonu sil
+                    if all_staff.exists():
+                        return Response(
+                            {"detail": "Cannot delete shop: other staff members exist"},
+                            status=400
+                        )
+                    
+                    with transaction.atomic():
+                        # Salonu ve tüm ilişkili verileri sil
+                        barbershop_id = barbershop.id
+                        barbershop.delete()
+                        return Response(
+                            {"detail": "Shop deleted and resigned successfully"},
+                            status=200
+                        )
+                
+                elif transfer_admin_to:
+                    # Yetki transferi
+                    try:
+                        new_admin_staff = Staff.objects.get(
+                            id=transfer_admin_to,
+                            barbershop=barbershop
+                        )
+                    except Staff.DoesNotExist:
+                        return Response(
+                            {"detail": "Target staff not found"},
+                            status=404
+                        )
+                    
+                    with transaction.atomic():
+                        # Yeni admin'e yetki ver
+                        new_admin_staff.is_admin = True
+                        new_admin_staff.save()
+                        
+                        # Eski admin'i sil
+                        staff.delete()
+                        
+                        return Response(
+                            {"detail": "Admin transferred and resigned successfully"},
+                            status=200
+                        )
+                else:
+                    return Response(
+                        {"detail": "Either 'transfer_admin_to' or 'delete_shop' must be provided"},
+                        status=400
+                    )
+            
+        except Exception as e:
+            import traceback
+            return Response(
+                {"detail": f"Error during resignation: {str(e)}", "traceback": traceback.format_exc()},
+                status=500
+            )
+
 
 class PartnerWorkScheduleViewSet(viewsets.ModelViewSet):
     serializer_class = WorkScheduleSerializer
