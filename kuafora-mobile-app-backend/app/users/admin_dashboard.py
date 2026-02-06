@@ -76,7 +76,7 @@ def _usage_stats(now, today, week_ago, month_ago):
 
 def _period_dates(period, month_param, today):
     """
-    period: 'daily' | 'weekly' | 'monthly' | 'yearly'
+    period: 'daily' | 'weekly' | 'monthly' | 'yearly' | 'all_time'
     month_param: 'YYYY-MM' veya None (sadece monthly'de kullanılır)
     Returns: (period_start, period_end, prev_period_start, prev_period_end) as date objects.
     """
@@ -114,6 +114,22 @@ def _period_dates(period, month_param, today):
             prev_period_start = date(period_start.year, period_start.month - 1, 1)
             _, last = calendar.monthrange(prev_period_start.year, prev_period_start.month)
             prev_period_end = date(prev_period_start.year, prev_period_start.month, last)
+    elif period == "all_time":
+        # Tüm zamanlar: İlk kayıt tarihinden bugüne kadar
+        try:
+            first_user = User.objects.filter(APP_USER_FILTER).order_by('created_at').first()
+            if first_user and first_user.created_at:
+                period_start = first_user.created_at.date()
+            else:
+                # Eğer hiç kullanıcı yoksa, bugünden 1 yıl öncesini al
+                period_start = date(today.year - 1, 1, 1)
+        except Exception:
+            # Hata durumunda bugünden 1 yıl öncesini al
+            period_start = date(today.year - 1, 1, 1)
+        period_end = today
+        # Önceki dönem: Tüm zamanlar için önceki dönem yok, aynı değerleri kullan
+        prev_period_start = period_start
+        prev_period_end = period_end
     else:  # yearly
         period_start = date(today.year, 1, 1)
         period_end = today
@@ -204,7 +220,7 @@ def admin_dashboard_view(request):
 
     # Periyot ve ay seçimi (GET)
     period = (request.GET.get("period") or "monthly").strip().lower()
-    if period not in ("daily", "weekly", "monthly", "yearly"):
+    if period not in ("daily", "weekly", "monthly", "yearly", "all_time"):
         period = "monthly"
     selected_month = request.GET.get("month") or ""
     if period != "monthly":
@@ -232,10 +248,15 @@ def admin_dashboard_view(request):
         "weekly": "Haftalık",
         "monthly": "Aylık",
         "yearly": "Yıllık",
+        "all_time": "Tüm Zamanlar",
     }
     period_label = period_labels.get(period, "Aylık")
-    period_range_label = f"{period_start.strftime('%d.%m.%Y')} – {period_end.strftime('%d.%m.%Y')}"
-    prev_period_range_label = f"{prev_period_start.strftime('%d.%m.%Y')} – {prev_period_end.strftime('%d.%m.%Y')}"
+    if period == "all_time":
+        period_range_label = f"{period_start.strftime('%d.%m.%Y')} – {period_end.strftime('%d.%m.%Y')} (Tüm Zamanlar)"
+        prev_period_range_label = "—"
+    else:
+        period_range_label = f"{period_start.strftime('%d.%m.%Y')} – {period_end.strftime('%d.%m.%Y')}"
+        prev_period_range_label = f"{prev_period_start.strftime('%d.%m.%Y')} – {prev_period_end.strftime('%d.%m.%Y')}"
     month_options = _month_options(today, 24)
 
     # Helper functions

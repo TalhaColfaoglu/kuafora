@@ -79,9 +79,41 @@ section.bg-surface span:not(.text-white):not([class*="text-accent"]):not([class*
   color: var(--color-primary) !important;
 }
 
-/* Ensure no white text on white backgrounds */
-section.bg-white .text-white:not([class*="bg-primary"]):not([class*="bg-secondary"]):not([class*="bg-accent"]):not([class*="bg-gradient"]),
-section.bg-surface .text-white:not([class*="bg-primary"]):not([class*="bg-secondary"]):not([class*="bg-accent"]):not([class*="bg-gradient"]) {
+/* Ensure no white text on white backgrounds - KESIN KURAL: ASLA BEYAZ ARKA PLAN ÜZERİNDE BEYAZ YAZI */
+section.bg-white .text-white:not([class*="bg-primary"]):not([class*="bg-secondary"]):not([class*="bg-accent"]):not([class*="bg-gradient"]):not([class*="bg-white/"]),
+section.bg-surface .text-white:not([class*="bg-primary"]):not([class*="bg-secondary"]):not([class*="bg-accent"]):not([class*="bg-gradient"]):not([class*="bg-white/"]),
+.bg-white .text-white:not([class*="bg-primary"]):not([class*="bg-secondary"]):not([class*="bg-accent"]):not([class*="bg-gradient"]):not([class*="bg-white/"]),
+.bg-surface .text-white:not([class*="bg-primary"]):not([class*="bg-secondary"]):not([class*="bg-accent"]):not([class*="bg-gradient"]):not([class*="bg-white/"]) {
+  color: var(--color-primary) !important;
+}
+
+/* Tüm elementler için beyaz arka plan üzerinde beyaz yazı kontrolü */
+section.bg-white h1.text-white:not([class*="bg-primary"]):not([class*="bg-secondary"]):not([class*="bg-accent"]):not([class*="bg-gradient"]):not([class*="bg-white/"]),
+section.bg-white h2.text-white:not([class*="bg-primary"]):not([class*="bg-secondary"]):not([class*="bg-accent"]):not([class*="bg-gradient"]):not([class*="bg-white/"]),
+section.bg-white h3.text-white:not([class*="bg-primary"]):not([class*="bg-secondary"]):not([class*="bg-accent"]):not([class*="bg-gradient"]):not([class*="bg-white/"]),
+section.bg-white h4.text-white:not([class*="bg-primary"]):not([class*="bg-secondary"]):not([class*="bg-accent"]):not([class*="bg-gradient"]):not([class*="bg-white/"]),
+section.bg-white h5.text-white:not([class*="bg-primary"]):not([class*="bg-secondary"]):not([class*="bg-accent"]):not([class*="bg-gradient"]):not([class*="bg-white/"]),
+section.bg-white h6.text-white:not([class*="bg-primary"]):not([class*="bg-secondary"]):not([class*="bg-accent"]):not([class*="bg-gradient"]):not([class*="bg-white/"]),
+section.bg-white p.text-white:not([class*="bg-primary"]):not([class*="bg-secondary"]):not([class*="bg-accent"]):not([class*="bg-gradient"]):not([class*="bg-white/"]),
+section.bg-white div.text-white:not([class*="bg-primary"]):not([class*="bg-secondary"]):not([class*="bg-accent"]):not([class*="bg-gradient"]):not([class*="bg-white/"]),
+section.bg-white span.text-white:not([class*="bg-primary"]):not([class*="bg-secondary"]):not([class*="bg-accent"]):not([class*="bg-gradient"]):not([class*="bg-white/"]),
+section.bg-white a.text-white:not([class*="bg-primary"]):not([class*="bg-secondary"]):not([class*="bg-accent"]):not([class*="bg-gradient"]):not([class*="bg-white/"]),
+section.bg-surface h1.text-white:not([class*="bg-primary"]):not([class*="bg-secondary"]):not([class*="bg-accent"]):not([class*="bg-gradient"]):not([class*="bg-white/"]),
+section.bg-surface h2.text-white:not([class*="bg-primary"]):not([class*="bg-secondary"]):not([class*="bg-accent"]):not([class*="bg-gradient"]):not([class*="bg-white/"]),
+section.bg-surface h3.text-white:not([class*="bg-primary"]):not([class*="bg-secondary"]):not([class*="bg-accent"]):not([class*="bg-gradient"]):not([class*="bg-white/"]),
+section.bg-surface h4.text-white:not([class*="bg-primary"]):not([class*="bg-secondary"]):not([class*="bg-accent"]):not([class*="bg-gradient"]):not([class*="bg-white/"]),
+section.bg-surface h5.text-white:not([class*="bg-primary"]):not([class*="bg-secondary"]):not([class*="bg-accent"]):not([class*="bg-gradient"]):not([class*="bg-white/"]),
+section.bg-surface h6.text-white:not([class*="bg-primary"]):not([class*="bg-secondary"]):not([class*="bg-accent"]):not([class*="bg-gradient"]):not([class*="bg-white/"]),
+section.bg-surface p.text-white:not([class*="bg-primary"]):not([class*="bg-secondary"]):not([class*="bg-accent"]):not([class*="bg-gradient"]):not([class*="bg-white/"]),
+section.bg-surface div.text-white:not([class*="bg-primary"]):not([class*="bg-secondary"]):not([class*="bg-accent"]):not([class*="bg-gradient"]):not([class*="bg-white/"]),
+section.bg-surface span.text-white:not([class*="bg-primary"]):not([class*="bg-secondary"]):not([class*="bg-accent"]):not([class*="bg-gradient"]):not([class*="bg-white/"]),
+section.bg-surface a.text-white:not([class*="bg-primary"]):not([class*="bg-secondary"]):not([class*="bg-accent"]):not([class*="bg-gradient"]):not([class*="bg-white/"]) {
+  color: var(--color-primary) !important;
+}
+
+/* Genel kural: Beyaz arka plan üzerinde beyaz yazı ASLA kullanma */
+.bg-white.text-white:not([class*="bg-primary"]):not([class*="bg-secondary"]):not([class*="bg-accent"]):not([class*="bg-gradient"]):not([class*="bg-white/"]),
+.bg-surface.text-white:not([class*="bg-primary"]):not([class*="bg-secondary"]):not([class*="bg-accent"]):not([class*="bg-gradient"]):not([class*="bg-white/"]) {
   color: var(--color-primary) !important;
 }
 

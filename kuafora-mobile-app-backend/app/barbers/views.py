@@ -2023,6 +2023,83 @@ class PartnerStaffViewSet(viewsets.ModelViewSet):
             data['barbershop_id'] = staff.barbershop.id  # Add barbershop ID
             return Response(data)
 
+    def create(self, request, *args, **kwargs):
+        """
+        Personel oluştur. Eğer email sistemde varsa ve başka bir dükkanda personel değilse,
+        direkt personel olarak ekle.
+        """
+        from django.contrib.auth import get_user_model
+        from rest_framework.exceptions import ValidationError
+        User = get_user_model()
+        
+        # Admin'in dükkanını bul
+        admin_staff = Staff.objects.filter(user=request.user, is_admin=True).order_by('-id').first()
+        if not admin_staff:
+            return Response({"detail": "No admin barbershop"}, status=400)
+        
+        shop = admin_staff.barbershop
+        
+        # User field'ını request.data'dan al - UUID string veya int olabilir
+        user_id = request.data.get('user')
+        if not user_id:
+            return Response({"detail": "user field is required"}, status=400)
+        
+        # User'ı bul
+        try:
+            if isinstance(user_id, str):
+                # UUID string ise
+                user = User.objects.get(id=user_id)
+            elif isinstance(user_id, int):
+                # int ise
+                user = User.objects.get(pk=user_id)
+            else:
+                # Diğer durumlar için string'e çevir ve dene
+                user = User.objects.get(pk=str(user_id))
+        except User.DoesNotExist:
+            return Response({"detail": "User not found"}, status=400)
+        except Exception as e:
+            return Response({"detail": f"Invalid user ID: {str(e)}"}, status=400)
+        
+        # Kullanıcı zaten başka bir dükkanda personel mi kontrol et
+        existing_staff = Staff.objects.filter(user=user).exclude(barbershop=shop).first()
+        if existing_staff:
+            return Response({
+                "detail": f"Bu kullanıcı zaten başka bir dükkanda personel ({existing_staff.barbershop.name})"
+            }, status=400)
+        
+        # Aynı dükkanda zaten varsa tekrarlama
+        already_exists = Staff.objects.filter(user=user, barbershop=shop).exists()
+        if already_exists:
+            return Response({"detail": "Bu kullanıcı zaten bu dükkanda personel"}, status=409)
+        
+        # Serializer için data hazırla - user field'ını User ID olarak gönder (UUID string veya int)
+        serializer_data = dict(request.data)
+        # User ID'yi doğru formatta gönder (UUID string veya int)
+        serializer_data['user'] = str(user.id) if hasattr(user.id, '__str__') else user.id
+        serializer_data['barbershop'] = shop.id
+        serializer_data['email'] = user.email  # Email'i user'dan al
+        
+        # Serializer'ı validate et ve kaydet
+        serializer = self.get_serializer(data=serializer_data)
+        serializer.is_valid(raise_exception=True)
+        
+        try:
+            # save() çağrısında user ve barbershop parametrelerini direkt geçerek
+            # serializer'ın bu alanları override etmesini sağla
+            instance = serializer.save(barbershop=shop, user=user, email=user.email)
+            headers = self.get_success_headers(serializer.data)
+            return Response(serializer.data, status=201, headers=headers)
+        except Exception as e:
+            from django.db import IntegrityError
+            import traceback
+            if isinstance(e, IntegrityError):
+                return Response({"detail": f"Personel oluşturulamadı: {str(e)}"}, status=400)
+            # Diğer hatalar için detaylı log
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Staff creation error: {str(e)}\n{traceback.format_exc()}")
+            return Response({"detail": f"Personel oluşturulamadı: {str(e)}"}, status=500)
+    
     @action(detail=False, methods=["get"], url_path="my-shops")
     def my_shops(self, request):
         qs = Staff.objects.filter(user=request.user).select_related("barbershop")

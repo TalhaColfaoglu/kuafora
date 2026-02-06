@@ -596,6 +596,9 @@
             <label class="period-tab {% if period == 'yearly' %}active{% endif %}">
                 <input type="radio" name="period" value="yearly" {% if period == 'yearly' %}checked{% endif %} onchange="this.form.submit()"> Yıllık
             </label>
+            <label class="period-tab {% if period == 'all_time' %}active{% endif %}">
+                <input type="radio" name="period" value="all_time" {% if period == 'all_time' %}checked{% endif %} onchange="this.form.submit()"> Tüm Zamanlar
+            </label>
         </div>
         {% if period == 'monthly' %}
         <div class="month-picker-wrap">
@@ -623,6 +626,7 @@
             <div class="stat-card-icon">👤</div>
         </div>
         <p class="stat-value">{{ period_stats.registrations|floatformat:0 }}</p>
+        {% if period != 'all_time' %}
         <div class="stat-percentage">
             <span class="trend-indicator {% if period_growth.registrations > 0 %}trend-up{% elif period_growth.registrations < 0 %}trend-down{% else %}trend-neutral{% endif %}">
                 {% if period_growth.registrations > 0 %}↑{% elif period_growth.registrations < 0 %}↓{% else %}→{% endif %}
@@ -630,6 +634,9 @@
             </span>
         </div>
         <div class="stat-subtitle">Önceki dönem: {{ prev_period_stats.registrations|floatformat:0 }} kayıt ({{ prev_period_range_label }})</div>
+        {% else %}
+        <div class="stat-subtitle">Tüm zamanlar için toplam kayıt</div>
+        {% endif %}
     </div>
     <div class="stat-card success">
         <div class="stat-card-header">
@@ -637,6 +644,7 @@
             <div class="stat-card-icon">📱</div>
         </div>
         <p class="stat-value">{{ period_stats.active_users|floatformat:0 }}</p>
+        {% if period != 'all_time' %}
         <div class="stat-percentage">
             <span class="trend-indicator {% if period_growth.active_users > 0 %}trend-up{% elif period_growth.active_users < 0 %}trend-down{% else %}trend-neutral{% endif %}">
                 {% if period_growth.active_users > 0 %}↑{% elif period_growth.active_users < 0 %}↓{% else %}→{% endif %}
@@ -644,6 +652,9 @@
             </span>
         </div>
         <div class="stat-subtitle">Önceki dönem: {{ prev_period_stats.active_users|floatformat:0 }}</div>
+        {% else %}
+        <div class="stat-subtitle">Tüm zamanlar için aktif kullanıcı sayısı</div>
+        {% endif %}
     </div>
     <div class="stat-card purple">
         <div class="stat-card-header">
@@ -651,6 +662,7 @@
             <div class="stat-card-icon">📅</div>
         </div>
         <p class="stat-value">{{ period_stats.appointments|floatformat:0 }}</p>
+        {% if period != 'all_time' %}
         <div class="stat-percentage">
             <span class="trend-indicator {% if period_growth.appointments > 0 %}trend-up{% elif period_growth.appointments < 0 %}trend-down{% else %}trend-neutral{% endif %}">
                 {% if period_growth.appointments > 0 %}↑{% elif period_growth.appointments < 0 %}↓{% else %}→{% endif %}
@@ -658,6 +670,9 @@
             </span>
         </div>
         <div class="stat-subtitle">Önceki dönem: {{ prev_period_stats.appointments|floatformat:0 }}</div>
+        {% else %}
+        <div class="stat-subtitle">Tüm zamanlar için toplam randevu</div>
+        {% endif %}
     </div>
     <div class="stat-card warning">
         <div class="stat-card-header">
@@ -665,6 +680,7 @@
             <div class="stat-card-icon">📧</div>
         </div>
         <p class="stat-value">{{ period_stats.emails|floatformat:0 }}</p>
+        {% if period != 'all_time' %}
         <div class="stat-percentage">
             <span class="trend-indicator {% if period_growth.emails > 0 %}trend-up{% elif period_growth.emails < 0 %}trend-down{% else %}trend-neutral{% endif %}">
                 {% if period_growth.emails > 0 %}↑{% elif period_growth.emails < 0 %}↓{% else %}→{% endif %}
@@ -672,6 +688,9 @@
             </span>
         </div>
         <div class="stat-subtitle">Önceki dönem: {{ prev_period_stats.emails|floatformat:0 }}</div>
+        {% else %}
+        <div class="stat-subtitle">Tüm zamanlar için toplam e-posta</div>
+        {% endif %}
     </div>
     <div class="stat-card success">
         <div class="stat-card-header">
@@ -679,6 +698,7 @@
             <div class="stat-card-icon">🏪</div>
         </div>
         <p class="stat-value">{{ period_stats.barbershops_created|floatformat:0 }}</p>
+        {% if period != 'all_time' %}
         <div class="stat-percentage">
             <span class="trend-indicator {% if period_growth.barbershops_created > 0 %}trend-up{% elif period_growth.barbershops_created < 0 %}trend-down{% else %}trend-neutral{% endif %}">
                 {% if period_growth.barbershops_created > 0 %}↑{% elif period_growth.barbershops_created < 0 %}↓{% else %}→{% endif %}
@@ -686,6 +706,9 @@
             </span>
         </div>
         <div class="stat-subtitle">Önceki dönem: {{ prev_period_stats.barbershops_created|floatformat:0 }}</div>
+        {% else %}
+        <div class="stat-subtitle">Tüm zamanlar için toplam yeni kuaför</div>
+        {% endif %}
     </div>
 </div>
 
