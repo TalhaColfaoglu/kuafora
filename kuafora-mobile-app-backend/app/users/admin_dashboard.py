@@ -3,7 +3,7 @@ from datetime import date, timedelta, datetime
 
 from django.contrib import admin
 from django.utils import timezone
-from django.db.models import Count, Q, Avg, Sum
+from django.db.models import Count, Q, Avg, Sum, F
 from django.template.response import TemplateResponse
 from django.db.models.functions import TruncDate
 
@@ -133,11 +133,28 @@ def _period_stats(period_start, period_end, now):
         created_at__date__gte=period_start,
         created_at__date__lte=period_end,
     ).count()
-    active_users = base_users.filter(
-        is_active=True,
-        last_login__gte=start_dt,
-        last_login__lte=end_dt,
-    ).count()
+    # Aktif kullanıcılar: last_login, updated_at veya analytics verilerini kullan
+    # Önce analytics'ten aktif kullanıcıları bul
+    try:
+        from app.analytics.models import AppEvent
+        active_from_analytics = AppEvent.objects.filter(
+            timestamp__gte=start_dt,
+            timestamp__lte=end_dt,
+            user__isnull=False
+        ).values('user').distinct().count()
+    except Exception:
+        active_from_analytics = 0
+    
+    # last_login veya updated_at bazlı aktif kullanıcılar
+    active_from_db = base_users.filter(
+        is_active=True
+    ).filter(
+        Q(last_login__gte=start_dt, last_login__lte=end_dt) |
+        Q(last_login__isnull=True, updated_at__gte=start_dt, updated_at__lte=end_dt)
+    ).distinct().count()
+    
+    # En yüksek değeri kullan (analytics daha doğru olabilir)
+    active_users = max(active_from_db, active_from_analytics)
     appointments = Appointment.objects.filter(
         start_datetime__gte=start_dt,
         start_datetime__lte=end_dt,
@@ -257,32 +274,86 @@ def admin_dashboard_view(request):
     app_users_total = app_user_stats['total']
     app_users_active = app_user_stats['active']
     
-    # Aktif kullanıcı metrikleri (last_login bazlı - sadece uygulama kullanıcıları)
+    # Kayıt istatistikleri için tarih aralıkları (önce tanımla)
+    week_start = timezone.make_aware(datetime.combine(week_ago, datetime.min.time()))
+    month_start = timezone.make_aware(datetime.combine(month_ago, datetime.min.time()))
+    
+    # Aktif kullanıcı metrikleri (last_login bazlı - yoksa updated_at veya analytics kullan)
+    # Önce analytics verilerinden aktif kullanıcıları bulalım
+    try:
+        from app.analytics.models import AppEvent, FeatureUsage
+        today_start = timezone.make_aware(datetime.combine(today, datetime.min.time()))
+        year_start = timezone.make_aware(datetime.combine(year_ago, datetime.min.time()))
+        
+        # Analytics'ten aktif kullanıcıları bul
+        daily_active_from_analytics = AppEvent.objects.filter(
+            timestamp__gte=now - timedelta(hours=24),
+            user__isnull=False
+        ).values('user').distinct().count()
+        
+        weekly_active_from_analytics = AppEvent.objects.filter(
+            timestamp__gte=week_start,
+            user__isnull=False
+        ).values('user').distinct().count()
+        
+        monthly_active_from_analytics = AppEvent.objects.filter(
+            timestamp__gte=month_start,
+            user__isnull=False
+        ).values('user').distinct().count()
+        
+        yearly_active_from_analytics = AppEvent.objects.filter(
+            timestamp__gte=year_start,
+            user__isnull=False
+        ).values('user').distinct().count()
+    except Exception:
+        daily_active_from_analytics = 0
+        weekly_active_from_analytics = 0
+        monthly_active_from_analytics = 0
+        yearly_active_from_analytics = 0
+    
+    # last_login veya updated_at bazlı aktif kullanıcılar
     daily_active_users = app_users_qs.filter(
-        last_login__gte=now - timedelta(hours=24),
         is_active=True
-    ).count()
+    ).filter(
+        Q(last_login__gte=now - timedelta(hours=24)) |
+        Q(last_login__isnull=True, updated_at__gte=now - timedelta(hours=24))
+    ).distinct().count()
     
     weekly_active_users = app_users_qs.filter(
-        last_login__gte=now - timedelta(days=7),
         is_active=True
-    ).count()
+    ).filter(
+        Q(last_login__gte=week_start) |
+        Q(last_login__isnull=True, updated_at__gte=week_start)
+    ).distinct().count()
     
     monthly_active_users = app_users_qs.filter(
-        last_login__gte=now - timedelta(days=30),
         is_active=True
-    ).count()
+    ).filter(
+        Q(last_login__gte=month_start) |
+        Q(last_login__isnull=True, updated_at__gte=month_start)
+    ).distinct().count()
     
     yearly_active_users = app_users_qs.filter(
-        last_login__gte=now - timedelta(days=365),
         is_active=True
-    ).count()
+    ).filter(
+        Q(last_login__gte=year_start) |
+        Q(last_login__isnull=True, updated_at__gte=year_start)
+    ).distinct().count()
+    
+    # Analytics verilerini de dahil et (daha doğru sonuç için)
+    daily_active_users = max(daily_active_users, daily_active_from_analytics)
+    weekly_active_users = max(weekly_active_users, weekly_active_from_analytics)
+    monthly_active_users = max(monthly_active_users, monthly_active_from_analytics)
+    yearly_active_users = max(yearly_active_users, yearly_active_from_analytics)
     
     # Son 1 ay içerisinde uygulamaya girmeyen aktif kullanıcılar (uygulama kullanıcıları)
     inactive_last_month = app_users_qs.filter(
         Q(is_active=True) &
-        (Q(last_login__lt=now - timedelta(days=30)) | Q(last_login__isnull=True))
-    ).count()
+        (
+            Q(last_login__lt=month_start) | 
+            Q(last_login__isnull=True, updated_at__lt=month_start)
+        )
+    ).distinct().count()
     
     # Hiç giriş yapmamış aktif kullanıcılar (uygulama kullanıcıları)
     never_logged_in = app_users_qs.filter(
@@ -291,9 +362,6 @@ def admin_dashboard_view(request):
     ).count()
     
     # Kayıt istatistikleri (sadece uygulama kullanıcıları - staff hariç)
-    week_start = timezone.make_aware(datetime.combine(week_ago, datetime.min.time()))
-    month_start = timezone.make_aware(datetime.combine(month_ago, datetime.min.time()))
-    
     today_registrations = app_users_qs.filter(
         created_at__date=today
     ).count()
@@ -348,16 +416,33 @@ def admin_dashboard_view(request):
     max_daily_active = 0
     
     # Her gün için aktif kullanıcı sayısını database'den al (sadece uygulama kullanıcıları)
+    # Analytics verilerini de kontrol et
+    try:
+        from app.analytics.models import AppEvent
+    except Exception:
+        AppEvent = None
+    
     for i in range(30):
         date = today - timedelta(days=29-i)
         date_start = timezone.make_aware(datetime.combine(date, datetime.min.time()))
         date_end = timezone.make_aware(datetime.combine(date, datetime.max.time()))
         
+        # last_login veya updated_at bazlı
         count = app_users_qs.filter(
-            is_active=True,
-            last_login__gte=date_start,
-            last_login__lte=date_end
-        ).count()
+            is_active=True
+        ).filter(
+            Q(last_login__gte=date_start, last_login__lte=date_end) |
+            Q(last_login__isnull=True, updated_at__gte=date_start, updated_at__lte=date_end)
+        ).distinct().count()
+        
+        # Analytics'ten de kontrol et
+        if AppEvent:
+            analytics_count = AppEvent.objects.filter(
+                timestamp__gte=date_start,
+                timestamp__lte=date_end,
+                user__isnull=False
+            ).values('user').distinct().count()
+            count = max(count, analytics_count)
         
         if count > max_daily_active:
             max_daily_active = count
@@ -434,16 +519,37 @@ def admin_dashboard_view(request):
     
     # Önceki dönem aktif kullanıcı sayıları (uygulama kullanıcıları)
     prev_week_daily_active = app_users_qs.filter(
-        last_login__gte=prev_week_start,
-        last_login__lt=prev_week_end,
         is_active=True
-    ).count()
+    ).filter(
+        Q(last_login__gte=prev_week_start, last_login__lt=prev_week_end) |
+        Q(last_login__isnull=True, updated_at__gte=prev_week_start, updated_at__lt=prev_week_end)
+    ).distinct().count()
     
     prev_month_daily_active = app_users_qs.filter(
-        last_login__gte=prev_month_start,
-        last_login__lt=prev_month_end,
         is_active=True
-    ).count()
+    ).filter(
+        Q(last_login__gte=prev_month_start, last_login__lt=prev_month_end) |
+        Q(last_login__isnull=True, updated_at__gte=prev_month_start, updated_at__lt=prev_month_end)
+    ).distinct().count()
+    
+    # Analytics'ten de kontrol et
+    try:
+        from app.analytics.models import AppEvent
+        prev_week_from_analytics = AppEvent.objects.filter(
+            timestamp__gte=prev_week_start,
+            timestamp__lt=prev_week_end,
+            user__isnull=False
+        ).values('user').distinct().count()
+        prev_week_daily_active = max(prev_week_daily_active, prev_week_from_analytics)
+        
+        prev_month_from_analytics = AppEvent.objects.filter(
+            timestamp__gte=prev_month_start,
+            timestamp__lt=prev_month_end,
+            user__isnull=False
+        ).values('user').distinct().count()
+        prev_month_daily_active = max(prev_month_daily_active, prev_month_from_analytics)
+    except Exception:
+        pass
     
     # Büyüme oranları
     week_growth_rate = calculate_growth_rate(week_registrations, prev_week_registrations)
@@ -455,25 +561,57 @@ def admin_dashboard_view(request):
     # Retention Rate (Tutma Oranı) - Bu hafta kayıt olanların kaçı hala aktif (uygulama kullanıcıları)
     week_retention_users = app_users_qs.filter(
         created_at__gte=week_start,
-        last_login__gte=now - timedelta(days=7),
         is_active=True
-    ).count()
+    ).filter(
+        Q(last_login__gte=now - timedelta(days=7)) |
+        Q(last_login__isnull=True, updated_at__gte=now - timedelta(days=7))
+    ).distinct().count()
+    
+    # Analytics'ten de kontrol et
+    try:
+        from app.analytics.models import AppEvent
+        week_retention_from_analytics = AppEvent.objects.filter(
+            user__created_at__gte=week_start,
+            timestamp__gte=now - timedelta(days=7),
+            user__isnull=False
+        ).values('user').distinct().count()
+        week_retention_users = max(week_retention_users, week_retention_from_analytics)
+    except Exception:
+        pass
+    
     week_retention_rate = calculate_percentage(week_retention_users, week_registrations) if week_registrations > 0 else 0.0
     
     # Churn Rate (Ayrılma Oranı) - Son 30 günde kayıt olup son 7 günde giriş yapmayanlar
     churned_users = app_users_qs.filter(
         Q(created_at__gte=month_start) &
-        (Q(last_login__lt=now - timedelta(days=7)) | Q(last_login__isnull=True)) &
-        Q(is_active=True)
-    ).count()
+        Q(is_active=True) &
+        (
+            Q(last_login__lt=now - timedelta(days=7)) | 
+            Q(last_login__isnull=True, updated_at__lt=now - timedelta(days=7))
+        )
+    ).distinct().count()
     churn_rate = calculate_percentage(churned_users, month_registrations) if month_registrations > 0 else 0.0
     
     # Conversion Rate - Kayıt olanların aktif kullanıcıya dönüşme oranı
     converted_users = app_users_qs.filter(
         created_at__gte=month_start,
-        last_login__isnull=False,
         is_active=True
-    ).count()
+    ).filter(
+        Q(last_login__isnull=False) |
+        Q(last_login__isnull=True, updated_at__gt=F('created_at'))
+    ).distinct().count()
+    
+    # Analytics'ten de kontrol et
+    try:
+        from app.analytics.models import AppEvent
+        converted_from_analytics = AppEvent.objects.filter(
+            user__created_at__gte=month_start,
+            user__isnull=False
+        ).values('user').distinct().count()
+        converted_users = max(converted_users, converted_from_analytics)
+    except Exception:
+        pass
+    
     conversion_rate = calculate_percentage(converted_users, month_registrations) if month_registrations > 0 else 0.0
     
     # ==================== DEMOGRAFİK ANALİZ ====================
@@ -534,6 +672,11 @@ def admin_dashboard_view(request):
     
     # Haftalık aktif kullanıcı trendi (son 4 hafta - DOĞRU HESAPLAMA)
     weekly_active_trend = []
+    try:
+        from app.analytics.models import AppEvent
+    except Exception:
+        AppEvent = None
+    
     for i in range(4):
         week_end = today - timedelta(days=i*7)
         week_start = week_end - timedelta(days=6)
@@ -541,10 +684,20 @@ def admin_dashboard_view(request):
         week_end_dt = timezone.make_aware(datetime.combine(week_end, datetime.max.time()))
         
         count = app_users_qs.filter(
-            last_login__gte=week_start_dt,
-            last_login__lte=week_end_dt,
             is_active=True
-        ).count()
+        ).filter(
+            Q(last_login__gte=week_start_dt, last_login__lte=week_end_dt) |
+            Q(last_login__isnull=True, updated_at__gte=week_start_dt, updated_at__lte=week_end_dt)
+        ).distinct().count()
+        
+        # Analytics'ten de kontrol et
+        if AppEvent:
+            analytics_count = AppEvent.objects.filter(
+                timestamp__gte=week_start_dt,
+                timestamp__lte=week_end_dt,
+                user__isnull=False
+            ).values('user').distinct().count()
+            count = max(count, analytics_count)
         
         weekly_active_trend.append({
             'week': f"Hafta {4-i}",

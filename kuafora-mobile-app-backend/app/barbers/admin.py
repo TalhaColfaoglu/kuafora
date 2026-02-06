@@ -18,6 +18,8 @@ from .models import (
     StaffCatalogImage,
     WorkSchedule,
     Review,
+    Favorite,
+    ViewEvent,
     ServiceCategory,
     Service,
     StaffService,
@@ -819,7 +821,6 @@ class ReviewAdmin(ModelAdmin):
     list_display = ("user", "barbershop", "rating_stars", "comment_snippet", "created_at")
     list_filter = ("rating", "created_at", "is_anonymous", "barbershop")
     search_fields = ("comment", "user__full_name", "barbershop__name")
-    actions = ["delete_reviews"]
     readonly_fields = ("created_at", "updated_at")
     fieldsets = (
         ("Temel", {"fields": ("user", "barbershop", "staff", "rating", "is_anonymous")}),
@@ -835,12 +836,58 @@ class ReviewAdmin(ModelAdmin):
     def comment_snippet(self, obj):
         return (obj.comment[:50] + '...') if len(obj.comment) > 50 else obj.comment
     comment_snippet.short_description = "Yorum"
+    
+    def has_delete_permission(self, request, obj=None):
+        """Yorum verileri silinemez - istatistikler için sürekli saklanmalı"""
+        return False
+    
+    def has_change_permission(self, request, obj=None):
+        """Yorum verileri değiştirilemez - sadece görüntülenebilir"""
+        return False
 
-    @action(description="Seçilen yorumları sil")
-    def delete_reviews(self, request, queryset):
-        count = queryset.count()
-        queryset.delete()
-        self.message_user(request, f"{count} yorum silindi.")
+
+@admin.register(Favorite)
+class FavoriteAdmin(ModelAdmin):
+    list_display = ("user", "barbershop", "created_at")
+    list_filter = ("created_at", "barbershop")
+    search_fields = ("user__email", "barbershop__name")
+    readonly_fields = ("created_at",)
+    date_hierarchy = "created_at"
+    autocomplete_fields = ("user", "barbershop")
+    
+    def has_delete_permission(self, request, obj=None):
+        """Favori verileri silinemez - istatistikler için sürekli saklanmalı"""
+        return False
+    
+    def has_add_permission(self, request):
+        """Sadece API üzerinden eklenebilir"""
+        return False
+    
+    def has_change_permission(self, request, obj=None):
+        """Favori verileri değiştirilemez - sadece görüntülenebilir"""
+        return False
+
+
+@admin.register(ViewEvent)
+class ViewEventAdmin(ModelAdmin):
+    list_display = ("barbershop", "user", "device_id", "viewed_at")
+    list_filter = ("viewed_at", "barbershop")
+    search_fields = ("barbershop__name", "user__email", "device_id")
+    readonly_fields = ("viewed_at",)
+    date_hierarchy = "viewed_at"
+    autocomplete_fields = ("barbershop", "user")
+    
+    def has_delete_permission(self, request, obj=None):
+        """Görüntülenme verileri silinemez - istatistikler için sürekli saklanmalı"""
+        return False
+    
+    def has_add_permission(self, request):
+        """Sadece API üzerinden eklenebilir"""
+        return False
+    
+    def has_change_permission(self, request, obj=None):
+        """Görüntülenme verileri değiştirilemez - sadece görüntülenebilir"""
+        return False
 
 
 @admin.register(Service)

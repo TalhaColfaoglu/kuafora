@@ -12,6 +12,18 @@ class AppEventAdmin(admin.ModelAdmin):
     
     def get_queryset(self, request):
         return super().get_queryset(request).select_related('user')
+    
+    def has_delete_permission(self, request, obj=None):
+        """İstatistik verileri silinemez - sürekli saklanmalı"""
+        return False
+    
+    def has_add_permission(self, request):
+        """Sadece API üzerinden eklenebilir"""
+        return False
+    
+    def has_change_permission(self, request, obj=None):
+        """İstatistik verileri değiştirilemez"""
+        return False
 
 
 @admin.register(ScreenView)
@@ -24,6 +36,18 @@ class ScreenViewAdmin(admin.ModelAdmin):
     
     def get_queryset(self, request):
         return super().get_queryset(request).select_related('user')
+    
+    def has_delete_permission(self, request, obj=None):
+        """İstatistik verileri silinemez - sürekli saklanmalı"""
+        return False
+    
+    def has_add_permission(self, request):
+        """Sadece API üzerinden eklenebilir"""
+        return False
+    
+    def has_change_permission(self, request, obj=None):
+        """İstatistik verileri değiştirilemez"""
+        return False
 
 
 @admin.register(FeatureUsage)
@@ -36,6 +60,18 @@ class FeatureUsageAdmin(admin.ModelAdmin):
     
     def get_queryset(self, request):
         return super().get_queryset(request).select_related('user')
+    
+    def has_delete_permission(self, request, obj=None):
+        """İstatistik verileri silinemez - sürekli saklanmalı"""
+        return False
+    
+    def has_add_permission(self, request):
+        """Sadece API üzerinden eklenebilir"""
+        return False
+    
+    def has_change_permission(self, request, obj=None):
+        """İstatistik verileri değiştirilemez"""
+        return False
 
 
 @admin.register(UserSession)
@@ -48,4 +84,16 @@ class UserSessionAdmin(admin.ModelAdmin):
     
     def get_queryset(self, request):
         return super().get_queryset(request).select_related('user')
+    
+    def has_delete_permission(self, request, obj=None):
+        """İstatistik verileri silinemez - sürekli saklanmalı"""
+        return False
+    
+    def has_add_permission(self, request):
+        """Sadece API üzerinden eklenebilir"""
+        return False
+    
+    def has_change_permission(self, request, obj=None):
+        """İstatistik verileri değiştirilemez"""
+        return False
 

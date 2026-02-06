@@ -153,6 +153,9 @@ class LoginView(generics.GenericAPIView):
             return Response({"detail": text or "Bad request"}, status=status.HTTP_400_BAD_REQUEST)
 
         user = serializer.validated_data["user"]
+        # Update last_login for dashboard tracking
+        user.last_login = timezone.now()
+        user.save(update_fields=['last_login'])
         refresh = RefreshToken.for_user(user)
         return Response({
             "access": str(refresh.access_token),
@@ -1183,7 +1186,10 @@ class ResolveUserView(generics.GenericAPIView):
         email = request.query_params.get('email')
         if not email:
             return Response({"detail": "email query param required"}, status=400)
-        user = User.objects.filter(email=email).first()
+        # Normalize email: trim ve lowercase (CheckEmailView ile uyumlu)
+        email = (email or "").strip().lower()
+        # Case-insensitive arama (CheckEmailView ile aynı davranış)
+        user = User.objects.filter(email__iexact=email).first()
         if not user:
             return Response({
                 "exists": False,

@@ -90,6 +90,12 @@ class GmailAPIEmailBackend(BaseEmailBackend):
                 raw = self._email_to_raw(email_message)
                 service.users().messages().send(userId="me", body={"raw": raw}).execute()
                 sent += 1
+                # Her başarılı email gönderiminde tracking yap
+                try:
+                    from app.users.email_tracking import increment_daily_email_count
+                    increment_daily_email_count()
+                except Exception as tracking_err:
+                    logger.warning("Email tracking failed (non-critical): %s", tracking_err)
             except Exception as e:
                 logger.exception("Gmail API send failed: %s", e)
                 if not self.fail_silently:

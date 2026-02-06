@@ -33,6 +33,100 @@ body {
   background: var(--color-white);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Force text color on white/surface backgrounds */
+section.bg-white,
+section.bg-surface {
+  color: var(--color-primary) !important;
+}
+
+section.bg-white h1,
+section.bg-white h2,
+section.bg-white h3,
+section.bg-white h4,
+section.bg-white h5,
+section.bg-white h6,
+section.bg-white p,
+section.bg-white span:not(.text-white):not([class*="text-accent"]):not([class*="text-white/"]):not([class*="bg-primary"]):not([class*="bg-secondary"]),
+section.bg-surface h1,
+section.bg-surface h2,
+section.bg-surface h3,
+section.bg-surface h4,
+section.bg-surface h5,
+section.bg-surface h6,
+section.bg-surface p,
+section.bg-surface span:not(.text-white):not([class*="text-accent"]):not([class*="text-white/"]):not([class*="bg-primary"]):not([class*="bg-secondary"]) {
+  color: var(--color-primary) !important;
+}
+
+/* Cards on white backgrounds */
+.bg-white:not([class*="bg-primary"]):not([class*="bg-secondary"]):not([class*="bg-white/"]) {
+  color: var(--color-primary) !important;
+}
+
+.bg-white:not([class*="bg-primary"]):not([class*="bg-secondary"]):not([class*="bg-white/"]) h1,
+.bg-white:not([class*="bg-primary"]):not([class*="bg-secondary"]):not([class*="bg-white/"]) h2,
+.bg-white:not([class*="bg-primary"]):not([class*="bg-secondary"]):not([class*="bg-white/"]) h3,
+.bg-white:not([class*="bg-primary"]):not([class*="bg-secondary"]):not([class*="bg-white/"]) h4,
+.bg-white:not([class*="bg-primary"]):not([class*="bg-secondary"]):not([class*="bg-white/"]) h5,
+.bg-white:not([class*="bg-primary"]):not([class*="bg-secondary"]):not([class*="bg-white/"]) h6,
+.bg-white:not([class*="bg-primary"]):not([class*="bg-secondary"]):not([class*="bg-white/"]) p,
+.bg-white:not([class*="bg-primary"]):not([class*="bg-secondary"]):not([class*="bg-white/"]) span:not(.text-white):not([class*="text-accent"]):not([class*="text-white/"]):not([class*="bg-primary"]):not([class*="bg-secondary"]) {
+  color: var(--color-primary) !important;
+}
+
+/* Ensure no white text on white backgrounds */
+section.bg-white .text-white:not([class*="bg-primary"]):not([class*="bg-secondary"]):not([class*="bg-accent"]):not([class*="bg-gradient"]),
+section.bg-surface .text-white:not([class*="bg-primary"]):not([class*="bg-secondary"]):not([class*="bg-accent"]):not([class*="bg-gradient"]) {
+  color: var(--color-primary) !important;
+}
+
+html {
+  height: 100%;
+}
+
+main {
+  flex: 1;
+}
+
+/* Footer Fix */
+footer {
+  margin-top: auto;
+  background-color: var(--color-primary) !important;
+  color: white !important;
+  position: relative;
+  z-index: 10;
+}
+
+footer * {
+  color: inherit;
+}
+
+footer h4,
+footer p,
+footer span,
+footer a {
+  color: rgba(255, 255, 255, 0.9) !important;
+}
+
+footer a:hover {
+  color: white !important;
+}
+
+footer .text-white\/40,
+footer .text-white\/60,
+footer .text-white\/70 {
+  color: rgba(255, 255, 255, 0.7) !important;
+}
+
+footer .text-white\/40:hover,
+footer .text-white\/60:hover,
+footer .text-white\/70:hover {
+  color: white !important;
 }
 
 @media (min-width: 640px) {
@@ -784,6 +878,46 @@ html {
 /* Image Load Animation */
 img.loaded {
   animation: fadeIn 0.5s ease-in-out;
+  opacity: 1 !important;
+}
+
+/* Ensure images are visible when loaded */
+img[src*="/static/img/"],
+img[src*="img/screens/"] {
+  opacity: 1;
+  transition: opacity 0.3s ease;
+  background-color: transparent;
+}
+
+img[src*="/static/img/"].loaded,
+img[src*="img/screens/"].loaded {
+  opacity: 1 !important;
+}
+
+/* Fallback visibility - ensure proper display */
+img[src*="/static/img/"] + div.hidden,
+img[src*="img/screens/"] + div.hidden {
+  display: none !important;
+}
+
+img[src*="/static/img/"] + div:not(.hidden),
+img[src*="img/screens/"] + div:not(.hidden) {
+  display: flex !important;
+  transition: opacity 0.3s ease;
+}
+
+/* Aspect video containers */
+.aspect-video {
+  background-color: var(--color-surface);
+  min-height: 200px;
+}
+
+.aspect-video img {
+  opacity: 1;
+}
+
+.aspect-video img:not([src]) {
+  display: none;
 }
 
 /* Custom Cursor (Optional) */

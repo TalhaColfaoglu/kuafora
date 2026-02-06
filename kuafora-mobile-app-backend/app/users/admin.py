@@ -18,9 +18,15 @@ class EmailDailyLogAdmin(ModelAdmin):
     list_per_page = 31
 
     def has_add_permission(self, request):
+        """Sadece sistem tarafından otomatik oluşturulur"""
         return False
 
     def has_change_permission(self, request, obj=None):
+        """İstatistik verileri değiştirilemez"""
+        return False
+    
+    def has_delete_permission(self, request, obj=None):
+        """İstatistik verileri silinemez - sürekli saklanmalı"""
         return False
 
 

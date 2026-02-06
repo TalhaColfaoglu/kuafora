@@ -529,7 +529,8 @@ GMAIL_API_ENABLED = bool(GMAIL_API_REFRESH_TOKEN and GMAIL_API_CLIENT_ID and GMA
 if GMAIL_API_ENABLED:
     EMAIL_BACKEND = "app.core.gmail_api_backend.GmailAPIEmailBackend"
 elif EMAIL_HOST_USER and EMAIL_HOST_PASSWORD:
-    EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+    # SMTP backend with automatic email tracking
+    EMAIL_BACKEND = "app.core.tracking_smtp_backend.TrackingSMTPEmailBackend"
 else:
     # SMTP/Gmail API yoksa: DEBUG'ta console, production'da dummy
     EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend" if DEBUG else "django.core.mail.backends.dummy.EmailBackend"

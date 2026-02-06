@@ -306,11 +306,11 @@
       </div>
     </header>
 
-    <main id="top" class="pt-20">
+    <main id="top" class="pt-20 flex-1">
       {% block content %}{% endblock %}
     </main>
 
-    <footer id="contact" class="bg-primary text-white">
+    <footer id="contact" class="bg-primary text-white relative z-10">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
         <div class="grid gap-12 md:grid-cols-12">
           <!-- Brand Column -->
@@ -390,13 +390,14 @@
         </div>
         
         <div class="mt-16 pt-8 border-t border-white/10 flex flex-col sm:flex-row justify-between items-center gap-4">
-          <p class="text-sm text-white/40">© {% now "Y" %} Kuafora. Tüm hakları saklıdır.</p>
+          <p class="text-sm text-white/60">© {% now "Y" %} Kuafora. Tüm hakları saklıdır.</p>
           <div class="flex items-center gap-6">
-            <a href="#" class="text-sm text-white/40 hover:text-white transition-colors">Türkçe 🇹🇷</a>
+            <a href="#" class="text-sm text-white/60 hover:text-white transition-colors">Türkçe 🇹🇷</a>
           </div>
         </div>
       </div>
     </footer>
+    
 
     {% block scripts %}{% endblock %}
     <script src="{% static 'js/site.js' %}" defer></script>

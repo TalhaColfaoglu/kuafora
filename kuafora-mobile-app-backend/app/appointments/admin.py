@@ -20,6 +20,10 @@ class AppointmentAdmin(ModelAdmin):
     date_hierarchy = "start_datetime"
     autocomplete_fields = ("shop", "staff", "customer")
     readonly_fields = ("created_at", "updated_at")
+    
+    def has_delete_permission(self, request, obj=None):
+        """Randevu verileri silinemez - istatistikler için sürekli saklanmalı"""
+        return False
     fieldsets = (
         ("Temel", {"fields": ("shop", "staff", "customer", "status", "source")}),
         ("Zaman", {"fields": ("start_datetime", "end_datetime", "duration_minutes")}),

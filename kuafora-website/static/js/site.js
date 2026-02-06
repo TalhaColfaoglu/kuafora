@@ -147,10 +147,15 @@
     const images = document.querySelectorAll('img[src*="/static/img/"], img[src*="img/screens/"]');
     
     images.forEach(function(img) {
+      // Set loading state
+      img.style.opacity = '0';
+      img.style.transition = 'opacity 0.3s ease';
+      
       // Error handler
       img.addEventListener('error', function() {
         console.warn('Görsel yüklenemedi:', this.src);
         this.style.display = 'none';
+        this.style.opacity = '0';
         const fallback = this.nextElementSibling;
         if (fallback && (fallback.classList.contains('hidden') || fallback.style.display === 'none')) {
           fallback.classList.remove('hidden');
@@ -161,6 +166,7 @@
       // Load handler
       img.addEventListener('load', function() {
         this.classList.add('loaded');
+        this.style.opacity = '1';
         const fallback = this.nextElementSibling;
         if (fallback && !fallback.classList.contains('hidden')) {
           fallback.classList.add('hidden');
@@ -171,10 +177,26 @@
       // Check if already loaded
       if (img.complete && img.naturalHeight !== 0) {
         img.classList.add('loaded');
+        img.style.opacity = '1';
         const fallback = img.nextElementSibling;
         if (fallback && !fallback.classList.contains('hidden')) {
           fallback.classList.add('hidden');
           fallback.style.display = 'none';
+        }
+      } else {
+        // Force load attempt
+        const src = img.src;
+        if (src) {
+          const testImg = new Image();
+          testImg.onload = function() {
+            img.style.opacity = '1';
+            img.classList.add('loaded');
+          };
+          testImg.onerror = function() {
+            img.style.display = 'none';
+            img.style.opacity = '0';
+          };
+          testImg.src = src;
         }
       }
     });
