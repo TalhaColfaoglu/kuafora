@@ -1183,23 +1183,35 @@ class ResolveUserView(generics.GenericAPIView):
         },
     )
     def get(self, request, *args, **kwargs):
+        import logging
+        logger = logging.getLogger(__name__)
+        
         email = request.query_params.get('email')
         if not email:
             return Response({"detail": "email query param required"}, status=400)
         # Normalize email: trim ve lowercase (CheckEmailView ile uyumlu)
         email = (email or "").strip().lower()
+        logger.info(f"[ResolveUserView] Resolving email: {email}")
+        
         # Case-insensitive arama (CheckEmailView ile aynı davranış)
         user = User.objects.filter(email__iexact=email).first()
         if not user:
+            logger.warning(f"[ResolveUserView] User not found for email: {email}")
             return Response({
                 "exists": False,
                 "user_id": None,
                 "attached_shop_id": None,
             })
+        
+        logger.info(f"[ResolveUserView] User found: {user.id} (email: {user.email})")
+        
         # Check staff attachment
         from app.barbers.models import Staff  # lazy import
         staff = Staff.objects.filter(user=user).select_related('barbershop').first()
         attached_shop_id = getattr(getattr(staff, 'barbershop', None), 'id', None)
+        
+        logger.info(f"[ResolveUserView] Staff attachment check: attached_shop_id={attached_shop_id}")
+        
         return Response({
             "exists": True,
             "user_id": user.id,

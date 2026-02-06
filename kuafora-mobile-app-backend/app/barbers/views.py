@@ -2081,7 +2081,15 @@ class PartnerStaffViewSet(viewsets.ModelViewSet):
         
         # Serializer'ı validate et ve kaydet
         serializer = self.get_serializer(data=serializer_data)
-        serializer.is_valid(raise_exception=True)
+        if not serializer.is_valid():
+            # Validation hatalarını detaylı göster
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Serializer validation errors: {serializer.errors}")
+            return Response({
+                "detail": "Validation error",
+                "errors": serializer.errors
+            }, status=400)
         
         try:
             # save() çağrısında user ve barbershop parametrelerini direkt geçerek
