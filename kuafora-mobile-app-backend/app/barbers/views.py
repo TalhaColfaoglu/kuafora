@@ -2026,15 +2026,23 @@ class PartnerStaffViewSet(viewsets.ModelViewSet):
     def create(self, request, *args, **kwargs):
         """
         Personel oluştur. Eğer email sistemde varsa ve başka bir dükkanda personel değilse,
-        direkt personel olarak ekle.
+        direkt personel olarak ekle. Serializer validation'ı bypass eder.
         """
         from django.contrib.auth import get_user_model
         from rest_framework.exceptions import ValidationError
+        from django.db import transaction
+        import traceback
+        import logging
         User = get_user_model()
+        logger = logging.getLogger(__name__)
+        
+        # Log: create metodu çağrıldı
+        logger.info(f"[PartnerStaffViewSet CREATE] CREATE METHOD CALLED - request.data: {request.data}")
         
         # Admin'in dükkanını bul
         admin_staff = Staff.objects.filter(user=request.user, is_admin=True).order_by('-id').first()
         if not admin_staff:
+            logger.warning(f"[PartnerStaffViewSet CREATE] No admin barbershop for user: {request.user.id}")
             return Response({"detail": "No admin barbershop"}, status=400)
         
         shop = admin_staff.barbershop
@@ -2042,7 +2050,10 @@ class PartnerStaffViewSet(viewsets.ModelViewSet):
         # User field'ını request.data'dan al - UUID string veya int olabilir
         user_id = request.data.get('user')
         if not user_id:
+            logger.warning(f"[PartnerStaffViewSet CREATE] user field missing in request.data: {request.data}")
             return Response({"detail": "user field is required"}, status=400)
+        
+        logger.info(f"[PartnerStaffViewSet CREATE] Creating staff for user_id={user_id}, shop_id={shop.id}")
         
         # User'ı bul
         try:
@@ -2056,8 +2067,10 @@ class PartnerStaffViewSet(viewsets.ModelViewSet):
                 # Diğer durumlar için string'e çevir ve dene
                 user = User.objects.get(pk=str(user_id))
         except User.DoesNotExist:
+            logger.warning(f"[PartnerStaffViewSet CREATE] User not found: {user_id}")
             return Response({"detail": "User not found"}, status=400)
         except Exception as e:
+            logger.error(f"[PartnerStaffViewSet CREATE] Error finding user: {str(e)}")
             return Response({"detail": f"Invalid user ID: {str(e)}"}, status=400)
         
         # Kullanıcı zaten başka bir dükkanda personel mi kontrol et
@@ -2075,12 +2088,13 @@ class PartnerStaffViewSet(viewsets.ModelViewSet):
         # Staff oluştur - serializer kullanmadan direkt oluştur
         # Çünkü serializer validation'ı bazen UUID string'leri kabul etmeyebilir
         try:
-            from django.db import transaction
             with transaction.atomic():
                 # Staff oluştur - request.data'dan gelen değerleri güvenli şekilde al
                 gender_pref = request.data.get('gender_preference') or 'all'
                 bio_text = request.data.get('bio') or ''
                 career_year = request.data.get('career_start_year')
+                
+                logger.info(f"[PartnerStaffViewSet CREATE] Creating Staff: barbershop={shop.id}, user={user.id}, email={user.email}")
                 
                 # Staff oluştur
                 staff = Staff.objects.create(
@@ -2093,16 +2107,15 @@ class PartnerStaffViewSet(viewsets.ModelViewSet):
                     career_start_year=career_year if career_year else None,
                 )
                 
+                logger.info(f"[PartnerStaffViewSet CREATE] Staff created successfully: id={staff.id}")
+                
                 # Serializer ile response döndür
                 serializer = self.get_serializer(staff)
                 headers = self.get_success_headers(serializer.data)
                 return Response(serializer.data, status=201, headers=headers)
         except Exception as e:
             from django.db import IntegrityError
-            import traceback
-            import logging
-            logger = logging.getLogger(__name__)
-            logger.error(f"Staff creation error: {str(e)}\n{traceback.format_exc()}")
+            logger.error(f"[PartnerStaffViewSet CREATE] Staff creation error: {str(e)}\n{traceback.format_exc()}")
             
             if isinstance(e, IntegrityError):
                 # Integrity hatası - muhtemelen duplicate key
@@ -2118,6 +2131,15 @@ class PartnerStaffViewSet(viewsets.ModelViewSet):
             return Response({
                 "detail": f"Personel oluşturulamadı: {str(e)}"
             }, status=500)
+    
+    def perform_create(self, serializer):
+        """
+        perform_create'i override ediyoruz çünkü create metodumuz zaten serializer kullanmıyor.
+        Bu metod hiçbir şey yapmamalı çünkü create metodumuz zaten tüm işi yapıyor.
+        """
+        # Bu metod hiçbir şey yapmamalı çünkü create metodumuz zaten tüm işi yapıyor
+        # Ama DRF'nin standart akışını bypass etmek için override ediyoruz
+        pass
     
     @action(detail=False, methods=["get"], url_path="my-shops")
     def my_shops(self, request):
