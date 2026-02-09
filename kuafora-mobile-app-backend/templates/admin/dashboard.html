@@ -808,6 +808,30 @@
         <p class="stat-value">{{ stats.usage.app_opens_month|floatformat:0 }}</p>
         <div class="stat-subtitle">Son 30 günde app_open</div>
     </div>
+    <div class="stat-card purple">
+        <div class="stat-card-header">
+            <h3>Toplam salon görüntülenmesi (bugün)</h3>
+            <div class="stat-card-icon">🏪</div>
+        </div>
+        <p class="stat-value">{{ stats.usage.shop_views_today|floatformat:0 }}</p>
+        <div class="stat-subtitle">Bugün BarberDetailScreen görüntüleme</div>
+    </div>
+    <div class="stat-card purple">
+        <div class="stat-card-header">
+            <h3>Toplam salon görüntülenmesi (bu hafta)</h3>
+            <div class="stat-card-icon">📅</div>
+        </div>
+        <p class="stat-value">{{ stats.usage.shop_views_week|floatformat:0 }}</p>
+        <div class="stat-subtitle">Son 7 günde salon detay görüntüleme</div>
+    </div>
+    <div class="stat-card purple">
+        <div class="stat-card-header">
+            <h3>Toplam salon görüntülenmesi (bu ay)</h3>
+            <div class="stat-card-icon">🗓️</div>
+        </div>
+        <p class="stat-value">{{ stats.usage.shop_views_month|floatformat:0 }}</p>
+        <div class="stat-subtitle">Son 30 günde salon detay görüntüleme</div>
+    </div>
 </div>
 {% if stats.usage.top_features %}
 <h3 class="chart-title" style="margin-top: 24px;">En çok kullanılan özellikler (son 30 gün)</h3>
