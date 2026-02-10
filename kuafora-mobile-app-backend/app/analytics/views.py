@@ -6,6 +6,7 @@ from django.db.models import Count, Q, Avg, Sum, F
 from django.db.models.functions import TruncDate, TruncHour
 from datetime import timedelta, datetime
 from app.analytics.models import AppEvent, ScreenView, FeatureUsage, UserSession
+from app.users.models import User
 from app.analytics.serializers import (
     AppEventSerializer, ScreenViewSerializer, FeatureUsageSerializer,
     UserSessionSerializer, BatchTrackingSerializer
@@ -280,7 +281,7 @@ class AnalyticsViewSet(viewsets.ViewSet):
         ).values('app_type').annotate(
             count=Count('id')
         )
-        
+
         return Response({
             'app_opens': app_opens,
             'daily_active_users': daily_active,
@@ -291,5 +292,70 @@ class AnalyticsViewSet(viewsets.ViewSet):
             'top_features': list(top_features),
             'daily_opens_chart': daily_opens,
             'app_distribution': list(app_distribution),
+        })
+
+    @action(detail=False, methods=['get'], url_path='user-activity')
+    def user_activity(self, request):
+        """
+        Belirli bir kullanıcının hangi günlerde ve bir günde kaç defa uygulamaya girdiğini döner.
+        - Query params:
+          - user_id (zorunlu)
+          - days (opsiyonel, varsayılan: 90)
+          - app_type (opsiyonel, varsayılan: 'main')
+        """
+        user_id = request.query_params.get('user_id')
+        if not user_id:
+            return Response({'error': 'user_id query parametresi zorunlu'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            user = User.objects.get(pk=user_id)
+        except User.DoesNotExist:
+            return Response({'error': 'Kullanıcı bulunamadı'}, status=status.HTTP_404_NOT_FOUND)
+
+        try:
+            days = int(request.query_params.get('days', '90'))
+            if days <= 0:
+                days = 90
+        except ValueError:
+            days = 90
+
+        app_type = request.query_params.get('app_type', 'main').strip() or 'main'
+
+        now = timezone.now()
+        end_date = now.date()
+        start_date = end_date - timedelta(days=days - 1)
+
+        # Sadece ilgili kullanıcının, seçili app_type için oturumları
+        qs = UserSession.objects.filter(
+            user=user,
+            app_type=app_type,
+            start_time__date__gte=start_date,
+            start_time__date__lte=end_date,
+        )
+
+        # Gün bazında kaç oturum açtığını hesapla
+        per_day_qs = qs.annotate(day=TruncDate('start_time')).values('day').annotate(
+            session_count=Count('id')
+        ).order_by('day')
+
+        per_day = [
+            {
+                'date': item['day'],
+                'session_count': item['session_count'],
+            }
+            for item in per_day_qs
+        ]
+
+        total_days_used = len(per_day)
+        total_sessions = qs.count()
+
+        return Response({
+            'user_id': str(user.id),
+            'app_type': app_type,
+            'start_date': start_date,
+            'end_date': end_date,
+            'total_days_used': total_days_used,
+            'total_sessions': total_sessions,
+            'per_day': per_day,
         })
 

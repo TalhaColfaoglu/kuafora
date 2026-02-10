@@ -38,6 +38,22 @@ body {
   flex-direction: column;
 }
 
+/* ===== Global Safety: No invisible white text on light backgrounds ===== */
+/* Ana içerik alanında, arka planı açık olan bloklarda beyaz (ve yarı şeffaf beyaz) metni koyu renge çevir. */
+main .text-white:not([class*="bg-primary"]):not([class*="bg-black"]):not([class*="bg-neutral"]):not([class*="bg-slate"]):not([class*="bg-zinc"]):not([class*="bg-stone"]):not([class*="bg-gradient"]):not([class*="bg-accent"]):not([class*="bg-dark"]),
+main .text-white\/5,
+main .text-white\/10,
+main .text-white\/20,
+main .text-white\/30,
+main .text-white\/40,
+main .text-white\/50,
+main .text-white\/60,
+main .text-white\/70,
+main .text-white\/80,
+main .text-white\/90 {
+  color: var(--color-primary) !important;
+}
+
 /* Force text color on white/surface backgrounds */
 section.bg-white,
 section.bg-surface {
