@@ -4,6 +4,7 @@ from django.conf import settings
 from django.conf.urls.static import static
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 from app.barbers.views import ToggleTodayApi
+from app.analytics.views import TrackingViewSet
 from app.users.views import ResolveUserView
 from app.subscriptions.views import MySubscriptionApi, StartTrialApi, SubscriptionViewSet
 from django.http import JsonResponse, FileResponse
@@ -85,7 +86,16 @@ urlpatterns = [
     path("api/", include(("app.subscriptions.urls", "subscriptions"))),
     path("api/", include(("app.search.urls", "search"))),
     path("api/", include(("app.support.urls", "support"))),
+    # Analytics router (dashboard & tracking)
     path("api/analytics/", include(("app.analytics.urls", "analytics"))),
+    # Mobil client tam olarak `/api/analytics/tracking/session` endpoint'ine POST atıyor.
+    # Bazı ortamlarda include edilen router bu isteği yakalayamadığı için 404 dönebiliyor.
+    # Bu alias, route sırasından bağımsız olarak isteği doğrudan TrackingViewSet.track_session action'ına yönlendirir.
+    path(
+        "api/analytics/tracking/session",
+        TrackingViewSet.as_view({"post": "track_session"}),
+        name="api-analytics-tracking-session-no-slash",
+    ),
     path("api/users/resolve/", ResolveUserView.as_view(), name="resolve-user"),
     # Monitoring endpoints
     path("health/", health_simple, name="health-simple"),  # Simple health check (for load balancers)
