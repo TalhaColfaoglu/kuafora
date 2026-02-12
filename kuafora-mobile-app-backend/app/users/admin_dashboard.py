@@ -152,7 +152,11 @@ def _period_dates(period, month_param, today):
 
 
 def _period_stats(period_start, period_end, now):
-    """Seçili tarih aralığında kayıt, aktif kullanıcı, randevu, e-posta, yeni kuaför sayıları (uygulama kullanıcıları = staff hariç)."""
+    """Seçili tarih aralığında kayıt, aktif kullanıcı, randevu, e-posta, yeni kuaför sayıları (uygulama kullanıcıları = staff hariç).
+
+    Not: Analytics tabloları veya UserSession migrasyonları eksik olsa bile dashboard'un tamamen hata vermemesi için
+    dış bağımlı tüm sorguları try/except ile sarıyoruz ve güvenli fallback olarak 0 döndürüyoruz.
+    """
     start_dt = timezone.make_aware(datetime.combine(period_start, datetime.min.time()))
     end_dt = timezone.make_aware(datetime.combine(period_end, datetime.max.time()))
     if end_dt > now:
@@ -162,17 +166,21 @@ def _period_stats(period_start, period_end, now):
         created_at__date__gte=period_start,
         created_at__date__lte=period_end,
     ).count()
-    # Aktif kullanıcılar: Önce gerçek kullanım (UserSession), yoksa eski mantığa geri düş
+
+    # Aktif kullanıcılar: Önce gerçek kullanım (UserSession), yoksa analytics + eski DB mantığına geri düş
     # 1) UserSession üzerinden: Seçili tarih aralığında en az bir kez ana uygulamaya girmiş benzersiz kullanıcı
-    session_qs = UserSession.objects.filter(
-        start_time__gte=start_dt,
-        start_time__lte=end_dt,
-        user__isnull=False,
-        user__is_staff=False,
-        user__is_superuser=False,
-        app_type='main',
-    )
-    active_from_sessions = session_qs.values('user').distinct().count()
+    try:
+        session_qs = UserSession.objects.filter(
+            start_time__gte=start_dt,
+            start_time__lte=end_dt,
+            user__isnull=False,
+            user__is_staff=False,
+            user__is_superuser=False,
+            app_type='main',
+        )
+        active_from_sessions = session_qs.values('user').distinct().count()
+    except Exception:
+        active_from_sessions = 0
 
     # 2) Analytics (AppEvent) üzerinden: app_open vb. event'lere göre aktif kullanıcı
     try:
@@ -188,12 +196,15 @@ def _period_stats(period_start, period_end, now):
         active_from_analytics = 0
 
     # 3) Eski database mantığı: last_login/updated_at aralığı
-    active_from_db = base_users.filter(
-        is_active=True
-    ).filter(
-        Q(last_login__gte=start_dt, last_login__lte=end_dt) |
-        Q(last_login__isnull=True, updated_at__gte=start_dt, updated_at__lte=end_dt)
-    ).distinct().count()
+    try:
+        active_from_db = base_users.filter(
+            is_active=True
+        ).filter(
+            Q(last_login__gte=start_dt, last_login__lte=end_dt) |
+            Q(last_login__isnull=True, updated_at__gte=start_dt, updated_at__lte=end_dt)
+        ).distinct().count()
+    except Exception:
+        active_from_db = 0
 
     # En tutarlı sonucu almak için en yüksek değeri kullan
     active_users = max(active_from_sessions, active_from_analytics, active_from_db)
@@ -327,33 +338,42 @@ def admin_dashboard_view(request):
     month_start = timezone.make_aware(datetime.combine(month_ago, datetime.min.time()))
     
     # Aktif kullanıcı metrikleri: Önce UserSession, yoksa analytics + last_login fallback
-    # Temel session queryset'i (sadece ana uygulama, gerçek kullanıcılar)
-    session_base_qs = UserSession.objects.filter(
-        user__isnull=False,
-        user__is_staff=False,
-        user__is_superuser=False,
-        app_type='main',
-    )
-
     today_start = timezone.make_aware(datetime.combine(today, datetime.min.time()))
     year_start = timezone.make_aware(datetime.combine(year_ago, datetime.min.time()))
 
-    # 1) UserSession bazlı aktif kullanıcılar
-    daily_from_sessions = session_base_qs.filter(
-        start_time__gte=now - timedelta(hours=24)
-    ).values('user').distinct().count()
+    # Temel session queryset'i (sadece ana uygulama, gerçek kullanıcılar)
+    session_base_qs = None
+    try:
+        session_base_qs = UserSession.objects.filter(
+            user__isnull=False,
+            user__is_staff=False,
+            user__is_superuser=False,
+            app_type='main',
+        )
 
-    weekly_from_sessions = session_base_qs.filter(
-        start_time__gte=week_start
-    ).values('user').distinct().count()
+        # 1) UserSession bazlı aktif kullanıcılar
+        daily_from_sessions = session_base_qs.filter(
+            start_time__gte=now - timedelta(hours=24)
+        ).values('user').distinct().count()
 
-    monthly_from_sessions = session_base_qs.filter(
-        start_time__gte=month_start
-    ).values('user').distinct().count()
+        weekly_from_sessions = session_base_qs.filter(
+            start_time__gte=week_start
+        ).values('user').distinct().count()
 
-    yearly_from_sessions = session_base_qs.filter(
-        start_time__gte=year_start
-    ).values('user').distinct().count()
+        monthly_from_sessions = session_base_qs.filter(
+            start_time__gte=month_start
+        ).values('user').distinct().count()
+
+        yearly_from_sessions = session_base_qs.filter(
+            start_time__gte=year_start
+        ).values('user').distinct().count()
+    except Exception:
+        # UserSession tablosu yoksa veya sorgu hata verirse, session bazlı metrikleri 0 kabul et
+        session_base_qs = None
+        daily_from_sessions = 0
+        weekly_from_sessions = 0
+        monthly_from_sessions = 0
+        yearly_from_sessions = 0
 
     # 2) Analytics (AppEvent) bazlı aktif kullanıcılar
     try:
@@ -385,33 +405,39 @@ def admin_dashboard_view(request):
         yearly_from_analytics = 0
 
     # 3) last_login / updated_at bazlı aktif kullanıcılar
-    daily_from_db = app_users_qs.filter(
-        is_active=True
-    ).filter(
-        Q(last_login__gte=now - timedelta(hours=24)) |
-        Q(last_login__isnull=True, updated_at__gte=now - timedelta(hours=24))
-    ).distinct().count()
+    try:
+        daily_from_db = app_users_qs.filter(
+            is_active=True
+        ).filter(
+            Q(last_login__gte=now - timedelta(hours=24)) |
+            Q(last_login__isnull=True, updated_at__gte=now - timedelta(hours=24))
+        ).distinct().count()
 
-    weekly_from_db = app_users_qs.filter(
-        is_active=True
-    ).filter(
-        Q(last_login__gte=week_start) |
-        Q(last_login__isnull=True, updated_at__gte=week_start)
-    ).distinct().count()
+        weekly_from_db = app_users_qs.filter(
+            is_active=True
+        ).filter(
+            Q(last_login__gte=week_start) |
+            Q(last_login__isnull=True, updated_at__gte=week_start)
+        ).distinct().count()
 
-    monthly_from_db = app_users_qs.filter(
-        is_active=True
-    ).filter(
-        Q(last_login__gte=month_start) |
-        Q(last_login__isnull=True, updated_at__gte=month_start)
-    ).distinct().count()
+        monthly_from_db = app_users_qs.filter(
+            is_active=True
+        ).filter(
+            Q(last_login__gte=month_start) |
+            Q(last_login__isnull=True, updated_at__gte=month_start)
+        ).distinct().count()
 
-    yearly_from_db = app_users_qs.filter(
-        is_active=True
-    ).filter(
-        Q(last_login__gte=year_start) |
-        Q(last_login__isnull=True, updated_at__gte=year_start)
-    ).distinct().count()
+        yearly_from_db = app_users_qs.filter(
+            is_active=True
+        ).filter(
+            Q(last_login__gte=year_start) |
+            Q(last_login__isnull=True, updated_at__gte=year_start)
+        ).distinct().count()
+    except Exception:
+        daily_from_db = 0
+        weekly_from_db = 0
+        monthly_from_db = 0
+        yearly_from_db = 0
 
     # Her metrik için en tutarlı (en yüksek) değeri kullan
     daily_active_users = max(daily_from_sessions, daily_from_analytics, daily_from_db)
@@ -495,10 +521,16 @@ def admin_dashboard_view(request):
         date_end = timezone.make_aware(datetime.combine(date, datetime.max.time()))
         
         # 1) O gün içerisinde en az bir kez oturum açmış benzersiz kullanıcı sayısı (ana uygulama)
-        count_sessions = session_base_qs.filter(
-            start_time__gte=date_start,
-            start_time__lte=date_end,
-        ).values('user').distinct().count()
+        try:
+            if session_base_qs is not None:
+                count_sessions = session_base_qs.filter(
+                    start_time__gte=date_start,
+                    start_time__lte=date_end,
+                ).values('user').distinct().count()
+            else:
+                count_sessions = 0
+        except Exception:
+            count_sessions = 0
 
         # 2) Analytics (AppEvent) bazlı aktif kullanıcı (fallback)
         try:
@@ -514,12 +546,15 @@ def admin_dashboard_view(request):
             analytics_count = 0
 
         # 3) last_login / updated_at bazlı (fallback)
-        db_count = app_users_qs.filter(
-            is_active=True
-        ).filter(
-            Q(last_login__gte=date_start, last_login__lte=date_end) |
-            Q(last_login__isnull=True, updated_at__gte=date_start, updated_at__lte=date_end)
-        ).distinct().count()
+        try:
+            db_count = app_users_qs.filter(
+                is_active=True
+            ).filter(
+                Q(last_login__gte=date_start, last_login__lte=date_end) |
+                Q(last_login__isnull=True, updated_at__gte=date_start, updated_at__lte=date_end)
+            ).distinct().count()
+        except Exception:
+            db_count = 0
 
         count = max(count_sessions, analytics_count, db_count)
         
@@ -598,15 +633,27 @@ def admin_dashboard_view(request):
     ).count()
     
     # Önceki dönem aktif kullanıcı sayıları (uygulama kullanıcıları, aynı üçlü mantıkla)
-    prev_week_from_sessions = session_base_qs.filter(
-        start_time__gte=prev_week_start,
-        start_time__lt=prev_week_end,
-    ).values('user').distinct().count()
+    try:
+        if session_base_qs is not None:
+            prev_week_from_sessions = session_base_qs.filter(
+                start_time__gte=prev_week_start,
+                start_time__lt=prev_week_end,
+            ).values('user').distinct().count()
+        else:
+            prev_week_from_sessions = 0
+    except Exception:
+        prev_week_from_sessions = 0
     
-    prev_month_from_sessions = session_base_qs.filter(
-        start_time__gte=prev_month_start,
-        start_time__lt=prev_month_end,
-    ).values('user').distinct().count()
+    try:
+        if session_base_qs is not None:
+            prev_month_from_sessions = session_base_qs.filter(
+                start_time__gte=prev_month_start,
+                start_time__lt=prev_month_end,
+            ).values('user').distinct().count()
+        else:
+            prev_month_from_sessions = 0
+    except Exception:
+        prev_month_from_sessions = 0
 
     try:
         prev_week_from_analytics = AppEvent.objects.filter(
@@ -629,19 +676,25 @@ def admin_dashboard_view(request):
         prev_week_from_analytics = 0
         prev_month_from_analytics = 0
 
-    prev_week_from_db = app_users_qs.filter(
-        is_active=True
-    ).filter(
-        Q(last_login__gte=prev_week_start, last_login__lt=prev_week_end) |
-        Q(last_login__isnull=True, updated_at__gte=prev_week_start, updated_at__lt=prev_week_end)
-    ).distinct().count()
+    try:
+        prev_week_from_db = app_users_qs.filter(
+            is_active=True
+        ).filter(
+            Q(last_login__gte=prev_week_start, last_login__lt=prev_week_end) |
+            Q(last_login__isnull=True, updated_at__gte=prev_week_start, updated_at__lt=prev_week_end)
+        ).distinct().count()
+    except Exception:
+        prev_week_from_db = 0
 
-    prev_month_from_db = app_users_qs.filter(
-        is_active=True
-    ).filter(
-        Q(last_login__gte=prev_month_start, last_login__lt=prev_month_end) |
-        Q(last_login__isnull=True, updated_at__gte=prev_month_start, updated_at__lt=prev_month_end)
-    ).distinct().count()
+    try:
+        prev_month_from_db = app_users_qs.filter(
+            is_active=True
+        ).filter(
+            Q(last_login__gte=prev_month_start, last_login__lt=prev_month_end) |
+            Q(last_login__isnull=True, updated_at__gte=prev_month_start, updated_at__lt=prev_month_end)
+        ).distinct().count()
+    except Exception:
+        prev_month_from_db = 0
 
     prev_week_daily_active = max(prev_week_from_sessions, prev_week_from_analytics, prev_week_from_db)
     prev_month_daily_active = max(prev_month_from_sessions, prev_month_from_analytics, prev_month_from_db)
@@ -779,10 +832,16 @@ def admin_dashboard_view(request):
         week_start_dt = timezone.make_aware(datetime.combine(week_start, datetime.min.time()))
         week_end_dt = timezone.make_aware(datetime.combine(week_end, datetime.max.time()))
         
-        count = session_base_qs.filter(
-            start_time__gte=week_start_dt,
-            start_time__lte=week_end_dt,
-        ).values('user').distinct().count()
+        try:
+            if session_base_qs is not None:
+                count = session_base_qs.filter(
+                    start_time__gte=week_start_dt,
+                    start_time__lte=week_end_dt,
+                ).values('user').distinct().count()
+            else:
+                count = 0
+        except Exception:
+            count = 0
         
         weekly_active_trend.append({
             'week': f"Hafta {4-i}",

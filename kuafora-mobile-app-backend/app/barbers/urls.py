@@ -79,6 +79,17 @@ urlpatterns = [
     path("partner/reviews/", PartnerReviewViewSet.as_view({'get': 'list'}), name="partner-reviews-list-manual"),
     path("partner/reviews/<int:pk>/", PartnerReviewViewSet.as_view({'get': 'retrieve'}), name="partner-reviews-detail-manual"),
     path("partner/reviews/<int:pk>/reply/", PartnerReviewViewSet.as_view({'post': 'reply'}), name="partner-reviews-reply-manual"),
+    # Manual aliases for Partner Staff resign endpoint (APPEND_SLASH / method safety)
+    path(
+        "partner/staff/resign",
+        PartnerStaffViewSet.as_view({"post": "resign", "delete": "resign"}),
+        name="partner-staff-resign-alias",
+    ),
+    path(
+        "partner/staff/resign/",
+        PartnerStaffViewSet.as_view({"post": "resign", "delete": "resign"}),
+        name="partner-staff-resign-alias-slash",
+    ),
     # Manual catalog endpoints to ensure 404 is resolved (APPEND_SLASH=False compatibility)
     # Note: Router should handle this automatically, but adding manual paths as fallback
     path("partner/barbershops/<int:pk>/catalog", PartnerBarbershopViewSet.as_view({'get': 'catalog', 'post': 'catalog'}), name="partner-barbershop-catalog"),
