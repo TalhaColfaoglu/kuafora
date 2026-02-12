@@ -991,6 +991,39 @@
 </div>
 
 <h2 class="section-title">
+    <span>🔄</span>
+    <span>Kullanıcı Giriş Sıklığı Metrikleri</span>
+</h2>
+<div class="dashboard-stats">
+    <div class="stat-card info">
+        <div class="stat-card-header">
+            <h3>Günlük Ortalama Giriş</h3>
+            <div class="stat-card-icon">📱</div>
+        </div>
+        <p class="stat-value">{{ stats.users.daily_login_frequency|floatformat:1 }}</p>
+        <div class="stat-subtitle">Bugün aktif kullanıcı başına ortalama giriş sayısı</div>
+    </div>
+    
+    <div class="stat-card info">
+        <div class="stat-card-header">
+            <h3>Haftalık Ortalama Giriş</h3>
+            <div class="stat-card-icon">📅</div>
+        </div>
+        <p class="stat-value">{{ stats.users.weekly_avg_logins|floatformat:1 }}</p>
+        <div class="stat-subtitle">Son 7 günde aktif kullanıcı başına toplam ortalama giriş sayısı</div>
+    </div>
+    
+    <div class="stat-card info">
+        <div class="stat-card-header">
+            <h3>Aylık Ortalama Giriş</h3>
+            <div class="stat-card-icon">📊</div>
+        </div>
+        <p class="stat-value">{{ stats.users.monthly_avg_logins|floatformat:1 }}</p>
+        <div class="stat-subtitle">Son 30 günde aktif kullanıcı başına toplam ortalama giriş sayısı</div>
+    </div>
+</div>
+
+<h2 class="section-title">
     <span>📊</span>
     <span>Büyüme & Tutma Metrikleri</span>
 </h2>
@@ -1272,6 +1305,30 @@
                 {% if user.created_at %}
                 <span>• Kayıt: {{ user.created_at|date:"d.m.Y" }}</span>
                 {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+{% if stats.users.top_frequent_users %}
+<h2 class="section-title">
+    <span>🔥</span>
+    <span>En Sık Giriş Yapan Kullanıcılar (Son 30 Gün)</span>
+</h2>
+<div class="top-users-list">
+    {% for user_data in stats.users.top_frequent_users %}
+    <div class="user-item">
+        <div class="user-info">
+            <div class="user-email">{{ user_data.user__email }}</div>
+            {% if user_data.user__full_name %}
+            <div class="user-name">{{ user_data.user__full_name }}</div>
+            {% endif %}
+            <div class="user-meta">
+                <span class="badge-success">{{ user_data.total_logins }} giriş</span>
+                <span>• {{ user_data.days_active }} gün aktif</span>
+                <span>• Ortalama: {{ user_data.avg_per_day|floatformat:1 }} giriş/gün</span>
             </div>
         </div>
     </div>

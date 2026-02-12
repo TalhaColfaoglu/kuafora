@@ -27,7 +27,7 @@ def _usage_stats(now, today, week_start_date, month_ago):
     """Analytics tablolarından kullanım metrikleri: harita yükleme, uygulama açılma, salon görüntülenmesi, en çok kullanılan özellikler/ekranlar.
     week_start_date: son 7 günün ilk günü (today - 6) için date."""
     try:
-        from app.analytics.models import FeatureUsage, AppEvent, ScreenView
+        from app.analytics.models import FeatureUsage, AppEvent, ScreenView, UserSession
     except Exception:
         return {
             "map_loads_today": 0,
@@ -39,20 +39,41 @@ def _usage_stats(now, today, week_start_date, month_ago):
             "shop_views_today": 0,
             "shop_views_week": 0,
             "shop_views_month": 0,
+            "shop_views_total": 0,
             "top_features": [],
             "top_screens": [],
         }
     today_start = timezone.make_aware(datetime.combine(today, datetime.min.time()))
     week_start = timezone.make_aware(datetime.combine(week_start_date, datetime.min.time()))
     month_start = timezone.make_aware(datetime.combine(month_ago, datetime.min.time()))
-    # Harita yükleme (map_view) – FeatureUsage
+    
+    # Harita yükleme (map_view) – FeatureUsage (eğer veri yoksa 0 döner)
     map_today = FeatureUsage.objects.filter(feature_type="map_view", timestamp__gte=today_start).count()
     map_week = FeatureUsage.objects.filter(feature_type="map_view", timestamp__gte=week_start).count()
     map_month = FeatureUsage.objects.filter(feature_type="map_view", timestamp__gte=month_start).count()
-    # Uygulama açılma – AppEvent
+    
+    # Uygulama açılma – AppEvent (eğer veri yoksa UserSession'dan türet)
     app_open_today = AppEvent.objects.filter(event_type="app_open", timestamp__gte=today_start).count()
     app_open_week = AppEvent.objects.filter(event_type="app_open", timestamp__gte=week_start).count()
     app_open_month = AppEvent.objects.filter(event_type="app_open", timestamp__gte=month_start).count()
+    
+    # Eğer AppEvent boşsa, UserSession sayısından türet (her session = bir app open)
+    if app_open_today == 0:
+        app_open_today = UserSession.objects.filter(
+            start_time__gte=today_start,
+            app_type='main'
+        ).count()
+    if app_open_week == 0:
+        app_open_week = UserSession.objects.filter(
+            start_time__gte=week_start,
+            app_type='main'
+        ).count()
+    if app_open_month == 0:
+        app_open_month = UserSession.objects.filter(
+            start_time__gte=month_start,
+            app_type='main'
+        ).count()
+    
     # Toplam salon görüntülenmesi – ScreenView (BarberDetailScreen = salon detay ekranı)
     shop_view_q = Q(screen_name="BarberDetailScreen")
     shop_views_today = ScreenView.objects.filter(shop_view_q, timestamp__gte=today_start).count()
@@ -60,6 +81,7 @@ def _usage_stats(now, today, week_start_date, month_ago):
     shop_views_month = ScreenView.objects.filter(shop_view_q, timestamp__gte=month_start).count()
     # Tüm zamanlar için toplam salon görüntülenmesi
     shop_views_total = ScreenView.objects.filter(shop_view_q).count()
+    
     # En çok kullanılan özellikler (son 30 gün)
     top_features = (
         FeatureUsage.objects.filter(timestamp__gte=month_start)
@@ -548,6 +570,65 @@ def admin_dashboard_view(request):
     month_growth_rate = calculate_growth_rate(month_registrations, prev_month_registrations)
     daily_active_growth = calculate_growth_rate(daily_active_users, prev_week_daily_active)
     
+    # ==================== GİRİŞ SIKLIĞI METRİKLERİ ====================
+    
+    # Günlük ortalama giriş sayısı (bugün giriş yapan kullanıcıların ortalama login_count'u)
+    try:
+        daily_login_frequency = UserActivityLog.objects.filter(
+            activity_date=today,
+            app_type='main'
+        ).aggregate(avg_logins=Avg('login_count'))['avg_logins'] or 0.0
+    except Exception:
+        daily_login_frequency = 0.0
+    
+    # Haftalık ortalama giriş sayısı (son 7 günde aktif olan kullanıcıların toplam login sayısı / aktif kullanıcı sayısı)
+    try:
+        weekly_total_logins = UserActivityLog.objects.filter(
+            activity_date__gte=week_start_date,
+            activity_date__lte=today,
+            app_type='main'
+        ).aggregate(total=Sum('login_count'))['total'] or 0
+        weekly_avg_logins = (weekly_total_logins / weekly_active_users) if weekly_active_users > 0 else 0.0
+    except Exception:
+        weekly_avg_logins = 0.0
+    
+    # Aylık ortalama giriş sayısı (son 30 günde aktif olan kullanıcıların toplam login sayısı / aktif kullanıcı sayısı)
+    try:
+        monthly_total_logins = UserActivityLog.objects.filter(
+            activity_date__gte=month_ago,
+            activity_date__lte=today,
+            app_type='main'
+        ).aggregate(total=Sum('login_count'))['total'] or 0
+        monthly_avg_logins = (monthly_total_logins / monthly_active_users) if monthly_active_users > 0 else 0.0
+    except Exception:
+        monthly_avg_logins = 0.0
+    
+    # En sık giriş yapan kullanıcılar (son 30 gün)
+    try:
+        top_frequent_users_raw = UserActivityLog.objects.filter(
+            activity_date__gte=month_ago,
+            activity_date__lte=today,
+            app_type='main',
+            user__isnull=False
+        ).values('user', 'user__email', 'user__full_name').annotate(
+            total_logins=Sum('login_count'),
+            days_active=Count('activity_date', distinct=True)
+        ).order_by('-total_logins')[:10]
+        
+        # Ortalama giriş/gün hesapla
+        top_frequent_users = []
+        for item in top_frequent_users_raw:
+            avg_per_day = round(item['total_logins'] / item['days_active'], 1) if item['days_active'] > 0 else 0
+            top_frequent_users.append({
+                'user__email': item['user__email'],
+                'user__full_name': item['user__full_name'],
+                'total_logins': item['total_logins'],
+                'days_active': item['days_active'],
+                'avg_per_day': avg_per_day,
+            })
+    except Exception:
+        top_frequent_users = []
+    
     # ==================== RETENTION VE CHURN METRİKLERİ ====================
     
     # Retention Rate (Tutma Oranı) - Bu hafta kayıt olanların kaçı hala aktif (uygulama kullanıcıları)
@@ -767,6 +848,11 @@ def admin_dashboard_view(request):
                 'has_weekly_active_trend': any(w['count'] > 0 for w in weekly_active_trend),
                 # Top kullanıcılar
                 'top_active_users': list(top_active_users),
+                # Giriş sıklığı metrikleri
+                'daily_login_frequency': round(daily_login_frequency, 1),
+                'weekly_avg_logins': round(weekly_avg_logins, 1),
+                'monthly_avg_logins': round(monthly_avg_logins, 1),
+                'top_frequent_users': list(top_frequent_users),
             },
             'barbershops': {
                 'total': total_barbershops,
