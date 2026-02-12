@@ -8,7 +8,7 @@ from django.template.response import TemplateResponse
 from django.db.models.functions import TruncDate
 
 from app.users.models import User, UserAddress
-from app.analytics.models import UserSession, AppEvent
+from app.analytics.models import UserSession, AppEvent, UserActivityLog, DailyMetrics
 from app.users.email_tracking import (
     get_today_email_count,
     get_weekly_email_count,
@@ -170,19 +170,16 @@ def _period_stats(period_start, period_end, now):
         created_at__date__lte=period_end,
     ).count()
 
-    # Aktif kullanıcılar: Seçili aralıkta en az bir kez ana uygulamayı açmış benzersiz cihaz (device_id)
+    # Aktif kullanıcılar: Seçili aralıkta en az bir kez giriş yapan benzersiz cihaz (device_id)
+    # UserActivityLog kullanarak daha doğru sayım
     try:
-        active_users = (
-            UserSession.objects.filter(
-                start_time__gte=start_dt,
-                start_time__lte=end_dt,
-                app_type="main",
-            )
-            .values("device_id")
-            .distinct()
-            .count()
-        )
-    except Exception:
+        active_users = UserActivityLog.objects.filter(
+            activity_date__gte=period_start,
+            activity_date__lte=period_end,
+            app_type="main",
+        ).values("device_id").distinct().count()
+    except Exception as e:
+        print(f"Error calculating active users for period: {e}")
         active_users = 0
     appointments = Appointment.objects.filter(
         start_datetime__gte=start_dt,
@@ -314,47 +311,50 @@ def admin_dashboard_view(request):
     month_start = timezone.make_aware(datetime.combine(month_ago, datetime.min.time()))
     
     # Aktif kullanıcı metrikleri: benzersiz cihaz (device_id) bazlı, ana mobil uygulama için
+    # UserActivityLog kullanarak daha doğru sayım
     today_start = timezone.make_aware(datetime.combine(today, datetime.min.time()))
     year_start = timezone.make_aware(datetime.combine(year_ago, datetime.min.time()))
 
-    session_base_qs = None
     try:
-        session_base_qs = UserSession.objects.filter(app_type="main")
+        # Günlük aktif kullanıcılar (o gün en az 1 kez giriş yapan benzersiz cihazlar)
+        daily_active_users = UserActivityLog.objects.filter(
+            activity_date=today,
+            app_type='main'
+        ).values('device_id').distinct().count()
 
-        # Günlük / haftalık / aylık / yıllık aktif cihaz sayıları
-        daily_active_users = (
-            session_base_qs.filter(start_time__date=today)
-            .values("device_id")
-            .distinct()
-            .count()
-        )
+        # Haftalık aktif kullanıcılar (son 7 günde en az 1 kez giriş yapan)
+        weekly_active_users = UserActivityLog.objects.filter(
+            activity_date__gte=week_start_date,
+            activity_date__lte=today,
+            app_type='main'
+        ).values('device_id').distinct().count()
 
-        weekly_active_users = (
-            session_base_qs.filter(start_time__date__gte=week_start_date)
-            .values("device_id")
-            .distinct()
-            .count()
-        )
+        # Aylık aktif kullanıcılar (son 30 günde en az 1 kez giriş yapan)
+        monthly_active_users = UserActivityLog.objects.filter(
+            activity_date__gte=month_ago,
+            activity_date__lte=today,
+            app_type='main'
+        ).values('device_id').distinct().count()
 
-        monthly_active_users = (
-            session_base_qs.filter(start_time__date__gte=month_ago)
-            .values("device_id")
-            .distinct()
-            .count()
-        )
-
-        yearly_active_users = (
-            session_base_qs.filter(start_time__date__gte=year_ago)
-            .values("device_id")
-            .distinct()
-            .count()
-        )
-    except Exception:
-        session_base_qs = None
+        # Yıllık aktif kullanıcılar (son 365 günde en az 1 kez giriş yapan)
+        yearly_active_users = UserActivityLog.objects.filter(
+            activity_date__gte=year_ago,
+            activity_date__lte=today,
+            app_type='main'
+        ).values('device_id').distinct().count()
+        
+        # Tüm zamanlar aktif kullanıcılar (hiç en az 1 kez giriş yapan)
+        all_time_active_users = UserActivityLog.objects.filter(
+            app_type='main'
+        ).values('device_id').distinct().count()
+        
+    except Exception as e:
+        print(f"Error calculating active users: {e}")
         daily_active_users = 0
         weekly_active_users = 0
         monthly_active_users = 0
         yearly_active_users = 0
+        all_time_active_users = 0
     
     # Son 1 ay içerisinde uygulamaya girmeyen aktif kullanıcılar (uygulama kullanıcıları)
     inactive_last_month = app_users_qs.filter(
@@ -425,28 +425,22 @@ def admin_dashboard_view(request):
     daily_active_chart = []
     max_daily_active = 0
     
-    # Her gün için aktif kullanıcı sayısını database'den al (sadece ana uygulama kullanıcıları)
+    # UserActivityLog'dan günlük aktif kullanıcı verilerini toplu olarak al
+    activity_data = UserActivityLog.objects.filter(
+        activity_date__gte=today - timedelta(days=29),
+        activity_date__lte=today,
+        app_type='main'
+    ).values('activity_date').annotate(
+        count=Count('device_id', distinct=True)
+    ).order_by('activity_date')
+    
+    # Dictionary'ye çevir (hızlı erişim için)
+    activity_dict = {item['activity_date']: item['count'] for item in activity_data}
+    
+    # Her gün için veriyi chart'a ekle
     for i in range(30):
         date = today - timedelta(days=29-i)
-        date_start = timezone.make_aware(datetime.combine(date, datetime.min.time()))
-        date_end = timezone.make_aware(datetime.combine(date, datetime.max.time()))
-        
-        # O gün içerisinde en az bir kez oturum açmış benzersiz cihaz sayısı (ana uygulama)
-        try:
-            if session_base_qs is not None:
-                count = (
-                    session_base_qs.filter(
-                        start_time__gte=date_start,
-                        start_time__lte=date_end,
-                    )
-                    .values("device_id")
-                    .distinct()
-                    .count()
-                )
-            else:
-                count = 0
-        except Exception:
-            count = 0
+        count = activity_dict.get(date, 0)
         
         if count > max_daily_active:
             max_daily_active = count
@@ -524,35 +518,29 @@ def admin_dashboard_view(request):
     
     # Önceki dönem aktif kullanıcı sayıları (benzersiz cihaz bazlı)
     try:
-        if session_base_qs is not None:
-            prev_week_daily_active = (
-                session_base_qs.filter(
-                    start_time__gte=prev_week_start,
-                    start_time__lt=prev_week_end,
-                )
-                .values("device_id")
-                .distinct()
-                .count()
-            )
-        else:
-            prev_week_daily_active = 0
-    except Exception:
+        prev_week_start_date_obj = prev_week_start.date()
+        prev_week_end_date_obj = prev_week_end.date()
+        
+        prev_week_daily_active = UserActivityLog.objects.filter(
+            activity_date__gte=prev_week_start_date_obj,
+            activity_date__lt=prev_week_end_date_obj,
+            app_type='main'
+        ).values('device_id').distinct().count()
+    except Exception as e:
+        print(f"Error calculating prev week active: {e}")
         prev_week_daily_active = 0
 
     try:
-        if session_base_qs is not None:
-            prev_month_daily_active = (
-                session_base_qs.filter(
-                    start_time__gte=prev_month_start,
-                    start_time__lt=prev_month_end,
-                )
-                .values("device_id")
-                .distinct()
-                .count()
-            )
-        else:
-            prev_month_daily_active = 0
-    except Exception:
+        prev_month_start_date_obj = prev_month_start.date()
+        prev_month_end_date_obj = prev_month_end.date()
+        
+        prev_month_daily_active = UserActivityLog.objects.filter(
+            activity_date__gte=prev_month_start_date_obj,
+            activity_date__lt=prev_month_end_date_obj,
+            app_type='main'
+        ).values('device_id').distinct().count()
+    except Exception as e:
+        print(f"Error calculating prev month active: {e}")
         prev_month_daily_active = 0
     
     # Büyüme oranları
@@ -680,28 +668,20 @@ def admin_dashboard_view(request):
     
     # ==================== HAFTALIK TREND ====================
     
-    # Haftalık aktif kullanıcı trendi (son 4 hafta - benzersiz cihaz bazlı, UserSession)
+    # Haftalık aktif kullanıcı trendi (son 4 hafta - benzersiz cihaz bazlı, UserActivityLog)
     weekly_active_trend = []
     for i in range(4):
         week_end = today - timedelta(days=i*7)
         week_start = week_end - timedelta(days=6)
-        week_start_dt = timezone.make_aware(datetime.combine(week_start, datetime.min.time()))
-        week_end_dt = timezone.make_aware(datetime.combine(week_end, datetime.max.time()))
         
         try:
-            if session_base_qs is not None:
-                count = (
-                    session_base_qs.filter(
-                        start_time__gte=week_start_dt,
-                        start_time__lte=week_end_dt,
-                    )
-                    .values("device_id")
-                    .distinct()
-                    .count()
-                )
-            else:
-                count = 0
-        except Exception:
+            count = UserActivityLog.objects.filter(
+                activity_date__gte=week_start,
+                activity_date__lte=week_end,
+                app_type='main'
+            ).values('device_id').distinct().count()
+        except Exception as e:
+            print(f"Error calculating weekly trend: {e}")
             count = 0
         
         weekly_active_trend.append({
@@ -749,6 +729,7 @@ def admin_dashboard_view(request):
                 'weekly_active': weekly_active_users,
                 'monthly_active': monthly_active_users,
                 'yearly_active': yearly_active_users,
+                'all_time_active': all_time_active_users,
                 'inactive_last_month': inactive_last_month,
                 'never_logged_in': never_logged_in,
                 'daily_active_percentage': daily_active_percentage,

@@ -174,6 +174,7 @@ class UserSession(models.Model):
             models.Index(fields=['user', 'start_time']),
             models.Index(fields=['app_type', 'start_time']),
             models.Index(fields=['session_id']),
+            models.Index(fields=['device_id', 'start_time']),
         ]
         ordering = ['-start_time']
     
@@ -187,4 +188,88 @@ class UserSession(models.Model):
             self.duration = delta.total_seconds()
             self.save(update_fields=['duration'])
         return self.duration
+
+
+class DailyMetrics(models.Model):
+    """Günlük metrics snapshot - Dashboard için tarihsel veri saklama"""
+    
+    date = models.DateField(unique=True, db_index=True, help_text="Metrik günü")
+    
+    # Kullanıcı metrikleri
+    total_users = models.IntegerField(default=0, help_text="Toplam kullanıcı sayısı")
+    app_users_total = models.IntegerField(default=0, help_text="Uygulama kullanıcıları (staff hariç)")
+    daily_active_users = models.IntegerField(default=0, help_text="O gün aktif olan kullanıcılar")
+    daily_registrations = models.IntegerField(default=0, help_text="O gün kayıt olan kullanıcılar")
+    
+    # 7 günlük metrikleri
+    weekly_active_users = models.IntegerField(default=0, help_text="Son 7 gün aktif kullanıcılar")
+    weekly_registrations = models.IntegerField(default=0, help_text="Son 7 gün kayıtlar")
+    
+    # 30 günlük metrikleri
+    monthly_active_users = models.IntegerField(default=0, help_text="Son 30 gün aktif kullanıcılar")
+    monthly_registrations = models.IntegerField(default=0, help_text="Son 30 gün kayıtlar")
+    
+    # Yıllık metrikleri
+    yearly_active_users = models.IntegerField(default=0, help_text="Son 365 gün aktif kullanıcılar")
+    yearly_registrations = models.IntegerField(default=0, help_text="Son 365 gün kayıtlar")
+    
+    # Barbershop metrikleri
+    total_barbershops = models.IntegerField(default=0)
+    approved_barbershops = models.IntegerField(default=0)
+    
+    # Randevu metrikleri
+    total_appointments = models.IntegerField(default=0)
+    daily_appointments = models.IntegerField(default=0)
+    
+    # Retention/Churn
+    retention_rate = models.FloatField(default=0.0, help_text="Tutma oranı (%)")
+    churn_rate = models.FloatField(default=0.0, help_text="Ayrılma oranı (%)")
+    conversion_rate = models.FloatField(default=0.0, help_text="Dönüşüm oranı (%)")
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        db_table = 'analytics_daily_metrics'
+        ordering = ['-date']
+        verbose_name = "Günlük Metrik"
+        verbose_name_plural = "Günlük Metrikler"
+    
+    def __str__(self):
+        return f"Metrics for {self.date}"
+
+
+class UserActivityLog(models.Model):
+    """Kullanıcı aktivite logu - Her giriş için bir kayıt (aktif kullanıcı takibi için)"""
+    
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='activity_logs',
+        null=True,
+        blank=True
+    )
+    device_id = models.CharField(max_length=200, db_index=True, help_text="Cihaz ID")
+    app_type = models.CharField(
+        max_length=10,
+        choices=[('main', 'Ana Uygulama'), ('partner', 'Partner Uygulaması')],
+        default='main'
+    )
+    activity_date = models.DateField(db_index=True, help_text="Aktivite günü")
+    login_count = models.IntegerField(default=1, help_text="O gün giriş sayısı")
+    last_activity = models.DateTimeField(default=timezone.now)
+    
+    class Meta:
+        db_table = 'analytics_user_activity_log'
+        unique_together = [['user', 'device_id', 'activity_date', 'app_type']]
+        indexes = [
+            models.Index(fields=['activity_date', 'app_type']),
+            models.Index(fields=['device_id', 'activity_date']),
+            models.Index(fields=['user', 'activity_date']),
+        ]
+        ordering = ['-activity_date']
+    
+    def __str__(self):
+        user_str = self.user.email if self.user else f"Device {self.device_id[:8]}"
+        return f"{user_str} - {self.activity_date}"
 
