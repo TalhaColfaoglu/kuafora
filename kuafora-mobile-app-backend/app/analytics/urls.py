@@ -18,6 +18,13 @@ urlpatterns = [
         TrackingViewSet.as_view({"post": "track_session"}),
         name="tracking-track-session-no-slash",
     ),
+    # Mobil uygulama `/api/analytics/tracking/batch` (trailing slash olmadan) isteği atabiliyor.
+    # Router default `/tracking/batch/` beklediği için 404 olmaması adına alias ekliyoruz.
+    path(
+        "tracking/batch",
+        TrackingViewSet.as_view({"post": "batch_tracking"}),
+        name="tracking-batch-no-slash",
+    ),
     path("", include(router.urls)),
 ]
 

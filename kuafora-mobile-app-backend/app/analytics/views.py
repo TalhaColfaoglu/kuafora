@@ -5,7 +5,7 @@ from django.utils import timezone
 from django.db.models import Count, Q, Avg, Sum, F
 from django.db.models.functions import TruncDate, TruncHour
 from datetime import timedelta, datetime
-from app.analytics.models import AppEvent, ScreenView, FeatureUsage, UserSession
+from app.analytics.models import AppEvent, ScreenView, FeatureUsage, UserSession, UserActivityLog
 from app.users.models import User
 from app.analytics.serializers import (
     AppEventSerializer, ScreenViewSerializer, FeatureUsageSerializer,
@@ -16,6 +16,71 @@ from app.analytics.serializers import (
 class TrackingViewSet(viewsets.ViewSet):
     """Tracking verilerini toplama endpoint'leri"""
     permission_classes = [permissions.AllowAny]  # Anonim kullanıcılar da tracking gönderebilir
+
+    def _touch_activity_log(self, *, user, device_id: str, app_type: str, increment: bool) -> None:
+        """Her yeni session oluştuğunda günlük aktivite logunu güncelle.
+
+        - **increment=True**: yeni bir session_id oluşturuldu (günlük login_count +1)
+        - **increment=False**: session update (sadece last_activity güncelle)
+        """
+        if not device_id:
+            return
+        if not app_type:
+            app_type = "main"
+
+        today = timezone.now().date()
+        now = timezone.now()
+
+        # Anonymous (user=None) kayıtlarında unique constraint yok; çoğalmayı engellemek için
+        # mevcut ilk kaydı güncelliyoruz, yoksa oluşturuyoruz.
+        if user is None:
+            qs = UserActivityLog.objects.filter(
+                user__isnull=True,
+                device_id=device_id,
+                activity_date=today,
+                app_type=app_type,
+            ).order_by("id")
+            obj = qs.first()
+            if obj:
+                if increment:
+                    obj.login_count = F("login_count") + 1
+                obj.last_activity = now
+                obj.save(update_fields=["login_count", "last_activity"] if increment else ["last_activity"])
+            else:
+                UserActivityLog.objects.create(
+                    user=None,
+                    device_id=device_id,
+                    activity_date=today,
+                    app_type=app_type,
+                    login_count=1 if increment else 0,
+                    last_activity=now,
+                )
+            return
+
+        # Authenticated user: unique_together ile güvenli update_or_create
+        defaults = {"last_activity": now}
+        if increment:
+            # login_count artırmak için önce getirip atomic increment yapıyoruz
+            obj, created = UserActivityLog.objects.get_or_create(
+                user=user,
+                device_id=device_id,
+                activity_date=today,
+                app_type=app_type,
+                defaults={"login_count": 1, "last_activity": now},
+            )
+            if not created:
+                UserActivityLog.objects.filter(pk=obj.pk).update(
+                    login_count=F("login_count") + 1,
+                    last_activity=now,
+                )
+        else:
+            UserActivityLog.objects.update_or_create(
+                user=user,
+                device_id=device_id,
+                activity_date=today,
+                app_type=app_type,
+                defaults=defaults,
+            )
     
     @action(detail=False, methods=['post'], url_path='batch')
     def batch_tracking(self, request):
@@ -58,6 +123,13 @@ class TrackingViewSet(viewsets.ViewSet):
                         )
                         if session.end_time:
                             session.calculate_duration()
+                        # ✅ Daily activity log: sadece yeni session oluştuysa login say
+                        self._touch_activity_log(
+                            user=user,
+                            device_id=session.device_id,
+                            app_type=session.app_type,
+                            increment=created,
+                        )
                     except Exception:
                         pass  # Ignore session errors
             
@@ -193,6 +265,13 @@ class TrackingViewSet(viewsets.ViewSet):
                 )
                 if session.end_time:
                     session.calculate_duration()
+                # ✅ Daily activity log: sadece yeni session oluştuysa login say
+                self._touch_activity_log(
+                    user=session.user,
+                    device_id=session.device_id,
+                    app_type=session.app_type,
+                    increment=created,
+                )
                 return Response(UserSessionSerializer(session).data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
