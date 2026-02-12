@@ -832,6 +832,14 @@
         <p class="stat-value">{{ stats.usage.shop_views_month|floatformat:0 }}</p>
         <div class="stat-subtitle">Son 30 günde salon detay görüntüleme</div>
     </div>
+    <div class="stat-card purple">
+        <div class="stat-card-header">
+            <h3>Toplam salon görüntülenmesi (tüm zamanlar)</h3>
+            <div class="stat-card-icon">🏁</div>
+        </div>
+        <p class="stat-value">{{ stats.usage.shop_views_total|floatformat:0 }}</p>
+        <div class="stat-subtitle">Panel açıldığından beri BarberDetailScreen görüntüleme sayısı</div>
+    </div>
 </div>
 {% if stats.usage.top_features %}
 <h3 class="chart-title" style="margin-top: 24px;">En çok kullanılan özellikler (son 30 gün)</h3>

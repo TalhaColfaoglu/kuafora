@@ -58,6 +58,8 @@ def _usage_stats(now, today, week_start_date, month_ago):
     shop_views_today = ScreenView.objects.filter(shop_view_q, timestamp__gte=today_start).count()
     shop_views_week = ScreenView.objects.filter(shop_view_q, timestamp__gte=week_start).count()
     shop_views_month = ScreenView.objects.filter(shop_view_q, timestamp__gte=month_start).count()
+    # Tüm zamanlar için toplam salon görüntülenmesi
+    shop_views_total = ScreenView.objects.filter(shop_view_q).count()
     # En çok kullanılan özellikler (son 30 gün)
     top_features = (
         FeatureUsage.objects.filter(timestamp__gte=month_start)
@@ -82,6 +84,7 @@ def _usage_stats(now, today, week_start_date, month_ago):
         "shop_views_today": shop_views_today,
         "shop_views_week": shop_views_week,
         "shop_views_month": shop_views_month,
+        "shop_views_total": shop_views_total,
         "top_features": list(top_features),
         "top_screens": list(top_screens),
     }
