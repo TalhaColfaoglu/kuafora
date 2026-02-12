@@ -872,7 +872,7 @@
     <span>👥</span>
     <span>Kullanıcı İstatistikleri</span>
 </h2>
-<p class="dashboard-note">Tüm sayılar veritabanından gerçek verilerle hesaplanır. DAU/WAU/MAU ve kayıt metrikleri yalnızca uygulama kullanıcılarını (admin/personel hariç) kapsar.</p>
+<p class="dashboard-note">Tüm sayılar veritabanından gerçek verilerle hesaplanır. DAU/WAU/MAU metrikleri, ana mobil uygulamayı ilgili dönemde en az bir kez açan benzersiz cihazları (aktif kullanıcılar) baz alır.</p>
 <div class="dashboard-stats">
     <div class="stat-card info">
         <div class="stat-card-header">
@@ -922,7 +922,7 @@
             </span>
             {% endif %}
         </div>
-        <div class="stat-subtitle">Son 24 saatte giriş yapan (uygulama kullanıcıları)</div>
+        <div class="stat-subtitle">Son 24 saatte uygulamayı en az bir kez açan benzersiz cihaz (aktif kullanıcı)</div>
     </div>
     
     <div class="stat-card success">
@@ -932,7 +932,7 @@
         </div>
         <p class="stat-value">{{ stats.users.weekly_active|floatformat:0 }}</p>
         <div class="stat-percentage">{{ stats.users.weekly_active_percentage|floatformat:1 }}%</div>
-        <div class="stat-subtitle">Son 7 günde giriş yapan kullanıcılar</div>
+        <div class="stat-subtitle">Son 7 günde uygulamayı en az bir kez açan benzersiz cihazlar</div>
     </div>
     
     <div class="stat-card success">
@@ -942,7 +942,7 @@
         </div>
         <p class="stat-value">{{ stats.users.monthly_active|floatformat:0 }}</p>
         <div class="stat-percentage">{{ stats.users.monthly_active_percentage|floatformat:1 }}%</div>
-        <div class="stat-subtitle">Son 30 günde giriş yapan kullanıcılar</div>
+        <div class="stat-subtitle">Son 30 günde uygulamayı en az bir kez açan benzersiz cihazlar</div>
     </div>
     
     <div class="stat-card purple">
@@ -952,7 +952,7 @@
         </div>
         <p class="stat-value">{{ stats.users.yearly_active|floatformat:0 }}</p>
         <div class="stat-percentage">{{ stats.users.yearly_active_percentage|floatformat:1 }}%</div>
-        <div class="stat-subtitle">Son 365 günde giriş yapan kullanıcılar</div>
+        <div class="stat-subtitle">Son 365 günde uygulamayı en az bir kez açan benzersiz cihazlar</div>
     </div>
 </div>
 
@@ -1099,7 +1099,7 @@
     {% endif %}
     <div class="chart-bars">
         {% for item in stats.daily_active_chart %}
-        <div class="chart-bar {% if item.count > 0 %}has-value{% endif %}" style="height: {% if stats.max_daily_active > 0 %}{% widthratio item.count stats.max_daily_active 100 %}{% else %}0{% endif %}%;" title="{{ item.date }}: {{ item.count }} kullanıcı">
+        <div class="chart-bar {% if item.count > 0 %}has-value{% endif %}" style="height: {% if stats.max_daily_active > 0 %}{% widthratio item.count stats.max_daily_active 100 %}{% else %}0{% endif %}%;" title="{{ item.date }}: {{ item.count }} aktif (benzersiz cihaz)">
             {% if item.count > 0 %}
             <span class="chart-bar-value">{{ item.count }}</span>
             {% endif %}
@@ -1199,7 +1199,7 @@
     {% endif %}
     <div class="chart-bars">
         {% for item in stats.users.weekly_active_trend %}
-        <div class="chart-bar {% if item.count > 0 %}has-value{% endif %}" style="height: {% if stats.users.max_weekly_active > 0 %}{% widthratio item.count stats.users.max_weekly_active 100 %}{% else %}0{% endif %}%;" title="{{ item.week }}: {{ item.count }} kullanıcı">
+        <div class="chart-bar {% if item.count > 0 %}has-value{% endif %}" style="height: {% if stats.users.max_weekly_active > 0 %}{% widthratio item.count stats.users.max_weekly_active 100 %}{% else %}0{% endif %}%;" title="{{ item.week }}: {{ item.count }} aktif (benzersiz cihaz)">
             {% if item.count > 0 %}
             <span class="chart-bar-value">{{ item.count }}</span>
             {% endif %}

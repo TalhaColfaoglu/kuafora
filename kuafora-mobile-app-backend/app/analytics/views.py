@@ -224,20 +224,25 @@ class AnalyticsViewSet(viewsets.ViewSet):
             timestamp__gte=timezone.make_aware(datetime.combine(month_ago, datetime.min.time()))
         ).count()
         
-        # Daily active users (son 24 saatte app açan unique kullanıcılar)
-        daily_active = UserSession.objects.filter(
-            start_time__gte=now - timedelta(hours=24)
-        ).values('user').distinct().count()
-        
-        # Weekly active users
-        weekly_active = UserSession.objects.filter(
-            start_time__gte=timezone.make_aware(datetime.combine(week_ago, datetime.min.time()))
-        ).values('user').distinct().count()
-        
-        # Monthly active users
-        monthly_active = UserSession.objects.filter(
-            start_time__gte=timezone.make_aware(datetime.combine(month_ago, datetime.min.time()))
-        ).values('user').distinct().count()
+        # Aktif kullanıcılar: benzersiz cihaz (device_id) bazlı,
+        # ana mobil uygulama (app_type='main') için hesaplanır.
+        # Kullanıcının login olup olmamasından bağımsızdır.
+        session_qs = UserSession.objects.filter(app_type='main')
+
+        # Daily active users: bugün en az bir kez uygulamayı açan benzersiz cihaz sayısı
+        daily_active = session_qs.filter(
+            start_time__date=today
+        ).values('device_id').distinct().count()
+
+        # Weekly active users: son 7 günde en az bir kez uygulamayı açan benzersiz cihaz sayısı
+        weekly_active = session_qs.filter(
+            start_time__date__gte=week_ago
+        ).values('device_id').distinct().count()
+
+        # Monthly active users: son 30 günde en az bir kez uygulamayı açan benzersiz cihaz sayısı
+        monthly_active = session_qs.filter(
+            start_time__date__gte=month_ago
+        ).values('device_id').distinct().count()
         
         # Average session duration (son 30 gün)
         avg_session_duration = UserSession.objects.filter(
