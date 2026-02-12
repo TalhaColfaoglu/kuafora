@@ -142,10 +142,15 @@ def version_check(request):
         current_version = request.query_params.get('current_version', '').strip()
         current_build_str = request.query_params.get('current_build', '0')
         platform = request.query_params.get('platform', 'android').strip().lower()
+        app_type = request.query_params.get('app_type', 'main').strip().lower()
         
         # Platform kontrolü
         if platform not in ['android', 'ios']:
             platform = 'android'
+
+        # Uygulama tipi kontrolü (ana / partner)
+        if app_type not in ['main', 'partner']:
+            app_type = 'main'
         
         # Build numarasını integer'a çevir
         try:
@@ -156,6 +161,7 @@ def version_check(request):
         # En son aktif versiyonu bul
         latest_version = AppVersion.objects.filter(
             platform=platform,
+            app_type=app_type,
             is_active=True
         ).order_by('-version_code').first()
         

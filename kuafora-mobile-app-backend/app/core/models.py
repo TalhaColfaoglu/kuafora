@@ -6,6 +6,10 @@ class AppVersion(models.Model):
     """
     Mobil uygulama versiyon bilgilerini yönetmek için model.
     """
+    APP_TYPE_CHOICES = [
+        ('main', 'Ana Uygulama'),
+        ('partner', 'Partner Uygulaması'),
+    ]
     PLATFORM_CHOICES = [
         ('android', 'Android'),
         ('ios', 'iOS'),
@@ -16,6 +20,12 @@ class AppVersion(models.Model):
         choices=PLATFORM_CHOICES,
         default='android',
         help_text='Uygulama platformu'
+    )
+    app_type = models.CharField(
+        max_length=10,
+        choices=APP_TYPE_CHOICES,
+        default='main',
+        help_text='Uygulama tipi (ana / partner)'
     )
     version_name = models.CharField(
         max_length=50,
@@ -54,10 +64,10 @@ class AppVersion(models.Model):
 
     class Meta:
         ordering = ['-version_code']
-        unique_together = [['platform', 'version_code']]
+        unique_together = [['platform', 'app_type', 'version_code']]
         indexes = [
-            models.Index(fields=['platform', 'is_active', '-version_code']),
+            models.Index(fields=['platform', 'app_type', 'is_active', '-version_code']),
         ]
 
     def __str__(self):
-        return f"{self.platform} - {self.version_name} (Build {self.version_code})"
+        return f"{self.platform} / {self.app_type} - {self.version_name} (Build {self.version_code})"

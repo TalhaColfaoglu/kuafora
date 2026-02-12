@@ -103,6 +103,10 @@ urlpatterns = [
     path("api/metrics/", metrics, name="metrics"),  # System and application metrics
     # App version check endpoint
     path("api/app/version-check/", version_check, name="version-check"),
+    # Mevcut mobil client bazı yerlerde base URL olarak `/api` üstüne `api/app/version-check/`
+    # ekleyerek `/api/api/app/version-check/` isteği atıyor. Bu alias, o hatalı path'i de
+    # destekleyerek 404'ü engeller ve her iki uygulamada da versiyon kontrolünün çalışmasını sağlar.
+    path("api/api/app/version-check/", version_check, name="version-check-double-api"),
 ]
 
 # Serve media files locally when using local storage (DEBUG or when S3 is not configured)
