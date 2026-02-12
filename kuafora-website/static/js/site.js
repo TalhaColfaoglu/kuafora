@@ -14,9 +14,8 @@
         preloader.style.transform = 'scale(1.1)';
         setTimeout(() => {
           preloader.style.display = 'none';
-          document.body.classList.remove('overflow-hidden');
         }, 500);
-      }, 800);
+      }, 500); // Reduced from 800ms to 500ms for faster loading
     });
   }
 
@@ -151,15 +150,19 @@
       img.style.opacity = '0';
       img.style.transition = 'opacity 0.3s ease';
       
-      // Error handler
+      // Error handler - silently handle missing images
       img.addEventListener('error', function() {
-        console.warn('Görsel yüklenemedi:', this.src);
+        // Only log in development
+        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+          console.warn('Görsel yüklenemedi:', this.src);
+        }
         this.style.display = 'none';
         this.style.opacity = '0';
         const fallback = this.nextElementSibling;
         if (fallback && (fallback.classList.contains('hidden') || fallback.style.display === 'none')) {
           fallback.classList.remove('hidden');
           fallback.style.display = 'flex';
+          fallback.style.opacity = '1';
         }
       });
       
