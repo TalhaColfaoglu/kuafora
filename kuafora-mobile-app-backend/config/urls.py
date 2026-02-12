@@ -86,16 +86,16 @@ urlpatterns = [
     path("api/", include(("app.subscriptions.urls", "subscriptions"))),
     path("api/", include(("app.search.urls", "search"))),
     path("api/", include(("app.support.urls", "support"))),
-    # Analytics router (dashboard & tracking)
-    path("api/analytics/", include(("app.analytics.urls", "analytics"))),
+    # Önce spesifik tracking alias'ını tanımla (daha spesifik path önce olmalı)
     # Mobil client tam olarak `/api/analytics/tracking/session` endpoint'ine POST atıyor.
-    # Bazı ortamlarda include edilen router bu isteği yakalayamadığı için 404 dönebiliyor.
-    # Bu alias, route sırasından bağımsız olarak isteği doğrudan TrackingViewSet.track_session action'ına yönlendirir.
+    # Bu alias isteği doğrudan TrackingViewSet.track_session action'ına yönlendirir.
     path(
         "api/analytics/tracking/session",
         TrackingViewSet.as_view({"post": "track_session"}),
         name="api-analytics-tracking-session-no-slash",
     ),
+    # Sonra genel analytics router'ını ekle (dashboard & diğer tracking endpoint'leri)
+    path("api/analytics/", include(("app.analytics.urls", "analytics"))),
     path("api/users/resolve/", ResolveUserView.as_view(), name="resolve-user"),
     # Monitoring endpoints
     path("health/", health_simple, name="health-simple"),  # Simple health check (for load balancers)
