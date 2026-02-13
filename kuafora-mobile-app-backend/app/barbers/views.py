@@ -4822,6 +4822,7 @@ class CalendarStatusViewSet(viewsets.ReadOnlyModelViewSet):
                 'status_message': None,
                 'active_overrides': []
             }
+        # Kapanış saati dahil DEĞİL (20:00'de kapanan personel 20:00'de çalışmıyor)
         if current_time < start_time or current_time >= end_time:
             return {
                 'staff_id': staff.id,
@@ -4905,7 +4906,7 @@ class CalendarStatusViewSet(viewsets.ReadOnlyModelViewSet):
                     staff__barbershop=barbershop,
                     day_of_week=day_code,
                     start_time__lte=current_time,
-                    end_time__gte=current_time,
+                    end_time__gt=current_time,  # > kullan, kapanış saati dahil değil
                     is_closed=False
                 ).values('staff').distinct().count() if is_open else 0
                 # Manuel aç/kapa: ana uygulamada sadece "Açık" / "Kapalı" yazsın; saat gösterme
@@ -4963,7 +4964,8 @@ class CalendarStatusViewSet(viewsets.ReadOnlyModelViewSet):
                         status_message = "Erken Kapanış"
                 elif override.override_scope == 'time_range_closed':
                     if override.start_time and override.end_time:
-                        if override.start_time <= current_time <= override.end_time:
+                        # Bitiş saati dahil DEĞİL
+                        if override.start_time <= current_time < override.end_time:
                             is_open = False
                             is_break = True
                             status_message = f"Mola ({override.end_time.strftime('%H:%M')} bitiş)"
@@ -4994,9 +4996,15 @@ class CalendarStatusViewSet(viewsets.ReadOnlyModelViewSet):
                         status_message = "Bugün Kapalı (Resmi Tatil)"
 
             # 3. Check Regular Hours (if still open)
+            shop_hours = None
+            day_code = weekday_code_map.get(today.weekday())
+            
             if is_open:
-                day_code = weekday_code_map.get(today.weekday())
-                shop_hours = ShopWorkingHours.objects.filter(barbershop=barbershop, day_of_week=day_code).first()
+                # Single DB query ile shop_hours'u al (sonraki kullanımlar için cache'le)
+                shop_hours = ShopWorkingHours.objects.filter(
+                    barbershop=barbershop, 
+                    day_of_week=day_code
+                ).select_related('barbershop').first()
                 
                 if not shop_hours or shop_hours.is_closed:
                     is_open = False
@@ -5030,7 +5038,8 @@ class CalendarStatusViewSet(viewsets.ReadOnlyModelViewSet):
                         # Within working hours, check breaks
                         # 1. Önce haftalık periyodik mola kontrolü
                         if shop_hours.break_start_time and shop_hours.break_end_time:
-                            if shop_hours.break_start_time <= current_time <= shop_hours.break_end_time:
+                            # Mola bitiş saati dahil DEĞİL (16:30'da biten mola 16:30'da bitmiştir, açık olmalı)
+                            if shop_hours.break_start_time <= current_time < shop_hours.break_end_time:
                                 is_open = False
                                 is_break = True
                                 status_message = f"Mola ({shop_hours.break_end_time.strftime('%H:%M')} bitiş)"
@@ -5046,7 +5055,7 @@ class CalendarStatusViewSet(viewsets.ReadOnlyModelViewSet):
                                 scope=BreakWindow.Scope.SHOP,
                                 date=today,
                                 start_time__lte=current_time,
-                                end_time__gte=current_time,
+                                end_time__gt=current_time,  # > kullan, bitiş saati dahil değil
                             ).order_by("start_time").first()
                             
                             if shop_break:
@@ -5059,28 +5068,36 @@ class CalendarStatusViewSet(viewsets.ReadOnlyModelViewSet):
                             else:
                                 status_message = "Açık"
 
-            # Opening ve closing time'ları hesapla
+            # Opening ve closing time'ları hesapla (shop_hours zaten yukarıda alındı, tekrar query yapma)
             opening_time_str = None
             closing_time_str = None
+            
+            # Eğer shop_hours hala None ise (override ile kapalı olduğunda) al
+            if shop_hours is None:
+                shop_hours = ShopWorkingHours.objects.filter(
+                    barbershop=barbershop, 
+                    day_of_week=day_code
+                ).select_related('barbershop').first()
+            
             if is_open and not is_break:
                 # Normal çalışma saatleri içindeyse closing time'ı göster
-                shop_hours = ShopWorkingHours.objects.filter(barbershop=barbershop, day_of_week=weekday_code_map.get(today.weekday())).first()
                 if shop_hours and shop_hours.end_time:
                     closing_time_str = shop_hours.end_time.strftime('%H:%M')
             elif not is_open and not is_break:
                 # Kapalıysa ve mola değilse opening time'ı göster
-                shop_hours = ShopWorkingHours.objects.filter(barbershop=barbershop, day_of_week=weekday_code_map.get(today.weekday())).first()
                 if shop_hours and shop_hours.start_time:
                     opening_time_str = shop_hours.start_time.strftime('%H:%M')
             
-            day_code = weekday_code_map.get(today.weekday())
-            active_staff_count = StaffWorkingHours.objects.filter(
-                staff__barbershop=barbershop,
-                day_of_week=day_code,
-                start_time__lte=current_time,
-                end_time__gte=current_time,
-                is_closed=False
-            ).values('staff').distinct().count() if is_open else 0
+            # Active staff count hesaplama - sadece açıksa query yap
+            active_staff_count = 0
+            if is_open and not is_break:
+                active_staff_count = StaffWorkingHours.objects.filter(
+                    staff__barbershop=barbershop,
+                    day_of_week=day_code,
+                    start_time__lte=current_time,
+                    end_time__gt=current_time,  # > kullan, kapanış saati dahil değil
+                    is_closed=False
+                ).values('staff').distinct().count()
 
             resp = Response({
                 'is_open': is_open,
