@@ -153,36 +153,36 @@ main {
 /* Footer Fix */
 footer {
   margin-top: auto;
-  background-color: var(--color-primary);
-  color: white;
   position: relative;
   z-index: 10;
 }
 
-footer * {
-  color: inherit;
-}
-
-footer h4,
-footer p,
-footer span,
-footer a {
-  color: rgba(255, 255, 255, 0.9);
-}
-
-footer a:hover {
+/* Footer defaults should not force dark theme.
+   If you need a dark footer, use `.footer-dark` on the footer element. */
+.footer-dark {
+  background-color: var(--color-primary);
   color: white;
 }
-
-footer .text-white\/40,
-footer .text-white\/60,
-footer .text-white\/70 {
+.footer-dark * {
+  color: inherit;
+}
+.footer-dark h4,
+.footer-dark p,
+.footer-dark span,
+.footer-dark a {
+  color: rgba(255, 255, 255, 0.9);
+}
+.footer-dark a:hover {
+  color: white;
+}
+.footer-dark .text-white\/40,
+.footer-dark .text-white\/60,
+.footer-dark .text-white\/70 {
   color: rgba(255, 255, 255, 0.7);
 }
-
-footer .text-white\/40:hover,
-footer .text-white\/60:hover,
-footer .text-white\/70:hover {
+.footer-dark .text-white\/40:hover,
+.footer-dark .text-white\/60:hover,
+.footer-dark .text-white\/70:hover {
   color: white;
 }
 
@@ -644,7 +644,7 @@ details[open] summary ~ * {
 /* Dark nav: white focus ring for contrast */
 .dynamic-nav a:focus-visible,
 .dynamic-nav button:focus-visible {
-  outline: 2px solid rgba(255, 255, 255, 0.9);
+  outline: 2px solid var(--color-primary);
   outline-offset: 2px;
 }
 
@@ -1115,12 +1115,13 @@ textarea,
 
 /* Gradient Text */
 .gradient-text {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 25%, #f093fb 50%, #4facfe 75%, #00f2fe 100%);
-  background-size: 300% 300%;
+  /* White-first theme: subtle, minimal accent (no heavy violet) */
+  background: linear-gradient(90deg, #0A0A0A 0%, #F43F5E 55%, #0A0A0A 100%);
+  background-size: 200% 200%;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
-  animation: gradientFlow 8s ease infinite;
+  animation: gradientFlow 10s ease infinite;
 }
 
 /* Animated Gradient Background */
