@@ -577,7 +577,25 @@
 <div class="kuafora-dashboard-wrap">
 <div class="dashboard-header">
     <h1>📊 Kuafora Analytics Dashboard</h1>
-    <p>Kullanıcı aktiviteleri, büyüme metrikleri ve sistem istatistikleri — Günlük / Haftalık / Aylık / Yıllık</p>
+    <p style="margin-bottom: 12px;">Kullanıcı aktiviteleri, büyüme metrikleri ve sistem istatistikleri — Gerçek zamanlı veriler</p>
+    <div style="display: flex; gap: 24px; margin-top: 16px; flex-wrap: wrap;">
+        <div style="background: rgba(255,255,255,0.15); padding: 8px 16px; border-radius: 8px; backdrop-filter: blur(10px);">
+            <div style="font-size: 24px; font-weight: 800;">{{ stats.users.total|floatformat:0 }}</div>
+            <div style="font-size: 13px; opacity: 0.9;">Toplam Kullanıcı</div>
+        </div>
+        <div style="background: rgba(255,255,255,0.15); padding: 8px 16px; border-radius: 8px; backdrop-filter: blur(10px);">
+            <div style="font-size: 24px; font-weight: 800;">{{ stats.users.monthly_active|floatformat:0 }}</div>
+            <div style="font-size: 13px; opacity: 0.9;">MAU (30-Day Active)</div>
+        </div>
+        <div style="background: rgba(255,255,255,0.15); padding: 8px 16px; border-radius: 8px; backdrop-filter: blur(10px);">
+            <div style="font-size: 24px; font-weight: 800;">{{ stats.users.day_7_retention_rate|floatformat:1 }}%</div>
+            <div style="font-size: 13px; opacity: 0.9;">7-Day Retention</div>
+        </div>
+        <div style="background: rgba(255,255,255,0.15); padding: 8px 16px; border-radius: 8px; backdrop-filter: blur(10px);">
+            <div style="font-size: 24px; font-weight: 800;">{{ stats.barbershops.total|floatformat:0 }}</div>
+            <div style="font-size: 13px; opacity: 0.9;">Toplam Salon</div>
+        </div>
+    </div>
 </div>
 
 <!-- Periyot ve ay seçici -->
@@ -612,6 +630,109 @@
         </div>
         {% endif %}
     </form>
+</div>
+
+<!-- Versiyon Yönetimi -->
+<h2 class="section-title">
+    <span>📱</span>
+    <span>Mobil Uygulama Versiyon Yönetimi</span>
+</h2>
+<div class="dashboard-stats">
+    {% if stats.app_versions.main_android or stats.app_versions.main_ios or stats.app_versions.partner_android or stats.app_versions.partner_ios %}
+        <!-- Ana Uygulama -->
+        {% if stats.app_versions.main_android %}
+        <div class="stat-card {% if stats.app_versions.main_android.force_update %}danger{% else %}success{% endif %}">
+            <div class="stat-card-header">
+                <h3>🤖 Ana App - Android</h3>
+                <div class="stat-card-icon">📲</div>
+            </div>
+            <p class="stat-value">{{ stats.app_versions.main_android.version_name }}</p>
+            <div class="stat-percentage">
+                <span>Build {{ stats.app_versions.main_android.version_code }}</span>
+                {% if stats.app_versions.main_android.force_update %}
+                <span style="background: #f44336; color: white; padding: 2px 6px; border-radius: 3px; margin-left: 8px; font-size: 11px;">⚠️ ZORUNLU</span>
+                {% endif %}
+                {% if stats.app_versions.main_android.min_version_code %}
+                <span style="background: #ff9800; color: white; padding: 2px 6px; border-radius: 3px; margin-left: 8px; font-size: 11px;">Min: {{ stats.app_versions.main_android.min_version_code }}</span>
+                {% endif %}
+            </div>
+            <div class="stat-subtitle">{{ stats.app_versions.main_android.release_date|date:"d.m.Y H:i" }}</div>
+        </div>
+        {% endif %}
+        
+        {% if stats.app_versions.main_ios %}
+        <div class="stat-card {% if stats.app_versions.main_ios.force_update %}danger{% else %}success{% endif %}">
+            <div class="stat-card-header">
+                <h3>🍎 Ana App - iOS</h3>
+                <div class="stat-card-icon">📲</div>
+            </div>
+            <p class="stat-value">{{ stats.app_versions.main_ios.version_name }}</p>
+            <div class="stat-percentage">
+                <span>Build {{ stats.app_versions.main_ios.version_code }}</span>
+                {% if stats.app_versions.main_ios.force_update %}
+                <span style="background: #f44336; color: white; padding: 2px 6px; border-radius: 3px; margin-left: 8px; font-size: 11px;">⚠️ ZORUNLU</span>
+                {% endif %}
+                {% if stats.app_versions.main_ios.min_version_code %}
+                <span style="background: #ff9800; color: white; padding: 2px 6px; border-radius: 3px; margin-left: 8px; font-size: 11px;">Min: {{ stats.app_versions.main_ios.min_version_code }}</span>
+                {% endif %}
+            </div>
+            <div class="stat-subtitle">{{ stats.app_versions.main_ios.release_date|date:"d.m.Y H:i" }}</div>
+        </div>
+        {% endif %}
+        
+        <!-- Partner Uygulaması -->
+        {% if stats.app_versions.partner_android %}
+        <div class="stat-card {% if stats.app_versions.partner_android.force_update %}danger{% else %}info{% endif %}">
+            <div class="stat-card-header">
+                <h3>🤖 Partner App - Android</h3>
+                <div class="stat-card-icon">💼</div>
+            </div>
+            <p class="stat-value">{{ stats.app_versions.partner_android.version_name }}</p>
+            <div class="stat-percentage">
+                <span>Build {{ stats.app_versions.partner_android.version_code }}</span>
+                {% if stats.app_versions.partner_android.force_update %}
+                <span style="background: #f44336; color: white; padding: 2px 6px; border-radius: 3px; margin-left: 8px; font-size: 11px;">⚠️ ZORUNLU</span>
+                {% endif %}
+                {% if stats.app_versions.partner_android.min_version_code %}
+                <span style="background: #ff9800; color: white; padding: 2px 6px; border-radius: 3px; margin-left: 8px; font-size: 11px;">Min: {{ stats.app_versions.partner_android.min_version_code }}</span>
+                {% endif %}
+            </div>
+            <div class="stat-subtitle">{{ stats.app_versions.partner_android.release_date|date:"d.m.Y H:i" }}</div>
+        </div>
+        {% endif %}
+        
+        {% if stats.app_versions.partner_ios %}
+        <div class="stat-card {% if stats.app_versions.partner_ios.force_update %}danger{% else %}info{% endif %}">
+            <div class="stat-card-header">
+                <h3>🍎 Partner App - iOS</h3>
+                <div class="stat-card-icon">💼</div>
+            </div>
+            <p class="stat-value">{{ stats.app_versions.partner_ios.version_name }}</p>
+            <div class="stat-percentage">
+                <span>Build {{ stats.app_versions.partner_ios.version_code }}</span>
+                {% if stats.app_versions.partner_ios.force_update %}
+                <span style="background: #f44336; color: white; padding: 2px 6px; border-radius: 3px; margin-left: 8px; font-size: 11px;">⚠️ ZORUNLU</span>
+                {% endif %}
+                {% if stats.app_versions.partner_ios.min_version_code %}
+                <span style="background: #ff9800; color: white; padding: 2px 6px; border-radius: 3px; margin-left: 8px; font-size: 11px;">Min: {{ stats.app_versions.partner_ios.min_version_code }}</span>
+                {% endif %}
+            </div>
+            <div class="stat-subtitle">{{ stats.app_versions.partner_ios.release_date|date:"d.m.Y H:i" }}</div>
+        </div>
+        {% endif %}
+    {% else %}
+        <div class="info-note">
+            ℹ️ Henüz uygulama versiyonu tanımlanmamış. <a href="/admin/core/appversion/add/" style="color: #2196F3; text-decoration: underline;">Versiyon eklemek için tıklayın</a>
+        </div>
+    {% endif %}
+</div>
+
+<div class="info-note" style="margin-bottom: 32px;">
+    <strong>💡 Versiyon Yönetimi Nasıl Çalışır?</strong><br>
+    • <strong>Zorunlu Güncelleme (force_update)</strong>: Bu versiyondan eski tüm kullanıcılar uygulamayı kullanamaz, önce güncelleme yapmak zorundadır.<br>
+    • <strong>Minimum Versiyon (min_version_code)</strong>: Bu build numarasından eski versiyonlar için zorunlu güncelleme uygulanır.<br>
+    • <strong>Güncelleme Mesajı (update_message)</strong>: Kullanıcıya gösterilecek popup mesajı.<br>
+    • <strong>Versiyon Yönetimi</strong>: <a href="/admin/core/appversion/" style="color: #2196F3; text-decoration: underline;">Admin Panel → Core → App versions</a>
 </div>
 
 <!-- Seçili dönem özeti -->
@@ -839,8 +960,19 @@
         </div>
         <p class="stat-value">{{ stats.usage.shop_views_total|floatformat:0 }}</p>
         <div class="stat-subtitle">Panel açıldığından beri BarberDetailScreen görüntüleme sayısı</div>
+        {% if stats.usage.shop_views_total == 0 %}
+        <div class="stat-subtitle" style="background: #FEF3C7; border-left: 3px solid #F59E0B; padding: 8px; border-radius: 4px; margin-top: 8px; font-size: 11px; color: #92400E;">
+            ⚠️ Mobil app henüz ScreenView event'leri göndermiyor. Bu metrik yakında aktif olacak.
+        </div>
+        {% endif %}
     </div>
 </div>
+{% if stats.usage.shop_views_total == 0 %}
+<div class="info-note" style="background: #FEF3C7; border-left: 4px solid #F59E0B; color: #92400E; margin-top: 16px;">
+    <strong>📊 Not:</strong> Salon görüntülenme verileri henüz toplanmıyor. Mobil uygulama güncellendikten sonra bu metrikler otomatik olarak dolacak. 
+    Şu an randevu sayıları ve diğer engagement metrikleri kullanılabilir.
+</div>
+{% endif %}
 {% if stats.usage.top_features %}
 <h3 class="chart-title" style="margin-top: 24px;">En çok kullanılan özellikler (son 30 gün)</h3>
 <div class="distribution-list">
@@ -876,11 +1008,137 @@
 </div>
 {% endif %}
 
+<!-- Kullanıcı İstatistikleri bölümü taşındı, aşağıda Aktif Kullanıcılar'dan sonra -->
+
+<h2 class="section-title">
+    <span>📈</span>
+    <span>Aktif & Pasif Kullanıcı Metrikleri + Giriş Sıklığı</span>
+</h2>
+
+<!-- Aktif Kullanıcı Metrikleri -->
+<h3 style="color: #10B981; font-size: 18px; margin: 24px 0 16px 0; font-weight: 600;">✅ Aktif Kullanıcılar</h3>
+<div class="dashboard-stats">
+    <div class="stat-card success">
+        <div class="stat-card-header">
+            <h3>Günlük Aktif (DAU)</h3>
+            <div class="stat-card-icon">📱</div>
+        </div>
+        <p class="stat-value">{{ stats.users.daily_active|floatformat:0 }}</p>
+        <div class="stat-percentage">
+            <span>{{ stats.users.daily_active_percentage|floatformat:1 }}%</span>
+            {% if stats.users.daily_active_growth != 0 %}
+            <span class="trend-indicator {% if stats.users.daily_active_growth > 0 %}trend-up{% elif stats.users.daily_active_growth < 0 %}trend-down{% else %}trend-neutral{% endif %}">
+                {% if stats.users.daily_active_growth > 0 %}↑{% elif stats.users.daily_active_growth < 0 %}↓{% else %}→{% endif %}
+                {{ stats.users.daily_active_growth|floatformat:1 }}%
+            </span>
+            {% endif %}
+        </div>
+        <div class="stat-subtitle">Son 24 saatte uygulamayı en az bir kez açan</div>
+    </div>
+    
+    <div class="stat-card success">
+        <div class="stat-card-header">
+            <h3>Haftalık Aktif (WAU)</h3>
+            <div class="stat-card-icon">📅</div>
+        </div>
+        <p class="stat-value">{{ stats.users.weekly_active|floatformat:0 }}</p>
+        <div class="stat-percentage">{{ stats.users.weekly_active_percentage|floatformat:1 }}%</div>
+        <div class="stat-subtitle">Son 7 günde uygulamayı en az bir kez açan</div>
+    </div>
+    
+    <div class="stat-card success">
+        <div class="stat-card-header">
+            <h3>Aylık Aktif (MAU)</h3>
+            <div class="stat-card-icon">📊</div>
+        </div>
+        <p class="stat-value">{{ stats.users.monthly_active|floatformat:0 }}</p>
+        <div class="stat-percentage">{{ stats.users.monthly_active_percentage|floatformat:1 }}%</div>
+        <div class="stat-subtitle">Son 30 günde uygulamayı en az bir kez açan</div>
+    </div>
+    
+    <div class="stat-card purple">
+        <div class="stat-card-header">
+            <h3>Yıllık Aktif (YAU)</h3>
+            <div class="stat-card-icon">🗓️</div>
+        </div>
+        <p class="stat-value">{{ stats.users.yearly_active|floatformat:0 }}</p>
+        <div class="stat-percentage">{{ stats.users.yearly_active_percentage|floatformat:1 }}%</div>
+        <div class="stat-subtitle">Son 365 günde uygulamayı en az bir kez açan</div>
+    </div>
+    
+    <div class="stat-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+        <div class="stat-card-header">
+            <h3 style="color: white !important;">📊 Tüm Zamanlar Aktif</h3>
+            <div class="stat-card-icon" style="color: white !important;">♾️</div>
+        </div>
+        <p class="stat-value" style="color: white !important;">{{ stats.users.all_time_active|floatformat:0 }}</p>
+        <div class="stat-percentage" style="color: rgba(255,255,255,0.9) !important;">{{ stats.users.yearly_active_percentage|floatformat:1 }}%</div>
+        <div class="stat-subtitle" style="color: rgba(255,255,255,0.95) !important;">Uygulama başlangıcından beri uygulamayı en az bir kez açan benzersiz cihazlar (tüm zamanlar)</div>
+    </div>
+</div>
+
+<!-- Giriş Sıklığı -->
+<h3 style="color: #3B82F6; font-size: 18px; margin: 24px 0 16px 0; font-weight: 600;">🔄 Kullanıcı Giriş Sıklığı</h3>
+<div class="dashboard-stats">
+    <div class="stat-card info">
+        <div class="stat-card-header">
+            <h3>Günlük Ortalama</h3>
+            <div class="stat-card-icon">📱</div>
+        </div>
+        <p class="stat-value">{{ stats.users.daily_login_frequency|floatformat:1 }}</p>
+        <div class="stat-subtitle">Bugün aktif kullanıcı başına ortalama giriş</div>
+    </div>
+    
+    <div class="stat-card info">
+        <div class="stat-card-header">
+            <h3>Haftalık Ortalama</h3>
+            <div class="stat-card-icon">📅</div>
+        </div>
+        <p class="stat-value">{{ stats.users.weekly_avg_logins|floatformat:1 }}</p>
+        <div class="stat-subtitle">Son 7 günde aktif kullanıcı başına toplam giriş</div>
+    </div>
+    
+    <div class="stat-card info">
+        <div class="stat-card-header">
+            <h3>Aylık Ortalama</h3>
+            <div class="stat-card-icon">📊</div>
+        </div>
+        <p class="stat-value">{{ stats.users.monthly_avg_logins|floatformat:1 }}</p>
+        <div class="stat-subtitle">Son 30 günde aktif kullanıcı başına toplam giriş</div>
+    </div>
+</div>
+
+<!-- Pasif Kullanıcılar -->
+<h3 style="color: #EF4444; font-size: 18px; margin: 24px 0 16px 0; font-weight: 600;">⚠️ Pasif Kullanıcılar</h3>
+<div class="dashboard-stats">
+    <div class="stat-card warning">
+        <div class="stat-card-header">
+            <h3>Son 1 Ayda Girmeyen</h3>
+            <div class="stat-card-icon">⏰</div>
+        </div>
+        <p class="stat-value">{{ stats.users.inactive_last_month|floatformat:0 }}</p>
+        <div class="stat-percentage">{{ stats.users.inactive_percentage|floatformat:1 }}%</div>
+        <div class="stat-subtitle">Son 30 günde giriş yapmayan</div>
+    </div>
+    
+    <div class="stat-card danger">
+        <div class="stat-card-header">
+            <h3>Hiç Giriş Yapmamış</h3>
+            <div class="stat-card-icon">❌</div>
+        </div>
+        <p class="stat-value">{{ stats.users.never_logged_in|floatformat:0 }}</p>
+        <div class="stat-percentage">{{ stats.users.never_logged_percentage|floatformat:1 }}%</div>
+        <div class="stat-subtitle">Kayıt oldu ama hiç giriş yapmadı</div>
+    </div>
+</div>
+
 <h2 class="section-title">
     <span>👥</span>
-    <span>Kullanıcı İstatistikleri</span>
+    <span>Kullanıcı Genel İstatistikleri & Kayıt Bilgileri</span>
 </h2>
-<p class="dashboard-note">Tüm sayılar veritabanından gerçek verilerle hesaplanır. DAU/WAU/MAU metrikleri, ana mobil uygulamayı ilgili dönemde en az bir kez açan benzersiz cihazları (aktif kullanıcılar) baz alır.</p>
+
+<!-- Genel İstatistikler -->
+<h3 style="color: #6B7280; font-size: 18px; margin: 24px 0 16px 0; font-weight: 600;">👤 Genel Kullanıcı Bilgileri</h3>
 <div class="dashboard-stats">
     <div class="stat-card info">
         <div class="stat-card-header">
@@ -908,161 +1166,130 @@
         <p class="stat-value">{{ stats.users.banned|floatformat:0 }}</p>
         <div class="stat-percentage">{% widthratio stats.users.banned stats.users.total 100 %}%</div>
     </div>
-</div>
-
-<h2 class="section-title">
-    <span>📈</span>
-    <span>Aktif Kullanıcı Metrikleri (Mobil Uygulama)</span>
-</h2>
-<div class="dashboard-stats">
-    <div class="stat-card success">
-        <div class="stat-card-header">
-            <h3>Günlük Aktif (DAU)</h3>
-            <div class="stat-card-icon">📱</div>
-        </div>
-        <p class="stat-value">{{ stats.users.daily_active|floatformat:0 }}</p>
-        <div class="stat-percentage">
-            <span>{{ stats.users.daily_active_percentage|floatformat:1 }}%</span>
-            {% if stats.users.daily_active_growth != 0 %}
-            <span class="trend-indicator {% if stats.users.daily_active_growth > 0 %}trend-up{% elif stats.users.daily_active_growth < 0 %}trend-down{% else %}trend-neutral{% endif %}">
-                {% if stats.users.daily_active_growth > 0 %}↑{% elif stats.users.daily_active_growth < 0 %}↓{% else %}→{% endif %}
-                {{ stats.users.daily_active_growth|floatformat:1 }}%
-            </span>
-            {% endif %}
-        </div>
-        <div class="stat-subtitle">Son 24 saatte uygulamayı en az bir kez açan benzersiz cihaz (aktif kullanıcı)</div>
-    </div>
     
     <div class="stat-card success">
         <div class="stat-card-header">
-            <h3>Haftalık Aktif (WAU)</h3>
-            <div class="stat-card-icon">📅</div>
+            <h3>Email Doğrulanmış</h3>
+            <div class="stat-card-icon">✓</div>
         </div>
-        <p class="stat-value">{{ stats.users.weekly_active|floatformat:0 }}</p>
-        <div class="stat-percentage">{{ stats.users.weekly_active_percentage|floatformat:1 }}%</div>
-        <div class="stat-subtitle">Son 7 günde uygulamayı en az bir kez açan benzersiz cihazlar</div>
+        <p class="stat-value">{{ stats.users.verified|floatformat:0 }}</p>
+        <div class="stat-percentage">{% widthratio stats.users.verified stats.users.total 100 %}%</div>
     </div>
     
-    <div class="stat-card success">
+    <div class="stat-card warning">
         <div class="stat-card-header">
-            <h3>Aylık Aktif (MAU)</h3>
-            <div class="stat-card-icon">📊</div>
+            <h3>Email Doğrulanmamış</h3>
+            <div class="stat-card-icon">⚠️</div>
         </div>
-        <p class="stat-value">{{ stats.users.monthly_active|floatformat:0 }}</p>
-        <div class="stat-percentage">{{ stats.users.monthly_active_percentage|floatformat:1 }}%</div>
-        <div class="stat-subtitle">Son 30 günde uygulamayı en az bir kez açan benzersiz cihazlar</div>
-    </div>
-    
-    <div class="stat-card purple">
-        <div class="stat-card-header">
-            <h3>Yıllık Aktif (YAU)</h3>
-            <div class="stat-card-icon">🗓️</div>
-        </div>
-        <p class="stat-value">{{ stats.users.yearly_active|floatformat:0 }}</p>
-        <div class="stat-percentage">{{ stats.users.yearly_active_percentage|floatformat:1 }}%</div>
-        <div class="stat-subtitle">Son 365 günde uygulamayı en az bir kez açan benzersiz cihazlar</div>
+        <p class="stat-value">{{ stats.users.unverified|floatformat:0 }}</p>
+        <div class="stat-percentage">{% widthratio stats.users.unverified stats.users.total 100 %}%</div>
     </div>
 </div>
 
-<h2 class="section-title">
-    <span>⚠️</span>
-    <span>Pasif Kullanıcı Metrikleri</span>
-</h2>
+<!-- Kayıt Metrikleri -->
+<h3 style="color: #8B5CF6; font-size: 18px; margin: 24px 0 16px 0; font-weight: 600;">📝 Kayıt Metrikleri</h3>
 <div class="dashboard-stats">
     <div class="stat-card warning">
         <div class="stat-card-header">
-            <h3>Son 1 Ayda Girmeyen</h3>
-            <div class="stat-card-icon">⏰</div>
-        </div>
-        <p class="stat-value">{{ stats.users.inactive_last_month|floatformat:0 }}</p>
-        <div class="stat-percentage">{{ stats.users.inactive_percentage|floatformat:1 }}%</div>
-        <div class="stat-subtitle">Son 30 günde giriş yapmayan (uygulama kullanıcıları)</div>
-    </div>
-    
-    <div class="stat-card danger">
-        <div class="stat-card-header">
-            <h3>Hiç Giriş Yapmamış</h3>
-            <div class="stat-card-icon">❌</div>
-        </div>
-        <p class="stat-value">{{ stats.users.never_logged_in|floatformat:0 }}</p>
-        <div class="stat-percentage">{{ stats.users.never_logged_percentage|floatformat:1 }}%</div>
-        <div class="stat-subtitle">Kayıt oldu ama hiç giriş yapmadı (uygulama kullanıcıları)</div>
-    </div>
-</div>
-
-<h2 class="section-title">
-    <span>🔄</span>
-    <span>Kullanıcı Giriş Sıklığı Metrikleri</span>
-</h2>
-<div class="dashboard-stats">
-    <div class="stat-card info">
-        <div class="stat-card-header">
-            <h3>Günlük Ortalama Giriş</h3>
-            <div class="stat-card-icon">📱</div>
-        </div>
-        <p class="stat-value">{{ stats.users.daily_login_frequency|floatformat:1 }}</p>
-        <div class="stat-subtitle">Bugün aktif kullanıcı başına ortalama giriş sayısı</div>
-    </div>
-    
-    <div class="stat-card info">
-        <div class="stat-card-header">
-            <h3>Haftalık Ortalama Giriş</h3>
+            <h3>Bugün Kayıt</h3>
             <div class="stat-card-icon">📅</div>
         </div>
-        <p class="stat-value">{{ stats.users.weekly_avg_logins|floatformat:1 }}</p>
-        <div class="stat-subtitle">Son 7 günde aktif kullanıcı başına toplam ortalama giriş sayısı</div>
+        <p class="stat-value">{{ stats.users.today_registrations|floatformat:0 }}</p>
     </div>
     
-    <div class="stat-card info">
+    <div class="stat-card">
         <div class="stat-card-header">
-            <h3>Aylık Ortalama Giriş</h3>
-            <div class="stat-card-icon">📊</div>
+            <h3>Bu Hafta Kayıt</h3>
+            <div class="stat-card-icon">📆</div>
         </div>
-        <p class="stat-value">{{ stats.users.monthly_avg_logins|floatformat:1 }}</p>
-        <div class="stat-subtitle">Son 30 günde aktif kullanıcı başına toplam ortalama giriş sayısı</div>
+        <p class="stat-value">{{ stats.users.week_registrations|floatformat:0 }}</p>
+        {% if stats.users.week_growth_rate != 0 %}
+        <div class="stat-percentage">
+            <span class="trend-indicator {% if stats.users.week_growth_rate > 0 %}trend-up{% elif stats.users.week_growth_rate < 0 %}trend-down{% else %}trend-neutral{% endif %}">
+                {% if stats.users.week_growth_rate > 0 %}↑{% elif stats.users.week_growth_rate < 0 %}↓{% else %}→{% endif %}
+                {{ stats.users.week_growth_rate|floatformat:1 }}%
+            </span>
+        </div>
+        {% endif %}
+        <div class="stat-subtitle">Önceki haftaya göre</div>
+    </div>
+    
+    <div class="stat-card">
+        <div class="stat-card-header">
+            <h3>Bu Ay Kayıt</h3>
+            <div class="stat-card-icon">🗓️</div>
+        </div>
+        <p class="stat-value">{{ stats.users.month_registrations|floatformat:0 }}</p>
+        {% if stats.users.month_growth_rate != 0 %}
+        <div class="stat-percentage">
+            <span class="trend-indicator {% if stats.users.month_growth_rate > 0 %}trend-up{% elif stats.users.month_growth_rate < 0 %}trend-down{% else %}trend-neutral{% endif %}">
+                {% if stats.users.month_growth_rate > 0 %}↑{% elif stats.users.month_growth_rate < 0 %}↓{% else %}→{% endif %}
+                {{ stats.users.month_growth_rate|floatformat:1 }}%
+            </span>
+        </div>
+        {% endif %}
+        <div class="stat-subtitle">Önceki aya göre</div>
     </div>
 </div>
 
 <h2 class="section-title">
     <span>📊</span>
-    <span>Büyüme & Tutma Metrikleri</span>
+    <span>Kullanıcı Retention & Engagement Metrikleri</span>
 </h2>
-<p class="dashboard-note">Tüm oranlar veritabanındaki gerçek kullanıcı verisine göre hesaplanır. Kayıt yoksa oran 0% veya N/A gösterilir.</p>
+<p class="dashboard-note" style="background: #EFF6FF; border-left: 4px solid #3B82F6; padding: 12px; border-radius: 8px; margin-bottom: 24px;">
+    <strong>📈 Profesyonel Metrikler:</strong> Tüm oranlar endüstri standartlarına göre hesaplanır. 7-Day ve 30-Day Retention, yatırımcılara ve growth analizine en uygun metriklerdir.
+</p>
 <div class="dashboard-stats">
     <div class="stat-card success">
         <div class="stat-card-header">
-            <h3>Retention Rate</h3>
-            <div class="stat-card-icon">💎</div>
+            <h3>7-Day Retention</h3>
+            <div class="stat-card-icon">💚</div>
         </div>
-        <p class="stat-value">{{ stats.users.week_retention_rate|floatformat:1 }}%</p>
-        <div class="stat-subtitle">Bu hafta kayıt olanların aktif kalma oranı</div>
-        {% if stats.users.week_registrations == 0 %}
-        <div class="stat-subtitle" style="color: #9CA3AF; font-size: 12px; margin-top: 4px;">Bu hafta kayıt yok → oran hesaplanamadı</div>
-        {% endif %}
+        <p class="stat-value">{{ stats.users.day_7_retention_rate|floatformat:1 }}%</p>
+        <div class="stat-subtitle">7 gün önce kayıt olanlardan hala aktif olanlar</div>
+        <div class="stat-subtitle" style="color: #059669; font-size: 12px; margin-top: 4px; font-weight: 600;">
+            Industry Standard: %40-60 (İyi), %60+ (Mükemmel)
+        </div>
     </div>
     
     <div class="stat-card info">
         <div class="stat-card-header">
-            <h3>Conversion Rate</h3>
-            <div class="stat-card-icon">🔄</div>
+            <h3>30-Day Retention</h3>
+            <div class="stat-card-icon">💙</div>
         </div>
-        <p class="stat-value">{{ stats.users.conversion_rate|floatformat:1 }}%</p>
-        <div class="stat-subtitle">Kayıt olanların aktif kullanıcıya dönüşme oranı (son 30 gün)</div>
-        {% if stats.users.month_registrations == 0 %}
-        <div class="stat-subtitle" style="color: #9CA3AF; font-size: 12px; margin-top: 4px;">Bu ay kayıt yok → oran hesaplanamadı</div>
-        {% endif %}
+        <p class="stat-value">{{ stats.users.day_30_retention_rate|floatformat:1 }}%</p>
+        <div class="stat-subtitle">30 gün önce kayıt olanlardan hala aktif olanlar</div>
+        <div class="stat-subtitle" style="color: #2563EB; font-size: 12px; margin-top: 4px; font-weight: 600;">
+            Industry Standard: %20-40 (İyi), %40+ (Mükemmel)
+        </div>
     </div>
     
-    <div class="stat-card danger">
+    <div class="stat-card warning">
         <div class="stat-card-header">
-            <h3>Churn Rate</h3>
+            <h3>Monthly Churn Rate</h3>
             <div class="stat-card-icon">📉</div>
         </div>
         <p class="stat-value">{{ stats.users.churn_rate|floatformat:1 }}%</p>
-        <div class="stat-subtitle">Son 30 günde kayıt olup son 7 günde giriş yapmayanlar</div>
-        {% if stats.users.month_registrations == 0 %}
-        <div class="stat-subtitle" style="color: #9CA3AF; font-size: 12px; margin-top: 4px;">Bu ay kayıt yok → oran hesaplanamadı</div>
-        {% endif %}
+        <div class="stat-subtitle">Son 30 günde aktif ama son 7 günde giriş yapmayan</div>
+        <div class="stat-subtitle" style="color: #D97706; font-size: 12px; margin-top: 4px; font-weight: 600;">
+            {% if stats.users.churned_users > 0 %}
+            {{ stats.users.churned_users }} kullanıcı churn oldu
+            {% else %}
+            Hedef: %3-5 (Düşük churn = iyi)
+            {% endif %}
+        </div>
+    </div>
+    
+    <div class="stat-card purple">
+        <div class="stat-card-header">
+            <h3>Activation Rate</h3>
+            <div class="stat-card-icon">🚀</div>
+        </div>
+        <p class="stat-value">{{ stats.users.activation_rate|floatformat:1 }}%</p>
+        <div class="stat-subtitle">İlk 24 saat içinde giriş yapan kullanıcılar</div>
+        <div class="stat-subtitle" style="color: #7C3AED; font-size: 12px; margin-top: 4px; font-weight: 600;">
+            Industry Standard: %60-80 (İyi), %80+ (Mükemmel)
+        </div>
     </div>
 </div>
 
@@ -1150,71 +1377,7 @@
     </div>
 </div>
 
-<h2 class="section-title">
-    <span>📝</span>
-    <span>Kayıt İstatistikleri</span>
-</h2>
-<div class="dashboard-stats">
-    <div class="stat-card warning">
-        <div class="stat-card-header">
-            <h3>Bugün Kayıt</h3>
-            <div class="stat-card-icon">📅</div>
-        </div>
-        <p class="stat-value">{{ stats.users.today_registrations|floatformat:0 }}</p>
-    </div>
-    
-    <div class="stat-card">
-        <div class="stat-card-header">
-            <h3>Bu Hafta Kayıt</h3>
-            <div class="stat-card-icon">📆</div>
-        </div>
-        <p class="stat-value">{{ stats.users.week_registrations|floatformat:0 }}</p>
-        {% if stats.users.week_growth_rate != 0 %}
-        <div class="stat-percentage">
-            <span class="trend-indicator {% if stats.users.week_growth_rate > 0 %}trend-up{% elif stats.users.week_growth_rate < 0 %}trend-down{% else %}trend-neutral{% endif %}">
-                {% if stats.users.week_growth_rate > 0 %}↑{% elif stats.users.week_growth_rate < 0 %}↓{% else %}→{% endif %}
-                {{ stats.users.week_growth_rate|floatformat:1 }}%
-            </span>
-        </div>
-        {% endif %}
-        <div class="stat-subtitle">Önceki haftaya göre</div>
-    </div>
-    
-    <div class="stat-card">
-        <div class="stat-card-header">
-            <h3>Bu Ay Kayıt</h3>
-            <div class="stat-card-icon">🗓️</div>
-        </div>
-        <p class="stat-value">{{ stats.users.month_registrations|floatformat:0 }}</p>
-        {% if stats.users.month_growth_rate != 0 %}
-        <div class="stat-percentage">
-            <span class="trend-indicator {% if stats.users.month_growth_rate > 0 %}trend-up{% elif stats.users.month_growth_rate < 0 %}trend-down{% else %}trend-neutral{% endif %}">
-                {% if stats.users.month_growth_rate > 0 %}↑{% elif stats.users.month_growth_rate < 0 %}↓{% else %}→{% endif %}
-                {{ stats.users.month_growth_rate|floatformat:1 }}%
-            </span>
-        </div>
-        {% endif %}
-        <div class="stat-subtitle">Önceki aya göre</div>
-    </div>
-    
-    <div class="stat-card success">
-        <div class="stat-card-header">
-            <h3>Email Doğrulanmış</h3>
-            <div class="stat-card-icon">✓</div>
-        </div>
-        <p class="stat-value">{{ stats.users.verified|floatformat:0 }}</p>
-        <div class="stat-percentage">{% widthratio stats.users.verified stats.users.total 100 %}%</div>
-    </div>
-    
-    <div class="stat-card warning">
-        <div class="stat-card-header">
-            <h3>Email Doğrulanmamış</h3>
-            <div class="stat-card-icon">⚠️</div>
-        </div>
-        <p class="stat-value">{{ stats.users.unverified|floatformat:0 }}</p>
-        <div class="stat-percentage">{% widthratio stats.users.unverified stats.users.total 100 %}%</div>
-    </div>
-</div>
+<!-- Kayıt İstatistikleri bölümü yukarıda Kullanıcı Genel İstatistikleri ile birleştirildi -->
 
 <div class="chart-container">
     <h3 class="chart-title">Son 7 Günlük Kayıt Grafiği</h3>
