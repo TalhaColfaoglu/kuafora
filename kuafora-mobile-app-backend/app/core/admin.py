@@ -12,13 +12,13 @@ class AppVersionAdmin(admin.ModelAdmin):
         'version_code',
         'force_update_display',
         'min_version_display',
-        'is_active_display',
+        'is_active',  # Gerçek field (list_editable için gerekli)
         'release_date',
     ]
     list_filter = ['platform', 'app_type', 'force_update', 'is_active', 'release_date']
     search_fields = ['version_name', 'version_code', 'update_message']
     readonly_fields = ['created_at', 'updated_at']
-    list_editable = ['is_active']
+    list_editable = ['is_active']  # Artık list_display'de olduğu için çalışacak
     ordering = ['-platform', '-app_type', '-version_code']
     
     fieldsets = (
@@ -78,14 +78,6 @@ class AppVersionAdmin(admin.ModelAdmin):
             )
         return '-'
     min_version_display.short_description = 'Min. Versiyon'
-    
-    def is_active_display(self, obj):
-        if obj.is_active:
-            return format_html(
-                '<span style="color: #4caf50; font-weight: bold;">✅ Aktif</span>'
-            )
-        return format_html('<span style="color: #999;">❌ Pasif</span>')
-    is_active_display.short_description = 'Durum'
     
     # Actions
     def activate_versions(self, request, queryset):
