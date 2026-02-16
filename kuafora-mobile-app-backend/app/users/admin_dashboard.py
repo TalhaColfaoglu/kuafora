@@ -23,6 +23,48 @@ from app.appointments.models import Appointment
 APP_USER_FILTER = Q(is_staff=False, is_superuser=False)
 
 
+def _active_breakdown(*, start_date: date, end_date: date, app_type: str = "main") -> dict:
+    """Aktif kullanıcı kırılımı.
+
+    Not: Guest kullanıcılar için server tarafında "kullanıcı" kimliği olmadığı için cihaz (device_id) baz alınır.
+
+    - **auth_users**: giriş yapmış (user != null) benzersiz kullanıcı sayısı (user_id)
+    - **auth_devices**: giriş yapmış kullanıcıların benzersiz cihaz sayısı (device_id)
+    - **guest_devices**: giriş yapmadan devam eden benzersiz cihaz sayısı (user == null)
+    - **guest_only_devices**: aynı aralıkta hiç authenticated aktivitesi olmayan guest cihazlar
+    - **active_devices**: toplam benzersiz cihaz (auth+guest union)
+    - **net_active**: auth_users + guest_only_devices (yaklaşık benzersiz kişi)
+    """
+    if not app_type:
+        app_type = "main"
+
+    qs = UserActivityLog.objects.filter(
+        activity_date__gte=start_date,
+        activity_date__lte=end_date,
+        app_type=app_type,
+    )
+
+    auth_users_qs = qs.filter(user__isnull=False).values_list("user_id", flat=True).distinct()
+    auth_devices_qs = qs.filter(user__isnull=False).values_list("device_id", flat=True).distinct()
+    guest_devices_qs = qs.filter(user__isnull=True).values_list("device_id", flat=True).distinct()
+    guest_only_devices_qs = guest_devices_qs.exclude(device_id__in=auth_devices_qs)
+
+    auth_users = auth_users_qs.count()
+    auth_devices = auth_devices_qs.count()
+    guest_devices = guest_devices_qs.count()
+    guest_only_devices = guest_only_devices_qs.count()
+    active_devices = qs.values_list("device_id", flat=True).distinct().count()
+
+    return {
+        "auth_users": auth_users,
+        "auth_devices": auth_devices,
+        "guest_devices": guest_devices,
+        "guest_only_devices": guest_only_devices,
+        "active_devices": active_devices,
+        "net_active": auth_users + guest_only_devices,
+    }
+
+
 def _usage_stats(now, today, week_start_date, month_ago):
     """Analytics tablolarından kullanım metrikleri: harita yükleme, uygulama açılma, salon görüntülenmesi, en çok kullanılan özellikler/ekranlar.
     week_start_date: son 7 günün ilk günü (today - 6) için date."""
@@ -202,17 +244,19 @@ def _period_stats(period_start, period_end, now):
         created_at__date__lte=period_end,
     ).count()
 
-    # Aktif kullanıcılar: Seçili aralıkta en az bir kez giriş yapan benzersiz cihaz (device_id)
-    # UserActivityLog kullanarak daha doğru sayım
+    # Aktif kullanıcılar: kırılım (auth vs guest) + net tahmin
     try:
-        active_users = UserActivityLog.objects.filter(
-            activity_date__gte=period_start,
-            activity_date__lte=period_end,
-            app_type="main",
-        ).values("device_id").distinct().count()
+        active_breakdown = _active_breakdown(start_date=period_start, end_date=period_end, app_type="main")
     except Exception as e:
         print(f"Error calculating active users for period: {e}")
-        active_users = 0
+        active_breakdown = {
+            "auth_users": 0,
+            "auth_devices": 0,
+            "guest_devices": 0,
+            "guest_only_devices": 0,
+            "active_devices": 0,
+            "net_active": 0,
+        }
     appointments = Appointment.objects.filter(
         start_datetime__gte=start_dt,
         start_datetime__lte=end_dt,
@@ -224,7 +268,11 @@ def _period_stats(period_start, period_end, now):
     ).count()
     return {
         "registrations": registrations,
-        "active_users": active_users,
+        # net "aktif kullanıcı" = giriş yapmış benzersiz kullanıcı + guest-only benzersiz cihaz
+        "active_users": active_breakdown["net_active"],
+        "active_auth_users": active_breakdown["auth_users"],
+        "active_guest_only_devices": active_breakdown["guest_only_devices"],
+        "active_devices": active_breakdown["active_devices"],
         "appointments": appointments,
         "emails": emails,
         "barbershops_created": barbershops_created,
@@ -342,43 +390,46 @@ def admin_dashboard_view(request):
     week_start = timezone.make_aware(datetime.combine(week_start_date, datetime.min.time()))
     month_start = timezone.make_aware(datetime.combine(month_ago, datetime.min.time()))
     
-    # Aktif kullanıcı metrikleri: benzersiz cihaz (device_id) bazlı, ana mobil uygulama için
-    # UserActivityLog kullanarak daha doğru sayım
+    # Aktif kullanıcı metrikleri (UserActivityLog):
+    # - cihaz bazlı (geriye dönük uyumluluk)
+    # - giriş yapmış vs giriş yapmadan devam eden kırılımı
+    # - net aktif kullanıcı (auth user + guest-only device)
     today_start = timezone.make_aware(datetime.combine(today, datetime.min.time()))
     year_start = timezone.make_aware(datetime.combine(year_ago, datetime.min.time()))
 
     try:
-        # Günlük aktif kullanıcılar (o gün en az 1 kez giriş yapan benzersiz cihazlar)
-        daily_active_users = UserActivityLog.objects.filter(
-            activity_date=today,
-            app_type='main'
-        ).values('device_id').distinct().count()
+        daily_breakdown = _active_breakdown(start_date=today, end_date=today, app_type="main")
+        weekly_breakdown = _active_breakdown(start_date=week_start_date, end_date=today, app_type="main")
+        monthly_breakdown = _active_breakdown(start_date=month_ago, end_date=today, app_type="main")
+        yearly_breakdown = _active_breakdown(start_date=year_ago, end_date=today, app_type="main")
+        all_time_breakdown = _active_breakdown(start_date=date(1970, 1, 1), end_date=today, app_type="main")
 
-        # Haftalık aktif kullanıcılar (son 7 günde en az 1 kez giriş yapan)
-        weekly_active_users = UserActivityLog.objects.filter(
-            activity_date__gte=week_start_date,
-            activity_date__lte=today,
-            app_type='main'
-        ).values('device_id').distinct().count()
+        # Cihaz bazlı metrikler
+        daily_active_users = daily_breakdown["active_devices"]
+        weekly_active_users = weekly_breakdown["active_devices"]
+        monthly_active_users = monthly_breakdown["active_devices"]
+        yearly_active_users = yearly_breakdown["active_devices"]
+        all_time_active_users = all_time_breakdown["active_devices"]
 
-        # Aylık aktif kullanıcılar (son 30 günde en az 1 kez giriş yapan)
-        monthly_active_users = UserActivityLog.objects.filter(
-            activity_date__gte=month_ago,
-            activity_date__lte=today,
-            app_type='main'
-        ).values('device_id').distinct().count()
+        # Net aktif kullanıcı tahmini
+        daily_active_net = daily_breakdown["net_active"]
+        weekly_active_net = weekly_breakdown["net_active"]
+        monthly_active_net = monthly_breakdown["net_active"]
+        yearly_active_net = yearly_breakdown["net_active"]
+        all_time_active_net = all_time_breakdown["net_active"]
 
-        # Yıllık aktif kullanıcılar (son 365 günde en az 1 kez giriş yapan)
-        yearly_active_users = UserActivityLog.objects.filter(
-            activity_date__gte=year_ago,
-            activity_date__lte=today,
-            app_type='main'
-        ).values('device_id').distinct().count()
-        
-        # Tüm zamanlar aktif kullanıcılar (hiç en az 1 kez giriş yapan)
-        all_time_active_users = UserActivityLog.objects.filter(
-            app_type='main'
-        ).values('device_id').distinct().count()
+        # Kırılım
+        daily_active_auth_users = daily_breakdown["auth_users"]
+        weekly_active_auth_users = weekly_breakdown["auth_users"]
+        monthly_active_auth_users = monthly_breakdown["auth_users"]
+        yearly_active_auth_users = yearly_breakdown["auth_users"]
+        all_time_active_auth_users = all_time_breakdown["auth_users"]
+
+        daily_active_guest_only_devices = daily_breakdown["guest_only_devices"]
+        weekly_active_guest_only_devices = weekly_breakdown["guest_only_devices"]
+        monthly_active_guest_only_devices = monthly_breakdown["guest_only_devices"]
+        yearly_active_guest_only_devices = yearly_breakdown["guest_only_devices"]
+        all_time_active_guest_only_devices = all_time_breakdown["guest_only_devices"]
         
     except Exception as e:
         print(f"Error calculating active users: {e}")
@@ -387,6 +438,21 @@ def admin_dashboard_view(request):
         monthly_active_users = 0
         yearly_active_users = 0
         all_time_active_users = 0
+        daily_active_net = 0
+        weekly_active_net = 0
+        monthly_active_net = 0
+        yearly_active_net = 0
+        all_time_active_net = 0
+        daily_active_auth_users = 0
+        weekly_active_auth_users = 0
+        monthly_active_auth_users = 0
+        yearly_active_auth_users = 0
+        all_time_active_auth_users = 0
+        daily_active_guest_only_devices = 0
+        weekly_active_guest_only_devices = 0
+        monthly_active_guest_only_devices = 0
+        yearly_active_guest_only_devices = 0
+        all_time_active_guest_only_devices = 0
     
     # Son 1 ay içerisinde uygulamaya girmeyen aktif kullanıcılar (uygulama kullanıcıları)
     inactive_last_month = app_users_qs.filter(
@@ -418,10 +484,11 @@ def admin_dashboard_view(request):
     
     # Yüzdeler hesaplama (payda: uygulama kullanıcı sayısı, böylece gerçek oran görünür)
     _denom = app_users_total if app_users_total > 0 else 1
-    daily_active_percentage = calculate_percentage(daily_active_users, _denom)
-    weekly_active_percentage = calculate_percentage(weekly_active_users, _denom)
-    monthly_active_percentage = calculate_percentage(monthly_active_users, _denom)
-    yearly_active_percentage = calculate_percentage(yearly_active_users, _denom)
+    # Not: Guest kullanıcılar için doğru payda olmadığı için, yüzdeler sadece giriş yapmış (auth) kullanıcılar bazında hesaplanır.
+    daily_active_percentage = calculate_percentage(daily_active_auth_users, _denom)
+    weekly_active_percentage = calculate_percentage(weekly_active_auth_users, _denom)
+    monthly_active_percentage = calculate_percentage(monthly_active_auth_users, _denom)
+    yearly_active_percentage = calculate_percentage(yearly_active_auth_users, _denom)
     inactive_percentage = calculate_percentage(inactive_last_month, _denom)
     never_logged_percentage = calculate_percentage(never_logged_in, _denom)
     
@@ -899,6 +966,23 @@ def admin_dashboard_view(request):
                 'monthly_active': monthly_active_users,
                 'yearly_active': yearly_active_users,
                 'all_time_active': all_time_active_users,
+                # Net aktif kullanıcı tahmini (auth user + guest-only device)
+                'daily_active_net': daily_active_net,
+                'weekly_active_net': weekly_active_net,
+                'monthly_active_net': monthly_active_net,
+                'yearly_active_net': yearly_active_net,
+                'all_time_active_net': all_time_active_net,
+                # Giriş kırılımı
+                'daily_active_auth_users': daily_active_auth_users,
+                'weekly_active_auth_users': weekly_active_auth_users,
+                'monthly_active_auth_users': monthly_active_auth_users,
+                'yearly_active_auth_users': yearly_active_auth_users,
+                'all_time_active_auth_users': all_time_active_auth_users,
+                'daily_active_guest_only_devices': daily_active_guest_only_devices,
+                'weekly_active_guest_only_devices': weekly_active_guest_only_devices,
+                'monthly_active_guest_only_devices': monthly_active_guest_only_devices,
+                'yearly_active_guest_only_devices': yearly_active_guest_only_devices,
+                'all_time_active_guest_only_devices': all_time_active_guest_only_devices,
                 'inactive_last_month': inactive_last_month,
                 'never_logged_in': never_logged_in,
                 'daily_active_percentage': daily_active_percentage,

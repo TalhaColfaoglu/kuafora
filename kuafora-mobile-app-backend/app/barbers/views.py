@@ -1474,8 +1474,9 @@ class PartnerBarbershopViewSet(viewsets.ModelViewSet):
         
         try:
             with transaction.atomic():
-                # Partner uygulamasından oluşturulan salonlar otomatik olarak onaylı ve doğrulanmış olarak oluşturulur
-                barbershop = serializer.save(is_verified=True, is_approved=True)
+                # Partner uygulamasından oluşturulan salonlar doğrulanır, ancak
+                # ANA UYGULAMADA GÖRÜNMEK İÇİN ADMIN ONAYI GEREKİR (is_approved=False başlar).
+                barbershop = serializer.save(is_verified=True, is_approved=False)
                 # Ensure creator is admin staff of this barbershop
                 Staff.objects.get_or_create(
                     barbershop=barbershop, 

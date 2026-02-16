@@ -38,9 +38,8 @@
     <!-- Canonical URL -->
     <link rel="canonical" href="https://kuafora.com{{ request.path }}" />
     
-    <!-- Favicon & App Icons - Kuafora Logo -->
-    <link rel="icon" type="image/png" href="{% static 'img/apple-touch-icon.png' %}" />
-    <link rel="apple-touch-icon" href="{% static 'img/apple-touch-icon.png' %}" />
+    <!-- Favicon & App Icons -->
+    {# Not: Görseller eklendikten sonra favicon/app icon linkleri aktif edilecek. #}
 
     <!-- Fonts - Optimized Loading with font-display swap -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -208,111 +207,78 @@
   </head>
   <body class="h-full antialiased bg-white text-primary font-sans">
     <a href="#top" class="skip-link">İçeriğe atla</a>
-
-    <!-- Preloader / Açılış Animasyonu -->
-    <div id="preloader" class="fixed inset-0 z-[9999] bg-white flex items-center justify-center transition-opacity duration-500">
-      <div class="text-center">
-        <div class="relative w-20 h-20 mx-auto mb-6">
-          <div class="absolute inset-0 border-4 border-primary/10 rounded-full"></div>
-          <div class="absolute inset-0 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
-          <div class="absolute inset-0 flex items-center justify-center">
-            <div class="w-12 h-12 bg-primary rounded-2xl flex items-center justify-center shadow-xl">
-              <span class="text-white text-2xl font-display font-bold">K</span>
+    <!-- Simple Navigation (white theme, all pages reachable) -->
+    <header class="fixed top-0 inset-x-0 z-50 bg-white/95 backdrop-blur border-b border-border">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="h-16 flex items-center justify-between">
+          <a href="/" class="flex items-center gap-3">
+            <div class="w-9 h-9 rounded-xl bg-white flex items-center justify-center border border-border">
+              <span class="text-black font-display font-bold">K</span>
             </div>
-          </div>
-        </div>
-        <p class="text-primary font-medium text-sm animate-pulse">Kuafora</p>
-      </div>
-    </div>
-
-    <!-- Dynamic Island Navigation -->
-    <header class="fixed top-0 inset-x-0 z-50 pointer-events-none">
-      <div class="flex justify-center pt-4 px-4">
-        <nav class="dynamic-nav rounded-full px-2 py-2 flex items-center gap-1 pointer-events-auto shadow-2xl">
-          <!-- Logo -->
-          <a href="/" class="flex items-center gap-2 pl-3 pr-4 py-1.5 rounded-full hover:bg-white/10 transition-all">
-            <div class="w-7 h-7 rounded-lg bg-white flex items-center justify-center border border-border">
-              <img
-                src="{% static 'img/logo.svg' %}"
-                alt="Kuafora"
-                class="w-5 h-5 object-contain"
-                onerror="this.style.display='none'; this.nextElementSibling.style.display='block';"
-              />
-              <span class="text-black font-display font-bold text-sm hidden">K</span>
-            </div>
-            <span class="font-display font-bold text-primary text-sm tracking-tight hidden sm:block">Kuafora</span>
+            <span class="font-display font-bold text-primary text-lg tracking-tight">Kuafora</span>
           </a>
-          
-          <!-- Divider -->
-          <div class="w-px h-6 bg-black/10 hidden md:block"></div>
-          
-          <!-- Navigation Links -->
-          <div class="hidden md:flex items-center">
+
+          <nav class="hidden lg:flex items-center gap-1 text-sm font-medium">
+            <a href="/" class="px-3 py-2 rounded-lg hover:bg-black/5 {% if request.path == '/' %}bg-black/5{% endif %}">Ana Sayfa</a>
+            <a href="{% url 'customer_app' %}" class="px-3 py-2 rounded-lg hover:bg-black/5">Müşteri Uygulaması</a>
+            <a href="/partner/kuafora-partner/" class="px-3 py-2 rounded-lg hover:bg-black/5">Partner</a>
+            <a href="{% url 'support' %}" class="px-3 py-2 rounded-lg hover:bg-black/5">Destek</a>
+            <div class="relative group">
+              <button type="button" class="px-3 py-2 rounded-lg hover:bg-black/5 inline-flex items-center gap-2">
+                Yasal
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                </svg>
+              </button>
+              <div class="hidden group-hover:block absolute right-0 mt-2 w-56 bg-white border border-border rounded-xl shadow-lg overflow-hidden">
+                <a href="{% url 'legal_terms' %}" class="block px-4 py-3 text-sm hover:bg-surface">Kullanım Koşulları</a>
+                <a href="{% url 'legal_privacy' %}" class="block px-4 py-3 text-sm hover:bg-surface">Gizlilik Politikası</a>
+                <a href="{% url 'legal_kvkk' %}" class="block px-4 py-3 text-sm hover:bg-surface">KVKK Aydınlatma Metni</a>
+                <a href="{% url 'legal_cookies' %}" class="block px-4 py-3 text-sm hover:bg-surface">Çerez Politikası</a>
+              </div>
+            </div>
+          </nav>
+
+          <div class="flex items-center gap-2">
             {% if request.resolver_match.url_name|slice:":7" == "partner" %}
-              <a href="/" class="nav-pill px-4 py-2 rounded-full text-sm font-medium">Ana Sayfa</a>
-              <a href="/partner/kuafora-partner/" class="nav-pill px-4 py-2 rounded-full text-sm font-medium {% if request.resolver_match.url_name == 'partner_landing' %}active{% endif %}">Partner Uygulaması</a>
-              <a href="/partner/kuafora-partner/ozellikler/" class="nav-pill px-4 py-2 rounded-full text-sm font-medium {% if request.resolver_match.url_name == 'partner_features' %}active{% endif %}">Özellikler</a>
-              <a href="/partner/kuafora-partner/sss/" class="nav-pill px-4 py-2 rounded-full text-sm font-medium {% if request.resolver_match.url_name == 'partner_faq' %}active{% endif %}">SSS</a>
+              <a href="/partner/kuafora-partner/#join" class="hidden sm:inline-flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-secondary">
+                Partner Uygulaması
+              </a>
             {% else %}
-              <a href="/" class="nav-pill px-4 py-2 rounded-full text-sm font-medium {% if request.path == '/' %}active{% endif %}">Ana Sayfa</a>
-              <a href="{% url 'customer_app' %}" class="nav-pill px-4 py-2 rounded-full text-sm font-medium">Müşteri Uygulaması</a>
-              <a href="/partner/kuafora-partner/" class="nav-pill px-4 py-2 rounded-full text-sm font-medium">Partner Uygulaması</a>
+              <a href="{% if request.path == '/' %}#notify{% else %}/#notify{% endif %}" class="hidden sm:inline-flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-secondary">
+                Haberdar Ol
+              </a>
             {% endif %}
-            <a href="{% url 'legal_terms' %}" class="nav-pill px-4 py-2 rounded-full text-sm font-medium">Yasal</a>
-          </div>
-          
-          <!-- Divider -->
-          <div class="w-px h-6 bg-black/10 hidden md:block"></div>
-          
-          <!-- CTA Button -->
-          {% if request.resolver_match.url_name|slice:":7" == "partner" %}
-            <a href="/partner/kuafora-partner/#join" class="hidden sm:flex items-center gap-2 bg-primary text-white px-5 py-2 rounded-full text-sm font-semibold hover:bg-secondary transition-all">
-              <span class="w-2 h-2 bg-accent-emerald rounded-full pulse-dot"></span>
-              Başvur
-            </a>
-          {% else %}
-            <a href="{% if request.path == '/' %}#notify{% else %}/#notify{% endif %}" class="hidden sm:flex items-center gap-2 bg-primary text-white px-5 py-2 rounded-full text-sm font-semibold hover:bg-secondary transition-all">
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
-              </svg>
-              Haberdar Ol
-            </a>
-          {% endif %}
-          
-          <!-- Mobile Menu Button -->
-          <button id="mobile-menu-btn" class="md:hidden p-2 rounded-full hover:bg-black/5 transition-colors text-primary" aria-label="Menü">
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <button id="mobile-menu-btn" class="lg:hidden p-2 rounded-xl hover:bg-black/5" aria-label="Menü">
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
               </svg>
             </button>
-        </nav>
+          </div>
+        </div>
       </div>
-      
-      <!-- Mobile Menu -->
-      <div id="mobile-menu" class="hidden pointer-events-auto mx-4 mt-2">
-        <div class="dynamic-nav rounded-3xl p-4 space-y-2">
-            {% if request.resolver_match.url_name|slice:":7" == "partner" %}
-            <a href="/" class="block text-primary/80 hover:text-primary py-3 px-4 rounded-xl hover:bg-black/5 transition-all font-medium">Ana Sayfa</a>
-            <a href="/partner/kuafora-partner/" class="block text-primary/80 hover:text-primary py-3 px-4 rounded-xl hover:bg-black/5 transition-all font-medium">Partner Uygulaması</a>
-            <a href="/partner/kuafora-partner/ozellikler/" class="block text-primary/80 hover:text-primary py-3 px-4 rounded-xl hover:bg-black/5 transition-all font-medium">Özellikler</a>
-            <a href="/partner/kuafora-partner/sss/" class="block text-primary/80 hover:text-primary py-3 px-4 rounded-xl hover:bg-black/5 transition-all font-medium">SSS</a>
-          {% else %}
-            <a href="/" class="block text-primary/80 hover:text-primary py-3 px-4 rounded-xl hover:bg-black/5 transition-all font-medium">Ana Sayfa</a>
-            <a href="{% url 'customer_app' %}" class="block text-primary/80 hover:text-primary py-3 px-4 rounded-xl hover:bg-black/5 transition-all font-medium">Müşteri Uygulaması</a>
-            <a href="/partner/kuafora-partner/" class="block text-primary/80 hover:text-primary py-3 px-4 rounded-xl hover:bg-black/5 transition-all font-medium">Partner Uygulaması</a>
-          {% endif %}
-            <a href="{% url 'legal_terms' %}" class="block text-primary/80 hover:text-primary py-3 px-4 rounded-xl hover:bg-black/5 transition-all font-medium">Yasal</a>
+
+      <!-- Mobile menu -->
+      <div id="mobile-menu" class="hidden lg:hidden border-t border-border bg-white">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 space-y-1 text-sm">
+          <a href="/" class="block px-3 py-3 rounded-xl hover:bg-surface">Ana Sayfa</a>
+          <a href="{% url 'customer_app' %}" class="block px-3 py-3 rounded-xl hover:bg-surface">Müşteri Uygulaması</a>
+          <a href="/partner/kuafora-partner/" class="block px-3 py-3 rounded-xl hover:bg-surface">Partner</a>
+          <a href="{% url 'support' %}" class="block px-3 py-3 rounded-xl hover:bg-surface">Destek</a>
+          <div class="pt-2 border-t border-border">
+            <p class="px-3 py-2 text-xs uppercase tracking-wider text-muted font-semibold">Yasal</p>
+            <a href="{% url 'legal_terms' %}" class="block px-3 py-3 rounded-xl hover:bg-surface">Kullanım Koşulları</a>
+            <a href="{% url 'legal_privacy' %}" class="block px-3 py-3 rounded-xl hover:bg-surface">Gizlilik Politikası</a>
+            <a href="{% url 'legal_kvkk' %}" class="block px-3 py-3 rounded-xl hover:bg-surface">KVKK Aydınlatma Metni</a>
+            <a href="{% url 'legal_cookies' %}" class="block px-3 py-3 rounded-xl hover:bg-surface">Çerez Politikası</a>
+          </div>
           <div class="pt-2">
             {% if request.resolver_match.url_name|slice:":7" == "partner" %}
-              <a href="/partner/kuafora-partner/#join" class="flex items-center justify-center gap-2 bg-primary text-white py-3 px-4 rounded-xl font-semibold">
-                <span class="w-2 h-2 bg-accent-emerald rounded-full pulse-dot"></span>
-                Başvur
+              <a href="/partner/kuafora-partner/#join" class="block text-center bg-primary text-white px-4 py-3 rounded-xl font-semibold">
+                Partner Uygulaması
               </a>
             {% else %}
-              <a href="{% if request.path == '/' %}#notify{% else %}/#notify{% endif %}" class="flex items-center justify-center gap-2 bg-primary text-white py-3 px-4 rounded-xl font-semibold">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 22a2 2 0 002-2H10a2 2 0 002 2zm6-6V11a6 6 0 10-12 0v5l-2 2h16l-2-2z"></path>
-                </svg>
+              <a href="{% if request.path == '/' %}#notify{% else %}/#notify{% endif %}" class="block text-center bg-primary text-white px-4 py-3 rounded-xl font-semibold">
                 Haberdar Ol
               </a>
             {% endif %}
@@ -332,13 +298,7 @@
           <div class="md:col-span-5">
             <div class="flex items-center gap-3 mb-6 group">
               <div class="w-12 h-12 rounded-2xl bg-white flex items-center justify-center shadow-sm border border-border">
-                <img
-                  src="{% static 'img/logo.svg' %}"
-                  alt="Kuafora"
-                  class="w-8 h-8 object-contain"
-                  onerror="this.style.display='none'; this.nextElementSibling.style.display='block';"
-                />
-                <span class="text-primary font-display font-bold text-xl hidden">K</span>
+                <span class="text-primary font-display font-bold text-xl">K</span>
               </div>
               <span class="font-display font-bold text-2xl tracking-tight">Kuafora</span>
             </div>
@@ -374,6 +334,7 @@
               <li><a href="/" class="text-muted hover:text-primary transition-colors">Ana Sayfa</a></li>
               <li><a href="{% url 'customer_app' %}" class="text-muted hover:text-primary transition-colors">Müşteri Uygulaması</a></li>
               <li><a href="/partner/kuafora-partner/" class="text-muted hover:text-primary transition-colors">Partner Uygulaması</a></li>
+              <li><a href="{% url 'support' %}" class="text-muted hover:text-primary transition-colors">Destek</a></li>
             </ul>
         </div>
           
@@ -457,7 +418,7 @@
         <div class="mt-14 pt-8 border-t border-border flex flex-col sm:flex-row justify-between items-center gap-4">
           <p class="text-sm text-muted">© {% now "Y" %} Kuafora. Tüm hakları saklıdır.</p>
           <div class="flex items-center gap-6">
-            <a href="#" class="text-sm text-muted hover:text-primary transition-colors">Türkçe (TR)</a>
+            <span class="text-sm text-muted">Türkçe (TR)</span>
           </div>
         </div>
       </div>

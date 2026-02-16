@@ -584,8 +584,8 @@
             <div style="font-size: 13px; opacity: 0.9;">Toplam Kullanıcı</div>
         </div>
         <div style="background: rgba(255,255,255,0.15); padding: 8px 16px; border-radius: 8px; backdrop-filter: blur(10px);">
-            <div style="font-size: 24px; font-weight: 800;">{{ stats.users.monthly_active|floatformat:0 }}</div>
-            <div style="font-size: 13px; opacity: 0.9;">MAU (30-Day Active)</div>
+            <div style="font-size: 24px; font-weight: 800;">{{ stats.users.monthly_active_net|floatformat:0 }}</div>
+            <div style="font-size: 13px; opacity: 0.9;">MAU — Net</div>
         </div>
         <div style="background: rgba(255,255,255,0.15); padding: 8px 16px; border-radius: 8px; backdrop-filter: blur(10px);">
             <div style="font-size: 24px; font-weight: 800;">{{ stats.users.day_7_retention_rate|floatformat:1 }}%</div>
@@ -761,7 +761,7 @@
     </div>
     <div class="stat-card success">
         <div class="stat-card-header">
-            <h3>Aktif kullanıcı (dönem)</h3>
+            <h3>Aktif kullanıcı (dönem) — Net</h3>
             <div class="stat-card-icon">📱</div>
         </div>
         <p class="stat-value">{{ period_stats.active_users|floatformat:0 }}</p>
@@ -772,9 +772,14 @@
                 {{ period_growth.active_users|floatformat:1 }}%
             </span>
         </div>
-        <div class="stat-subtitle">Önceki dönem: {{ prev_period_stats.active_users|floatformat:0 }}</div>
+        <div class="stat-subtitle">
+            Giriş yapmış: {{ period_stats.active_auth_users|floatformat:0 }} • Guest: {{ period_stats.active_guest_only_devices|floatformat:0 }} • Cihaz: {{ period_stats.active_devices|floatformat:0 }}
+        </div>
+        <div class="stat-subtitle">Önceki dönem (net): {{ prev_period_stats.active_users|floatformat:0 }}</div>
         {% else %}
-        <div class="stat-subtitle">Tüm zamanlar için aktif kullanıcı sayısı</div>
+        <div class="stat-subtitle">
+            Giriş yapmış: {{ period_stats.active_auth_users|floatformat:0 }} • Guest: {{ period_stats.active_guest_only_devices|floatformat:0 }} • Cihaz: {{ period_stats.active_devices|floatformat:0 }}
+        </div>
         {% endif %}
     </div>
     <div class="stat-card purple">
@@ -1020,7 +1025,7 @@
 <div class="dashboard-stats">
     <div class="stat-card success">
         <div class="stat-card-header">
-            <h3>Günlük Aktif (DAU)</h3>
+            <h3>Günlük Aktif (DAU) — Cihaz</h3>
             <div class="stat-card-icon">📱</div>
         </div>
         <p class="stat-value">{{ stats.users.daily_active|floatformat:0 }}</p>
@@ -1033,37 +1038,37 @@
             </span>
             {% endif %}
         </div>
-        <div class="stat-subtitle">Son 24 saatte uygulamayı en az bir kez açan</div>
+        <div class="stat-subtitle">Bugün aktif benzersiz cihazlar (guest dahil). Yüzde: giriş yapan kayıtlı kullanıcı / toplam kayıtlı.</div>
     </div>
     
     <div class="stat-card success">
         <div class="stat-card-header">
-            <h3>Haftalık Aktif (WAU)</h3>
+            <h3>Haftalık Aktif (WAU) — Cihaz</h3>
             <div class="stat-card-icon">📅</div>
         </div>
         <p class="stat-value">{{ stats.users.weekly_active|floatformat:0 }}</p>
         <div class="stat-percentage">{{ stats.users.weekly_active_percentage|floatformat:1 }}%</div>
-        <div class="stat-subtitle">Son 7 günde uygulamayı en az bir kez açan</div>
+        <div class="stat-subtitle">Son 7 günde aktif benzersiz cihazlar (guest dahil). Yüzde: giriş yapan kayıtlı kullanıcı / toplam kayıtlı.</div>
     </div>
     
     <div class="stat-card success">
         <div class="stat-card-header">
-            <h3>Aylık Aktif (MAU)</h3>
+            <h3>Aylık Aktif (MAU) — Cihaz</h3>
             <div class="stat-card-icon">📊</div>
         </div>
         <p class="stat-value">{{ stats.users.monthly_active|floatformat:0 }}</p>
         <div class="stat-percentage">{{ stats.users.monthly_active_percentage|floatformat:1 }}%</div>
-        <div class="stat-subtitle">Son 30 günde uygulamayı en az bir kez açan</div>
+        <div class="stat-subtitle">Son 30 günde aktif benzersiz cihazlar (guest dahil). Yüzde: giriş yapan kayıtlı kullanıcı / toplam kayıtlı.</div>
     </div>
     
     <div class="stat-card purple">
         <div class="stat-card-header">
-            <h3>Yıllık Aktif (YAU)</h3>
+            <h3>Yıllık Aktif (YAU) — Cihaz</h3>
             <div class="stat-card-icon">🗓️</div>
         </div>
         <p class="stat-value">{{ stats.users.yearly_active|floatformat:0 }}</p>
         <div class="stat-percentage">{{ stats.users.yearly_active_percentage|floatformat:1 }}%</div>
-        <div class="stat-subtitle">Son 365 günde uygulamayı en az bir kez açan</div>
+        <div class="stat-subtitle">Son 365 günde aktif benzersiz cihazlar (guest dahil). Yüzde: giriş yapan kayıtlı kullanıcı / toplam kayıtlı.</div>
     </div>
     
     <div class="stat-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
@@ -1072,8 +1077,39 @@
             <div class="stat-card-icon" style="color: white !important;">♾️</div>
         </div>
         <p class="stat-value" style="color: white !important;">{{ stats.users.all_time_active|floatformat:0 }}</p>
-        <div class="stat-percentage" style="color: rgba(255,255,255,0.9) !important;">{{ stats.users.yearly_active_percentage|floatformat:1 }}%</div>
         <div class="stat-subtitle" style="color: rgba(255,255,255,0.95) !important;">Uygulama başlangıcından beri uygulamayı en az bir kez açan benzersiz cihazlar (tüm zamanlar)</div>
+    </div>
+</div>
+
+<!-- Giriş durumuna göre net aktif kullanıcı -->
+<h3 style="color: #111827; font-size: 18px; margin: 18px 0 16px 0; font-weight: 700;">🔐 Giriş Durumuna Göre (Net Aktif)</h3>
+<p class="dashboard-note" style="margin-top: 0;">
+    <strong>Net aktif</strong> = (Giriş yapmış benzersiz kullanıcı) + (Aynı dönemde hiç giriş yapmamış guest-only benzersiz cihaz).
+</p>
+<div class="dashboard-stats">
+    <div class="stat-card info">
+        <div class="stat-card-header">
+            <h3>DAU — Net</h3>
+            <div class="stat-card-icon">👥</div>
+        </div>
+        <p class="stat-value">{{ stats.users.daily_active_net|floatformat:0 }}</p>
+        <div class="stat-subtitle">Giriş: {{ stats.users.daily_active_auth_users|floatformat:0 }} • Guest: {{ stats.users.daily_active_guest_only_devices|floatformat:0 }}</div>
+    </div>
+    <div class="stat-card info">
+        <div class="stat-card-header">
+            <h3>WAU — Net</h3>
+            <div class="stat-card-icon">👥</div>
+        </div>
+        <p class="stat-value">{{ stats.users.weekly_active_net|floatformat:0 }}</p>
+        <div class="stat-subtitle">Giriş: {{ stats.users.weekly_active_auth_users|floatformat:0 }} • Guest: {{ stats.users.weekly_active_guest_only_devices|floatformat:0 }}</div>
+    </div>
+    <div class="stat-card info">
+        <div class="stat-card-header">
+            <h3>MAU — Net</h3>
+            <div class="stat-card-icon">👥</div>
+        </div>
+        <p class="stat-value">{{ stats.users.monthly_active_net|floatformat:0 }}</p>
+        <div class="stat-subtitle">Giriş: {{ stats.users.monthly_active_auth_users|floatformat:0 }} • Guest: {{ stats.users.monthly_active_guest_only_devices|floatformat:0 }}</div>
     </div>
 </div>
 

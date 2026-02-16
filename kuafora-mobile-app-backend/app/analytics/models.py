@@ -1,4 +1,5 @@
 from django.db import models
+from django.db.models import Q
 from django.utils import timezone
 from app.users.models import User
 
@@ -262,6 +263,15 @@ class UserActivityLog(models.Model):
     class Meta:
         db_table = 'analytics_user_activity_log'
         unique_together = [['user', 'device_id', 'activity_date', 'app_type']]
+        constraints = [
+            # Guest (user=NULL) kayıtlarında Postgres'te NULL unique_together'ı bozabilir.
+            # Bu partial unique constraint ile aynı gün/cihaz için duplicate guest kayıtlarını engelleriz.
+            models.UniqueConstraint(
+                fields=['device_id', 'activity_date', 'app_type'],
+                condition=Q(user__isnull=True),
+                name='uniq_guest_device_day_app',
+            ),
+        ]
         indexes = [
             models.Index(fields=['activity_date', 'app_type']),
             models.Index(fields=['device_id', 'activity_date']),

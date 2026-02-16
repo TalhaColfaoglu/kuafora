@@ -2,6 +2,7 @@ from rest_framework import viewsets, status, permissions
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.utils import timezone
+from django.db import IntegrityError
 from django.db.models import Count, Q, Avg, Sum, F
 from django.db.models.functions import TruncDate, TruncHour
 from datetime import timedelta, datetime
@@ -47,14 +48,36 @@ class TrackingViewSet(viewsets.ViewSet):
                 obj.last_activity = now
                 obj.save(update_fields=["login_count", "last_activity"] if increment else ["last_activity"])
             else:
-                UserActivityLog.objects.create(
-                    user=None,
-                    device_id=device_id,
-                    activity_date=today,
-                    app_type=app_type,
-                    login_count=1 if increment else 0,
-                    last_activity=now,
-                )
+                try:
+                    UserActivityLog.objects.create(
+                        user=None,
+                        device_id=device_id,
+                        activity_date=today,
+                        app_type=app_type,
+                        login_count=1 if increment else 0,
+                        last_activity=now,
+                    )
+                except IntegrityError:
+                    # Aynı anda iki istek gelirse partial unique constraint'e takılabilir.
+                    # Bu durumda tekrar fetch edip update yap.
+                    obj = (
+                        UserActivityLog.objects.filter(
+                            user__isnull=True,
+                            device_id=device_id,
+                            activity_date=today,
+                            app_type=app_type,
+                        )
+                        .order_by("id")
+                        .first()
+                    )
+                    if obj:
+                        if increment:
+                            UserActivityLog.objects.filter(pk=obj.pk).update(
+                                login_count=F("login_count") + 1,
+                                last_activity=now,
+                            )
+                        else:
+                            UserActivityLog.objects.filter(pk=obj.pk).update(last_activity=now)
             return
 
         # Authenticated user: unique_together ile güvenli update_or_create
