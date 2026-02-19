@@ -1,0 +1,14 @@
+{% extends "admin/change_form.html" %}
+{% load i18n %}
+
+{% block object-tools-items %}
+  {{ block.super }}
+  {% if change and not is_popup %}
+    <li>
+      <a href="{% url 'admin:subscriptions_subscription_apply_coupon' original.pk %}" class="historylink">
+        Kupon Uygula
+      </a>
+    </li>
+  {% endif %}
+{% endblock %}
+

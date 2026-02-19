@@ -1,9 +1,15 @@
+from django import forms
 from django.contrib import admin
+from django.contrib import messages
+from django.http import Http404, HttpRequest
+from django.shortcuts import redirect, render
+from django.urls import path, reverse
 from django.utils.html import format_html
 from django.utils import timezone
 from unfold.admin import ModelAdmin, TabularInline
 from unfold.decorators import action
 from .models import SubscriptionPlan, Subscription, Coupon, CouponUsage
+from .services import apply_coupon_to_subscription
 
 
 @admin.register(SubscriptionPlan)
@@ -55,6 +61,7 @@ class CouponUsageInline(TabularInline):
 
 @admin.register(Subscription)
 class SubscriptionAdmin(ModelAdmin):
+    change_form_template = "admin/subscriptions/subscription/change_form.html"
     list_display = (
         'barbershop', 
         'plan', 
@@ -69,6 +76,57 @@ class SubscriptionAdmin(ModelAdmin):
     inlines = [CouponUsageInline]
     actions = ['make_lifetime', 'extend_trial_30_days']
     
+    class ApplyCouponCodeForm(forms.Form):
+        coupon_code = forms.CharField(
+            label="Kupon Kodu",
+            max_length=50,
+            help_text="Uygulanacak kupon kodu (örn. ILK200, HOSGELDINIZ).",
+            widget=forms.TextInput(attrs={"class": "vTextField", "placeholder": "ILK200"}),
+        )
+
+    def get_urls(self):
+        urls = super().get_urls()
+        custom = [
+            path(
+                "<path:object_id>/apply-coupon/",
+                self.admin_site.admin_view(self.apply_coupon_view),
+                name="subscriptions_subscription_apply_coupon",
+            ),
+        ]
+        return custom + urls
+
+    def apply_coupon_view(self, request: HttpRequest, object_id: str):
+        subscription = self.get_object(request, object_id)
+        if subscription is None:
+            raise Http404("Abonelik bulunamadı")
+
+        if request.method == "POST":
+            form = self.ApplyCouponCodeForm(request.POST)
+            if form.is_valid():
+                code = form.cleaned_data["coupon_code"].strip().upper()
+                try:
+                    coupon = Coupon.objects.get(code=code)
+                except Coupon.DoesNotExist:
+                    messages.error(request, "Kupon bulunamadı.")
+                else:
+                    result = apply_coupon_to_subscription(subscription=subscription, coupon=coupon)
+                    if result.ok:
+                        messages.success(request, "Kupon başarıyla uygulandı.")
+                        return redirect(reverse("admin:subscriptions_subscription_change", args=[subscription.pk]))
+                    messages.error(request, result.error or "Kupon uygulanamadı.")
+        else:
+            form = self.ApplyCouponCodeForm()
+
+        context = dict(
+            self.admin_site.each_context(request),
+            title="Kupon Uygula",
+            subscription=subscription,
+            form=form,
+            opts=self.model._meta,
+            original=subscription,
+        )
+        return render(request, "admin/subscriptions/apply_coupon.html", context)
+
     fieldsets = (
         ('Temel Bilgiler', {
             'fields': ('barbershop', 'plan', 'status')

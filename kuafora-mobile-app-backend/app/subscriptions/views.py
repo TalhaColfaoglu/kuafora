@@ -9,6 +9,7 @@ from django.db import transaction
 from datetime import timedelta
 
 from .models import SubscriptionPlan, Subscription, Coupon, CouponUsage
+from .services import apply_coupon_to_subscription
 from .serializers import (
     SubscriptionPlanSerializer,
     SubscriptionSerializer,
@@ -212,47 +213,6 @@ class SubscriptionViewSet(viewsets.ModelViewSet):
         # Yetki kontrolü
         if not request.user.staff_profiles.filter(barbershop_id=barbershop_id, is_admin=True).exists():
             return Response({'error': 'Bu salon için yetkiniz yok'}, status=403)
-        
-        def _apply_coupon(subscription: Subscription, coupon: Coupon):
-            """
-            Kuponu aboneliğe uygula:
-            - Aynı salon için aynı kupon tekrar uygulanamaz (CouponUsage ile)
-            - free_months => trial_ends_at veya current_period_end uzatılır
-            - lifetime => status lifetime olur
-            Not: percent/fixed ödeme altyapısı gelince işlenecek (şimdilik süre etkilemez).
-            """
-            if CouponUsage.objects.filter(coupon=coupon, subscription__barbershop_id=subscription.barbershop_id).exists():
-                return (False, 'Bu kupon bu salon için zaten kullanılmış')
-
-            if not coupon.is_valid:
-                return (False, 'Kupon geçersiz veya süresi dolmuş')
-
-            # Abonelik üzerinde son kullanılan kuponu gösterim amaçlı tutuyoruz
-            subscription.coupon = coupon
-            subscription.coupon_applied_at = timezone.now()
-
-            if coupon.discount_type == 'lifetime':
-                subscription.status = 'lifetime'
-            elif coupon.discount_type == 'free_months':
-                # İlk 200 kod için 365 gün ekle
-                if coupon.current_uses < 200:
-                    days = 365
-                else:
-                    days = 30 * int(coupon.discount_value or 0)
-                # Aktif abonelikte dönem sonunu, trial'da trial bitişini uzat
-                if subscription.status in ['active', 'grace_period'] and subscription.current_period_end:
-                    subscription.current_period_end = subscription.current_period_end + timedelta(days=days)
-                else:
-                    base = subscription.trial_ends_at or timezone.now()
-                    subscription.trial_ends_at = base + timedelta(days=days)
-
-            subscription.save()
-
-            # usage ve sayaç
-            CouponUsage.objects.create(coupon=coupon, subscription=subscription)
-            coupon.current_uses += 1
-            coupon.save()
-            return (True, None)
 
         # Zaten abonelik var mı? Varsa plan ve kupon güncellemesi yap
         existing_subscription = Subscription.objects.filter(barbershop_id=barbershop_id).first()
@@ -274,9 +234,9 @@ class SubscriptionViewSet(viewsets.ModelViewSet):
                 except Coupon.DoesNotExist:
                     return Response({'error': 'Kupon bulunamadı'}, status=400)
 
-                ok, err = _apply_coupon(existing_subscription, coupon)
-                if not ok:
-                    return Response({'error': err}, status=400)
+                result = apply_coupon_to_subscription(subscription=existing_subscription, coupon=coupon)
+                if not result.ok:
+                    return Response({'error': result.error}, status=400)
             
             return Response({
                 'success': True,
@@ -331,20 +291,10 @@ class SubscriptionViewSet(viewsets.ModelViewSet):
             
             # Kupon varsa uygula
             if coupon:
-                subscription.coupon = coupon
-                subscription.coupon_applied_at = timezone.now()
-                
-                if coupon.discount_type == 'lifetime':
-                    subscription.status = 'lifetime'
-                elif coupon.discount_type == 'free_months':
-                    subscription.trial_ends_at = subscription.trial_ends_at + timedelta(days=30 * coupon.discount_value)
-                
-                subscription.save()
-                
-                coupon.current_uses += 1
-                coupon.save()
-                
-                CouponUsage.objects.create(coupon=coupon, subscription=subscription)
+                result = apply_coupon_to_subscription(subscription=subscription, coupon=coupon)
+                if not result.ok:
+                    transaction.set_rollback(True)
+                    return Response({'error': result.error or 'Kupon uygulanamadı'}, status=400)
         
         return Response({
             'success': True,
@@ -382,39 +332,9 @@ class SubscriptionViewSet(viewsets.ModelViewSet):
         
         code = serializer.validated_data['code']
         coupon = Coupon.objects.get(code=code)
-        # Aynı salon için aynı kupon tekrar kullanılamaz
-        if CouponUsage.objects.filter(coupon=coupon, subscription__barbershop_id=barbershop_id).exists():
-            return Response({'success': False, 'error': 'Bu kupon bu salon için zaten kullanılmış'}, status=status.HTTP_400_BAD_REQUEST)
-        
-        # Kuponu uygula
-        with transaction.atomic():
-            subscription.coupon = coupon
-            subscription.coupon_applied_at = timezone.now()
-            
-            if coupon.discount_type == 'lifetime':
-                subscription.status = 'lifetime'
-            elif coupon.discount_type == 'free_months':
-                # İlk 200 kod için 365 gün ekle
-                if coupon.current_uses < 200:
-                    days = 365
-                else:
-                    days = 30 * int(coupon.discount_value or 0)
-                # Trial veya aktif dönem süresini uzat
-                if subscription.status in ['active', 'grace_period'] and subscription.current_period_end:
-                    subscription.current_period_end = subscription.current_period_end + timedelta(days=days)
-                else:
-                    base = subscription.trial_ends_at or timezone.now()
-                    subscription.trial_ends_at = base + timedelta(days=days)
-            # percent ve fixed ödeme altyapısı gelince işlenecek
-            
-            subscription.save()
-            
-            # Kupon kullanım sayısını artır
-            coupon.current_uses += 1
-            coupon.save()
-            
-            # Kullanım kaydı oluştur
-            CouponUsage.objects.create(coupon=coupon, subscription=subscription)
+        result = apply_coupon_to_subscription(subscription=subscription, coupon=coupon)
+        if not result.ok:
+            return Response({'success': False, 'error': result.error}, status=status.HTTP_400_BAD_REQUEST)
         
         return Response({
             'success': True,
@@ -500,21 +420,10 @@ class CreateSubscriptionApi(APIView):
             # Kupon varsa uygula
             if coupon_code:
                 coupon = Coupon.objects.get(code=coupon_code)
-                
-                subscription.coupon = coupon
-                subscription.coupon_applied_at = timezone.now()
-                
-                if coupon.discount_type == 'lifetime':
-                    subscription.status = 'lifetime'
-                elif coupon.discount_type == 'free_months':
-                    subscription.trial_ends_at = subscription.trial_ends_at + timedelta(days=30 * coupon.discount_value)
-                
-                subscription.save()
-                
-                coupon.current_uses += 1
-                coupon.save()
-                
-                CouponUsage.objects.create(coupon=coupon, subscription=subscription)
+                result = apply_coupon_to_subscription(subscription=subscription, coupon=coupon)
+                if not result.ok:
+                    transaction.set_rollback(True)
+                    return Response({'error': result.error or 'Kupon uygulanamadı'}, status=400)
         
         return Response({
             'success': True,
