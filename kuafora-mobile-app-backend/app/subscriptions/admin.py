@@ -35,7 +35,9 @@ class QuickApplyCouponForm(forms.Form):
             Barbershop.objects.filter(is_verified=True).order_by('name')
         )
         self.fields['coupon'].queryset = (
-            Coupon.objects.filter(is_active=True).order_by('code')
+            Coupon.objects.filter(is_active=True)
+            .exclude(discount_type='lifetime')
+            .order_by('code')
         )
 
     def label_from_instance_barbershop(self, obj):
@@ -185,7 +187,9 @@ class SubscriptionAdmin(ModelAdmin):
             form=form,
             subscription_info=subscription_info,
             opts=self.model._meta,
-            active_coupons=Coupon.objects.filter(is_active=True).order_by('code'),
+            active_coupons=Coupon.objects.filter(is_active=True)
+            .exclude(discount_type='lifetime')
+            .order_by('code'),
         )
         return render(request, "admin/subscriptions/quick_apply_coupon.html", context)
 

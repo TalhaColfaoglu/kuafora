@@ -23,10 +23,13 @@ def apply_coupon_to_subscription(*, subscription: Subscription, coupon: Coupon) 
     Rules:
     - A coupon can be used only once per barbershop (enforced via CouponUsage lookup).
     - free_months extends trial_ends_at (or current_period_end for active/grace subscriptions).
-    - lifetime switches status to 'lifetime'.
     - percent/fixed are reserved for future payment integrations (no date changes currently).
+    - lifetime coupon type removed: not supported.
     """
     # Guardrails (cheap checks before transaction).
+    if coupon.discount_type == "lifetime":
+        return ApplyCouponResult(ok=False, error="Ömür boyu kuponlar artık desteklenmiyor")
+
     if not coupon.is_valid:
         return ApplyCouponResult(ok=False, error="Kupon geçersiz veya süresi dolmuş")
 
@@ -48,15 +51,8 @@ def apply_coupon_to_subscription(*, subscription: Subscription, coupon: Coupon) 
         subscription.coupon = coupon
         subscription.coupon_applied_at = timezone.now()
 
-        if coupon.discount_type == "lifetime":
-            subscription.status = "lifetime"
-
-        elif coupon.discount_type == "free_months":
-            # First 200 redemptions get 365 days (legacy marketing rule).
-            if coupon.current_uses < 200:
-                days = 365
-            else:
-                days = 30 * int(coupon.discount_value or 0)
+        if coupon.discount_type == "free_months":
+            days = 30 * int(coupon.discount_value or 0)
 
             if subscription.status in ["active", "grace_period"] and subscription.current_period_end:
                 subscription.current_period_end = subscription.current_period_end + timedelta(days=days)

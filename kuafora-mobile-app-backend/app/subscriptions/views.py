@@ -63,7 +63,7 @@ class MySubscriptionApi(APIView):
                     barbershop=barbershop,
                     plan=plan,
                     status='trial',
-                    trial_ends_at=timezone.now() + timedelta(days=90)
+                    trial_ends_at=timezone.now() + timedelta(days=30)
                 )
                 return Response(SubscriptionSerializer(subscription).data)
             
@@ -130,12 +130,7 @@ class CouponValidateApi(APIView):
         })
     
     def _get_success_message(self, coupon):
-        if coupon.discount_type == 'lifetime':
-            remaining = coupon.remaining_uses
-            if remaining is not None:
-                return f'🎉 Ömür boyu ücretsiz! ({remaining} kullanım hakkı kaldı)'
-            return '🎉 Ömür boyu ücretsiz!'
-        elif coupon.discount_type == 'free_months':
+        if coupon.discount_type == 'free_months':
             return f'🎁 {coupon.discount_value} ay ücretsiz!'
         elif coupon.discount_type == 'percent':
             return f'💰 %{coupon.discount_value} indirim!'
@@ -194,7 +189,7 @@ class SubscriptionViewSet(viewsets.ModelViewSet):
                     barbershop=barbershop,
                     plan=plan,
                     status='trial',
-                    trial_ends_at=timezone.now() + timedelta(days=90)
+                    trial_ends_at=timezone.now() + timedelta(days=30)
                 )
                 return Response(SubscriptionSerializer(subscription).data)
             
@@ -281,7 +276,7 @@ class SubscriptionViewSet(viewsets.ModelViewSet):
                 return Response({'error': 'Kupon bulunamadı'}, status=400)
         
         with transaction.atomic():
-            # Trial abonelik oluştur (90 gün)
+            # Trial abonelik oluştur (1 ay)
             subscription = Subscription.objects.create(
                 barbershop=barbershop,
                 plan=plan,
@@ -343,9 +338,7 @@ class SubscriptionViewSet(viewsets.ModelViewSet):
         })
     
     def _get_success_message(self, coupon):
-        if coupon.discount_type == 'lifetime':
-            return '🎉 Tebrikler! Aboneliğiniz ömür boyu ücretsiz oldu!'
-        elif coupon.discount_type == 'free_months':
+        if coupon.discount_type == 'free_months':
             return f'🎁 {coupon.discount_value} ay eklendi!'
         elif coupon.discount_type == 'percent':
             return f'💰 %{coupon.discount_value} indirim uygulandı!'

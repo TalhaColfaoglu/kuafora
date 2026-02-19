@@ -142,9 +142,9 @@ class Subscription(models.Model):
         return f"{self.barbershop.name} - {self.plan.name} ({self.get_status_display()})"
     
     def save(self, *args, **kwargs):
-        # Trial bitiş tarihini otomatik ayarla (90 gün)
+        # Trial bitiş tarihini otomatik ayarla (1 ay bedava)
         if not self.trial_ends_at:
-            self.trial_ends_at = timezone.now() + timedelta(days=90)
+            self.trial_ends_at = timezone.now() + timedelta(days=30)
         super().save(*args, **kwargs)
     
     @property
@@ -248,7 +248,6 @@ class Coupon(models.Model):
     """Kupon sistemi - Admin panelinden yönetilecek"""
     
     DISCOUNT_TYPE_CHOICES = [
-        ('lifetime', 'Ömür Boyu Ücretsiz'),
         ('free_months', 'Bedava Ay'),
         ('percent', 'Yüzde İndirim'),
         ('fixed', 'Sabit TL İndirim'),
@@ -273,7 +272,7 @@ class Coupon(models.Model):
     )
     discount_value = models.IntegerField(
         verbose_name="İndirim Değeri",
-        help_text="0 (lifetime), 6 (ay), 50 (%), 100 (TL)"
+        help_text="6 (ay), 50 (%), 100 (TL)"
     )
     
     # Kısıtlamalar
@@ -347,8 +346,8 @@ class Coupon(models.Model):
     def discount_display(self):
         """İndirim gösterimi"""
         if self.discount_type == 'lifetime':
-            return 'Ömür boyu ücretsiz'
-        elif self.discount_type == 'free_months':
+            return 'Ömür boyu (artık desteklenmiyor)'
+        if self.discount_type == 'free_months':
             return f'{self.discount_value} ay ücretsiz'
         elif self.discount_type == 'percent':
             return f'%{self.discount_value} indirim'

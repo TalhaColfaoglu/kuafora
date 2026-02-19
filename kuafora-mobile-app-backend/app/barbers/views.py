@@ -1503,23 +1503,8 @@ class PartnerBarbershopViewSet(viewsets.ModelViewSet):
                                 barbershop=barbershop,
                                 plan=plan,
                                 status='trial',
-                                trial_ends_at=timezone.now() + timedelta(days=90)
+                                trial_ends_at=timezone.now() + timedelta(days=30)
                             )
-                            # İlk 200 kuaför: ILK200 kuponu varsa otomatik uygula (quota doluysa otomatik atlar)
-                            try:
-                                from app.subscriptions.models import Coupon, CouponUsage
-                                coupon = Coupon.objects.filter(code='ILK200', is_active=True).first()
-                                if coupon and coupon.is_valid:
-                                    subscription.coupon = coupon
-                                    subscription.coupon_applied_at = timezone.now()
-                                    subscription.status = 'lifetime'
-                                    subscription.save(update_fields=['coupon', 'coupon_applied_at', 'status'])
-                                    _, created = CouponUsage.objects.get_or_create(coupon=coupon, subscription=subscription)
-                                    if created:
-                                        coupon.current_uses += 1
-                                        coupon.save()
-                            except Exception as coupon_err:
-                                logger.warning(f"[PartnerBarbershopViewSet] Coupon uygulanamadı: {str(coupon_err)}")
                 except Exception as sub_err:
                     # Subscription oluşturma hatası kritik değil, sessizce geç
                     logger.warning(f"[PartnerBarbershopViewSet] Subscription oluşturulamadı: {str(sub_err)}")
