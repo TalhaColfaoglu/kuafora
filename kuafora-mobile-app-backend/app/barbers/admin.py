@@ -1,6 +1,9 @@
 from datetime import timedelta
 
 from django.contrib import admin
+from django.http import Http404, HttpRequest
+from django.shortcuts import redirect
+from django.urls import path
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.html import format_html
@@ -9,6 +12,7 @@ from django.db import models
 from django.contrib.admin import SimpleListFilter
 from unfold.admin import ModelAdmin, TabularInline
 from unfold.decorators import action
+from app.subscriptions.models import Subscription, SubscriptionPlan
 from .models import (
     Barbershop,
     BarbershopAppeal,
@@ -220,6 +224,39 @@ class BarbershopAdmin(ModelAdmin):
         "rejection_reason",
         "rejected_at",
     )
+
+    def get_urls(self):
+        urls = super().get_urls()
+        custom = [
+            path(
+                "<path:object_id>/apply-coupon/",
+                self.admin_site.admin_view(self.apply_coupon_redirect_view),
+                name="barbers_barbershop_apply_coupon",
+            ),
+        ]
+        return custom + urls
+
+    def apply_coupon_redirect_view(self, request: HttpRequest, object_id: str):
+        barbershop = self.get_object(request, object_id)
+        if barbershop is None:
+            raise Http404("Salon bulunamadı")
+
+        subscription = Subscription.objects.filter(barbershop=barbershop).select_related("plan").first()
+        if subscription is None:
+            # Admin kolaylığı: abonelik yoksa trial olarak oluştur.
+            # Plan seçimi salonun system_type değerine göre yapılır.
+            if getattr(barbershop, "system_type", "info") == "booking":
+                plan = SubscriptionPlan.objects.filter(slug="randevu", is_active=True).first()
+            else:
+                plan = SubscriptionPlan.objects.filter(slug="bilgi", is_active=True).first()
+            if plan is None:
+                plan = SubscriptionPlan.objects.filter(is_active=True).first()
+            if plan is None:
+                raise Http404("Aktif plan bulunamadı")
+
+            subscription = Subscription.objects.create(barbershop=barbershop, plan=plan, status="trial")
+
+        return redirect(reverse("admin:subscriptions_subscription_apply_coupon", args=[subscription.pk]))
 
     fieldsets = (
         ("📋 Temel Bilgiler", {
@@ -534,23 +571,26 @@ class BarbershopAdmin(ModelAdmin):
     def google_maps_link_display(self, obj):
         if obj.google_maps_link and obj.google_maps_link.strip():
             link = obj.google_maps_link.strip()
+            coords_html = ""
+            if obj.latitude and obj.longitude:
+                coords_html = format_html(
+                    '<div style="margin-top: 10px; padding: 8px; background: white; border-radius: 6px;">'
+                    '<small style="color: #6b7280;">Koordinatlar: {}, {}</small>'
+                    "</div>",
+                    obj.latitude,
+                    obj.longitude,
+                )
             return format_html(
-                f'''
-                <div style="margin: 10px 0; padding: 12px; background: #eff6ff; border-radius: 8px; border-left: 4px solid #3b82f6;">
-                    <div style="margin-bottom: 8px;">
-                        <strong style="color: #1e40af;">📍 Google Maps Konumu:</strong>
-                    </div>
-                    <a href="{link}" target="_blank" style="color: #3b82f6; text-decoration: none; word-break: break-all; display: inline-block; margin-top: 4px;">
-                        {link}
-                        <span style="margin-left: 6px;">🔗</span>
-                    </a>
-                    {f'''
-                    <div style="margin-top: 10px; padding: 8px; background: white; border-radius: 6px;">
-                        <small style="color: #6b7280;">Koordinatlar: {obj.latitude or "N/A"}, {obj.longitude or "N/A"}</small>
-                    </div>
-                    ''' if obj.latitude and obj.longitude else ''}
-                </div>
-                '''
+                '<div style="margin: 10px 0; padding: 12px; background: #eff6ff; border-radius: 8px; border-left: 4px solid #3b82f6;">'
+                '<div style="margin-bottom: 8px;"><strong style="color: #1e40af;">📍 Google Maps Konumu:</strong></div>'
+                '<a href="{}" target="_blank" style="color: #3b82f6; text-decoration: none; word-break: break-all; display: inline-block; margin-top: 4px;">'
+                '{} <span style="margin-left: 6px;">🔗</span>'
+                "</a>"
+                "{}"
+                "</div>",
+                link,
+                link,
+                coords_html,
             )
         return format_html(
             '<div style="padding: 12px; background: #fef2f2; border-radius: 8px; border-left: 4px solid #ef4444; color: #991b1b;">'

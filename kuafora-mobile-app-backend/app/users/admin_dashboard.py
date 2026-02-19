@@ -511,12 +511,12 @@ def admin_dashboard_view(request):
     registration_dict = {item['date']: item['count'] for item in registration_data}
     
     for i in range(7):
-        date = today - timedelta(days=6-i)
-        count = registration_dict.get(date, 0)
+        day = today - timedelta(days=6-i)
+        count = registration_dict.get(day, 0)
         if count > max_registration_count:
             max_registration_count = count
         registration_chart.append({
-            'date': date.strftime('%d.%m'),
+            'date': day.strftime('%d.%m'),
             'count': count
         })
     
@@ -538,13 +538,13 @@ def admin_dashboard_view(request):
     
     # Her gün için veriyi chart'a ekle
     for i in range(30):
-        date = today - timedelta(days=29-i)
-        count = activity_dict.get(date, 0)
+        day = today - timedelta(days=29-i)
+        count = activity_dict.get(day, 0)
         
         if count > max_daily_active:
             max_daily_active = count
         daily_active_chart.append({
-            'date': date.strftime('%d.%m'),
+            'date': day.strftime('%d.%m'),
             'count': count
         })
     

@@ -7,6 +7,9 @@
     <a href="{% url 'admin-barbershop-preview' original.pk %}" target="_blank" style="display: inline-flex; align-items: center; gap: 8px; padding: 10px 16px; background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: #fff; text-decoration: none; border-radius: 10px; font-weight: 600; font-size: 14px; box-shadow: 0 2px 8px rgba(59,130,246,0.3);">
         📱 Detay ekranı önizlemesi (kuaförü uygulama gibi gör)
     </a>
+    <a href="{% url 'admin:barbers_barbershop_apply_coupon' original.pk %}" style="display: inline-flex; align-items: center; gap: 8px; padding: 10px 16px; margin-left: 10px; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: #fff; text-decoration: none; border-radius: 10px; font-weight: 600; font-size: 14px; box-shadow: 0 2px 8px rgba(16,185,129,0.25);">
+        🎟️ Kupon uygula (abonelik)
+    </a>
 </p>
 {% endif %}
 {{ block.super }}
