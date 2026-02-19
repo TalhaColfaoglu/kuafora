@@ -397,14 +397,17 @@ def admin_dashboard_view(request):
     today_start = timezone.make_aware(datetime.combine(today, datetime.min.time()))
     year_start = timezone.make_aware(datetime.combine(year_ago, datetime.min.time()))
 
+    # epoch_date sabit olarak tanımla - date() fonksiyonunu loop değişkeni gölgelemez
+    epoch_date = date(1970, 1, 1)
+
     try:
         daily_breakdown = _active_breakdown(start_date=today, end_date=today, app_type="main")
         weekly_breakdown = _active_breakdown(start_date=week_start_date, end_date=today, app_type="main")
         monthly_breakdown = _active_breakdown(start_date=month_ago, end_date=today, app_type="main")
         yearly_breakdown = _active_breakdown(start_date=year_ago, end_date=today, app_type="main")
-        all_time_breakdown = _active_breakdown(start_date=date(1970, 1, 1), end_date=today, app_type="main")
+        all_time_breakdown = _active_breakdown(start_date=epoch_date, end_date=today, app_type="main")
 
-        # Cihaz bazlı metrikler
+        # Cihaz bazlı metrikler (UserActivityLog)
         daily_active_users = daily_breakdown["active_devices"]
         weekly_active_users = weekly_breakdown["active_devices"]
         monthly_active_users = monthly_breakdown["active_devices"]
@@ -430,24 +433,52 @@ def admin_dashboard_view(request):
         monthly_active_guest_only_devices = monthly_breakdown["guest_only_devices"]
         yearly_active_guest_only_devices = yearly_breakdown["guest_only_devices"]
         all_time_active_guest_only_devices = all_time_breakdown["guest_only_devices"]
-        
+
+        # Fallback: UserActivityLog henüz veri içermiyorsa last_login bazlı hesapla
+        if daily_active_users == 0 and weekly_active_users == 0:
+            daily_active_auth_users = app_users_qs.filter(last_login__date=today).count()
+            weekly_active_auth_users = app_users_qs.filter(last_login__gte=week_start).count()
+            monthly_active_auth_users = app_users_qs.filter(last_login__gte=month_start).count()
+            yearly_active_auth_users = app_users_qs.filter(last_login__gte=year_start).count()
+            all_time_active_auth_users = app_users_qs.filter(last_login__isnull=False).count()
+            daily_active_users = daily_active_auth_users
+            weekly_active_users = weekly_active_auth_users
+            monthly_active_users = monthly_active_auth_users
+            yearly_active_users = yearly_active_auth_users
+            all_time_active_users = all_time_active_auth_users
+            daily_active_net = daily_active_auth_users
+            weekly_active_net = weekly_active_auth_users
+            monthly_active_net = monthly_active_auth_users
+            yearly_active_net = yearly_active_auth_users
+            all_time_active_net = all_time_active_auth_users
+            daily_active_guest_only_devices = 0
+            weekly_active_guest_only_devices = 0
+            monthly_active_guest_only_devices = 0
+            yearly_active_guest_only_devices = 0
+            all_time_active_guest_only_devices = 0
+
     except Exception as e:
         print(f"Error calculating active users: {e}")
-        daily_active_users = 0
-        weekly_active_users = 0
-        monthly_active_users = 0
-        yearly_active_users = 0
-        all_time_active_users = 0
-        daily_active_net = 0
-        weekly_active_net = 0
-        monthly_active_net = 0
-        yearly_active_net = 0
-        all_time_active_net = 0
-        daily_active_auth_users = 0
-        weekly_active_auth_users = 0
-        monthly_active_auth_users = 0
-        yearly_active_auth_users = 0
-        all_time_active_auth_users = 0
+        # Fallback son çare: last_login bazlı
+        try:
+            daily_active_auth_users = app_users_qs.filter(last_login__date=today).count()
+            weekly_active_auth_users = app_users_qs.filter(last_login__gte=week_start).count()
+            monthly_active_auth_users = app_users_qs.filter(last_login__gte=month_start).count()
+            yearly_active_auth_users = app_users_qs.filter(last_login__gte=year_start).count()
+            all_time_active_auth_users = app_users_qs.filter(last_login__isnull=False).count()
+        except Exception:
+            daily_active_auth_users = weekly_active_auth_users = monthly_active_auth_users = 0
+            yearly_active_auth_users = all_time_active_auth_users = 0
+        daily_active_users = daily_active_auth_users
+        weekly_active_users = weekly_active_auth_users
+        monthly_active_users = monthly_active_auth_users
+        yearly_active_users = yearly_active_auth_users
+        all_time_active_users = all_time_active_auth_users
+        daily_active_net = daily_active_auth_users
+        weekly_active_net = weekly_active_auth_users
+        monthly_active_net = monthly_active_auth_users
+        yearly_active_net = yearly_active_auth_users
+        all_time_active_net = all_time_active_auth_users
         daily_active_guest_only_devices = 0
         weekly_active_guest_only_devices = 0
         monthly_active_guest_only_devices = 0
@@ -615,16 +646,22 @@ def admin_dashboard_view(request):
         created_at__lt=prev_month_end
     ).count()
     
-    # Önceki dönem aktif kullanıcı sayıları (benzersiz cihaz bazlı)
+    # Önceki dönem aktif kullanıcı sayıları (benzersiz cihaz bazlı, fallback: last_login)
     try:
         prev_week_start_date_obj = prev_week_start.date()
         prev_week_end_date_obj = prev_week_end.date()
-        
+
         prev_week_daily_active = UserActivityLog.objects.filter(
             activity_date__gte=prev_week_start_date_obj,
             activity_date__lt=prev_week_end_date_obj,
             app_type='main'
         ).values('device_id').distinct().count()
+
+        if prev_week_daily_active == 0:
+            prev_week_daily_active = app_users_qs.filter(
+                last_login__gte=prev_week_start,
+                last_login__lt=prev_week_end,
+            ).count()
     except Exception as e:
         print(f"Error calculating prev week active: {e}")
         prev_week_daily_active = 0
@@ -632,12 +669,18 @@ def admin_dashboard_view(request):
     try:
         prev_month_start_date_obj = prev_month_start.date()
         prev_month_end_date_obj = prev_month_end.date()
-        
+
         prev_month_daily_active = UserActivityLog.objects.filter(
             activity_date__gte=prev_month_start_date_obj,
             activity_date__lt=prev_month_end_date_obj,
             app_type='main'
         ).values('device_id').distinct().count()
+
+        if prev_month_daily_active == 0:
+            prev_month_daily_active = app_users_qs.filter(
+                last_login__gte=prev_month_start,
+                last_login__lt=prev_month_end,
+            ).count()
     except Exception as e:
         print(f"Error calculating prev month active: {e}")
         prev_month_daily_active = 0
@@ -760,25 +803,29 @@ def admin_dashboard_view(request):
     
     # Monthly Churn Rate (Son 30 günde aktif olan ama son 7 günde hiç giriş yapmayan - Industry Standard)
     try:
-        # Son 30 günde aktif olan kullanıcılar
+        # Son 30 günde aktif olan kullanıcılar (ActivityLog + last_login fallback)
         active_in_last_30_days = UserActivityLog.objects.filter(
             activity_date__gte=month_ago,
             activity_date__lte=today,
             app_type='main',
             user__isnull=False
         ).values('user').distinct().count()
-        
-        # Son 7 günde aktif olanlar
+
         active_in_last_7_days = UserActivityLog.objects.filter(
             activity_date__gte=week_start_date,
             activity_date__lte=today,
             app_type='main',
             user__isnull=False
         ).values('user').distinct().count()
-        
+
+        # Fallback: UserActivityLog boşsa last_login kullan
+        if active_in_last_30_days == 0:
+            active_in_last_30_days = app_users_qs.filter(last_login__gte=month_start).count()
+            active_in_last_7_days = app_users_qs.filter(last_login__gte=week_start).count()
+
         # Churned = Son 30 günde aktif ama son 7 günde değil
         churned_users = max(active_in_last_30_days - active_in_last_7_days, 0)
-        
+
         churn_rate = calculate_percentage(churned_users, active_in_last_30_days) if active_in_last_30_days > 0 else 0.0
     except Exception:
         churn_rate = 0.0
@@ -875,23 +922,29 @@ def admin_dashboard_view(request):
     # Haftalık aktif kullanıcı trendi (son 4 hafta - benzersiz cihaz bazlı, UserActivityLog)
     weekly_active_trend = []
     for i in range(4):
-        week_end = today - timedelta(days=i*7)
-        week_start = week_end - timedelta(days=6)
-        
+        trend_week_end = today - timedelta(days=i*7)
+        trend_week_start = trend_week_end - timedelta(days=6)
+
         try:
             count = UserActivityLog.objects.filter(
-                activity_date__gte=week_start,
-                activity_date__lte=week_end,
+                activity_date__gte=trend_week_start,
+                activity_date__lte=trend_week_end,
                 app_type='main'
             ).values('device_id').distinct().count()
+            if count == 0:
+                # Fallback: last_login bazlı
+                count = app_users_qs.filter(
+                    last_login__date__gte=trend_week_start,
+                    last_login__date__lte=trend_week_end,
+                ).count()
         except Exception as e:
             print(f"Error calculating weekly trend: {e}")
             count = 0
-        
+
         weekly_active_trend.append({
             'week': f"Hafta {4-i}",
             'count': count,
-            'date_range': f"{week_start.strftime('%d.%m')} - {week_end.strftime('%d.%m')}"
+            'date_range': f"{trend_week_start.strftime('%d.%m')} - {trend_week_end.strftime('%d.%m')}"
         })
     
     max_weekly_active = max([w['count'] for w in weekly_active_trend]) if weekly_active_trend and any(w['count'] > 0 for w in weekly_active_trend) else 1

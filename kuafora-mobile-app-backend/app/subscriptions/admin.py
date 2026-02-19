@@ -12,6 +12,37 @@ from .models import SubscriptionPlan, Subscription, Coupon, CouponUsage
 from .services import apply_coupon_to_subscription
 
 
+class QuickApplyCouponForm(forms.Form):
+    """Admin için: Salon + Kupon seçimi ile hızlı kupon uygulama formu."""
+
+    barbershop = forms.ModelChoiceField(
+        queryset=None,
+        label="Kuaför Salonu",
+        empty_label="— Salon seçin —",
+        widget=forms.Select(attrs={"class": "vTextField", "style": "min-width:320px"}),
+    )
+    coupon = forms.ModelChoiceField(
+        queryset=None,
+        label="Kupon",
+        empty_label="— Kupon seçin —",
+        widget=forms.Select(attrs={"class": "vTextField", "style": "min-width:320px"}),
+    )
+
+    def __init__(self, *args, **kwargs):
+        from app.barbers.models import Barbershop
+        super().__init__(*args, **kwargs)
+        self.fields['barbershop'].queryset = (
+            Barbershop.objects.filter(is_verified=True).order_by('name')
+        )
+        self.fields['coupon'].queryset = (
+            Coupon.objects.filter(is_active=True).order_by('code')
+        )
+
+    def label_from_instance_barbershop(self, obj):
+        sub = getattr(obj, '_cached_sub', None)
+        return f"{obj.name} — {sub.get_status_display() if sub else 'Abonelik yok'}"
+
+
 @admin.register(SubscriptionPlan)
 class SubscriptionPlanAdmin(ModelAdmin):
     list_display = ('name', 'slug', 'price_display', 'booking_systems_display', 'is_active_badge', 'sort_order')
@@ -63,19 +94,20 @@ class CouponUsageInline(TabularInline):
 class SubscriptionAdmin(ModelAdmin):
     change_form_template = "admin/subscriptions/subscription/change_form.html"
     list_display = (
-        'barbershop', 
-        'plan', 
-        'status_badge', 
-        'trial_info',
+        'barbershop',
+        'plan',
+        'status_badge',
+        'remaining_days_display',
         'coupon_info',
-        'created_at'
+        'quick_apply_link',
+        'created_at',
     )
     list_filter = ('status', 'plan', 'created_at')
     search_fields = ('barbershop__name', 'coupon__code')
     readonly_fields = ('created_at', 'updated_at', 'started_at')
     inlines = [CouponUsageInline]
     actions = ['make_lifetime', 'extend_trial_30_days']
-    
+
     class ApplyCouponCodeForm(forms.Form):
         coupon_code = forms.CharField(
             label="Kupon Kodu",
@@ -88,6 +120,11 @@ class SubscriptionAdmin(ModelAdmin):
         urls = super().get_urls()
         custom = [
             path(
+                "quick-apply/",
+                self.admin_site.admin_view(self.quick_apply_coupon_view),
+                name="subscriptions_subscription_quick_apply",
+            ),
+            path(
                 "<path:object_id>/apply-coupon/",
                 self.admin_site.admin_view(self.apply_coupon_view),
                 name="subscriptions_subscription_apply_coupon",
@@ -95,7 +132,65 @@ class SubscriptionAdmin(ModelAdmin):
         ]
         return custom + urls
 
+    def quick_apply_coupon_view(self, request: HttpRequest):
+        """Salon seç + Kupon seç → uygula. Tek adımda hızlı kupon ekleme."""
+        from app.barbers.models import Barbershop
+        from app.subscriptions.models import SubscriptionPlan
+
+        form = QuickApplyCouponForm(request.POST or None)
+        subscription_info = None
+
+        if request.method == "POST" and form.is_valid():
+            barbershop = form.cleaned_data["barbershop"]
+            coupon = form.cleaned_data["coupon"]
+
+            subscription = Subscription.objects.filter(barbershop=barbershop).first()
+            if subscription is None:
+                plan = SubscriptionPlan.objects.filter(is_active=True).order_by('sort_order').first()
+                subscription = Subscription.objects.create(
+                    barbershop=barbershop,
+                    plan=plan,
+                    status='trial',
+                    trial_ends_at=timezone.now() + timezone.timedelta(days=30),
+                )
+
+            result = apply_coupon_to_subscription(subscription=subscription, coupon=coupon)
+            if result.ok:
+                messages.success(
+                    request,
+                    f"✓ '{coupon.code}' kuponu '{barbershop.name}' salonuna uygulandı.",
+                )
+                return redirect(
+                    reverse("admin:subscriptions_subscription_change", args=[subscription.pk])
+                )
+            else:
+                messages.error(request, result.error or "Kupon uygulanamadı.")
+                subscription_info = subscription
+
+        # GET veya hatalı POST'ta önceden seçilmiş salon varsa bilgi göster
+        if request.method == "GET":
+            barbershop_id = request.GET.get("barbershop_id")
+            if barbershop_id:
+                form.initial["barbershop"] = barbershop_id
+                try:
+                    subscription_info = Subscription.objects.get(
+                        barbershop_id=barbershop_id
+                    )
+                except Subscription.DoesNotExist:
+                    pass
+
+        context = dict(
+            self.admin_site.each_context(request),
+            title="Hızlı Kupon Uygula",
+            form=form,
+            subscription_info=subscription_info,
+            opts=self.model._meta,
+            active_coupons=Coupon.objects.filter(is_active=True).order_by('code'),
+        )
+        return render(request, "admin/subscriptions/quick_apply_coupon.html", context)
+
     def apply_coupon_view(self, request: HttpRequest, object_id: str):
+        """Belirli bir aboneliğe kupon uygula (subscription detail page'den açılır)."""
         subscription = self.get_object(request, object_id)
         if subscription is None:
             raise Http404("Abonelik bulunamadı")
@@ -112,7 +207,9 @@ class SubscriptionAdmin(ModelAdmin):
                     result = apply_coupon_to_subscription(subscription=subscription, coupon=coupon)
                     if result.ok:
                         messages.success(request, "Kupon başarıyla uygulandı.")
-                        return redirect(reverse("admin:subscriptions_subscription_change", args=[subscription.pk]))
+                        return redirect(
+                            reverse("admin:subscriptions_subscription_change", args=[subscription.pk])
+                        )
                     messages.error(request, result.error or "Kupon uygulanamadı.")
         else:
             form = self.ApplyCouponCodeForm()
@@ -162,28 +259,54 @@ class SubscriptionAdmin(ModelAdmin):
         }
         color_class = colors.get(obj.status, 'bg-gray-100 text-gray-800')
         return format_html(
-            f'<span class="px-2 py-1 rounded text-xs font-medium {color_class}">{obj.get_status_display()}</span>'
+            '<span class="px-2 py-1 rounded text-xs font-medium {}">{}</span>',
+            color_class,
+            obj.get_status_display(),
         )
     status_badge.short_description = "Durum"
-    
-    def trial_info(self, obj):
-        if obj.status == 'trial':
-            days = obj.days_until_trial_ends
-            if days is not None:
-                color = 'text-green-600' if days > 7 else 'text-orange-600' if days > 0 else 'text-red-600'
-                return format_html(
-                    f'<span class="{color} font-bold">{days} gün</span>'
-                )
-        return "-"
-    trial_info.short_description = "Trial"
-    
+
+    def remaining_days_display(self, obj):
+        """Kalan gün sayısını duruma göre renkli göster."""
+        now = timezone.now()
+        if obj.status == 'lifetime':
+            return format_html('<span class="text-purple-600 font-bold">♾ Ömür Boyu</span>')
+        if obj.status == 'trial' and obj.trial_ends_at:
+            days = (obj.trial_ends_at.date() - now.date()).days
+            if days > 7:
+                return format_html('<span class="text-green-600 font-bold">{} gün</span>', days)
+            elif days > 0:
+                return format_html('<span class="text-orange-500 font-bold">{} gün ⚠</span>', days)
+            else:
+                return format_html('<span class="text-red-600 font-bold">Süresi doldu</span>')
+        if obj.status == 'active' and obj.current_period_end:
+            days = (obj.current_period_end.date() - now.date()).days
+            if days > 14:
+                return format_html('<span class="text-green-600 font-bold">{} gün</span>', days)
+            elif days > 0:
+                return format_html('<span class="text-orange-500 font-bold">{} gün ⚠</span>', days)
+            else:
+                return format_html('<span class="text-red-600 font-bold">Süresi doldu</span>')
+        if obj.status == 'grace_period':
+            return format_html('<span class="text-orange-600 font-bold">Grace</span>')
+        return format_html('<span class="text-gray-400">—</span>')
+    remaining_days_display.short_description = "Kalan Süre"
+
     def coupon_info(self, obj):
         if obj.coupon:
             return format_html(
-                f'<span class="bg-yellow-100 text-yellow-800 px-2 py-1 rounded text-xs">{obj.coupon.code}</span>'
+                '<span class="bg-yellow-100 text-yellow-800 px-2 py-1 rounded text-xs">{}</span>',
+                obj.coupon.code,
             )
-        return "-"
+        return "—"
     coupon_info.short_description = "Kupon"
+
+    def quick_apply_link(self, obj):
+        url = reverse("admin:subscriptions_subscription_apply_coupon", args=[obj.pk])
+        return format_html(
+            '<a href="{}" class="text-xs text-blue-600 hover:underline">🎟 Kupon Ekle</a>',
+            url,
+        )
+    quick_apply_link.short_description = "İşlem"
     
     @action(description="Seçilenleri ömür boyu yap")
     def make_lifetime(self, request, queryset):

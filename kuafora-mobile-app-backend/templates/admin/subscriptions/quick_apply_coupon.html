@@ -1,0 +1,301 @@
+{% extends "admin/base_site.html" %}
+{% load i18n %}
+
+{% block title %}Hızlı Kupon Uygula — {{ site_title }}{% endblock %}
+
+{% block breadcrumbs %}
+<nav class="breadcrumbs">
+  <ul>
+    <li><a href="{% url 'admin:index' %}">Ana Sayfa</a></li>
+    <li><a href="{% url 'admin:subscriptions_subscription_changelist' %}">Abonelikler</a></li>
+    <li>Hızlı Kupon Uygula</li>
+  </ul>
+</nav>
+{% endblock %}
+
+{% block content %}
+<style>
+  .qac-card {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 28px 32px;
+    max-width: 700px;
+    margin-bottom: 24px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+  }
+  .qac-card h2 {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: #1e293b;
+    margin: 0 0 20px 0;
+    padding-bottom: 12px;
+    border-bottom: 2px solid #f1f5f9;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .qac-field { margin-bottom: 20px; }
+  .qac-field label {
+    display: block;
+    font-weight: 600;
+    font-size: 0.85rem;
+    color: #374151;
+    margin-bottom: 6px;
+  }
+  .qac-field select, .qac-field input[type=text] {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    color: #111827;
+    background: #f9fafb;
+    transition: border-color 0.15s;
+    box-sizing: border-box;
+  }
+  .qac-field select:focus, .qac-field input[type=text]:focus {
+    outline: none;
+    border-color: #6366f1;
+    background: #fff;
+    box-shadow: 0 0 0 3px rgba(99,102,241,0.1);
+  }
+  .qac-btn-apply {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: linear-gradient(135deg, #6366f1, #4f46e5);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 12px 28px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.15s;
+  }
+  .qac-btn-apply:hover { opacity: 0.9; }
+  .qac-btn-cancel {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: #f3f4f6;
+    color: #4b5563;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    padding: 12px 24px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    text-decoration: none;
+    margin-left: 10px;
+    transition: background 0.15s;
+  }
+  .qac-btn-cancel:hover { background: #e5e7eb; }
+  .qac-info-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-top: 4px;
+  }
+  .qac-info-item {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 12px 16px;
+  }
+  .qac-info-item .label {
+    font-size: 0.75rem;
+    color: #64748b;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 4px;
+  }
+  .qac-info-item .value {
+    font-size: 1rem;
+    font-weight: 700;
+    color: #1e293b;
+  }
+  .status-trial { color: #3b82f6; }
+  .status-active { color: #22c55e; }
+  .status-lifetime { color: #a855f7; }
+  .status-grace { color: #f97316; }
+  .status-expired { color: #ef4444; }
+  .coupon-badge {
+    display: inline-block;
+    background: #fef3c7;
+    color: #92400e;
+    border: 1px solid #fcd34d;
+    border-radius: 6px;
+    padding: 2px 10px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+  }
+  .coupon-list-preview {
+    margin-top: 16px;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .coupon-list-preview table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+  }
+  .coupon-list-preview th {
+    background: #f8fafc;
+    color: #64748b;
+    font-weight: 600;
+    padding: 8px 12px;
+    text-align: left;
+    border-bottom: 1px solid #e5e7eb;
+  }
+  .coupon-list-preview td {
+    padding: 8px 12px;
+    border-bottom: 1px solid #f1f5f9;
+    color: #374151;
+  }
+  .coupon-list-preview tr:last-child td { border-bottom: none; }
+</style>
+
+<div style="max-width: 740px;">
+
+  {% if messages %}
+    {% for message in messages %}
+      <div style="
+        padding: 14px 18px;
+        border-radius: 8px;
+        margin-bottom: 16px;
+        font-weight: 600;
+        {% if message.tags == 'error' %}
+          background: #fef2f2; color: #991b1b; border: 1px solid #fca5a5;
+        {% else %}
+          background: #f0fdf4; color: #166534; border: 1px solid #86efac;
+        {% endif %}
+      ">{{ message }}</div>
+    {% endfor %}
+  {% endif %}
+
+  <div class="qac-card">
+    <h2>🎟 Hızlı Kupon Uygula</h2>
+    <p style="color:#64748b; font-size:0.9rem; margin: -10px 0 20px 0;">
+      Salon ve kupon seçin, tek tıkla uygulayın. Salona abonelik yoksa otomatik trial oluşturulur.
+    </p>
+
+    <form method="post" action="">
+      {% csrf_token %}
+
+      <div class="qac-field">
+        <label for="{{ form.barbershop.id_for_label }}">💈 Kuaför Salonu</label>
+        {{ form.barbershop }}
+        {% if form.barbershop.errors %}
+          <p style="color:#ef4444; font-size:0.8rem; margin-top:4px;">{{ form.barbershop.errors|join:", " }}</p>
+        {% endif %}
+      </div>
+
+      <div class="qac-field">
+        <label for="{{ form.coupon.id_for_label }}">🏷 Kupon</label>
+        {{ form.coupon }}
+        {% if form.coupon.errors %}
+          <p style="color:#ef4444; font-size:0.8rem; margin-top:4px;">{{ form.coupon.errors|join:", " }}</p>
+        {% endif %}
+      </div>
+
+      <div style="display:flex; align-items:center; margin-top:8px;">
+        <button type="submit" class="qac-btn-apply">✓ Kuponu Uygula</button>
+        <a href="{% url 'admin:subscriptions_subscription_changelist' %}" class="qac-btn-cancel">✕ Vazgeç</a>
+      </div>
+    </form>
+  </div>
+
+  {% if subscription_info %}
+  <div class="qac-card">
+    <h2>📋 Mevcut Abonelik Bilgisi</h2>
+    <div class="qac-info-grid">
+      <div class="qac-info-item">
+        <div class="label">Salon</div>
+        <div class="value">{{ subscription_info.barbershop.name }}</div>
+      </div>
+      <div class="qac-info-item">
+        <div class="label">Plan</div>
+        <div class="value">{{ subscription_info.plan.name|default:"—" }}</div>
+      </div>
+      <div class="qac-info-item">
+        <div class="label">Durum</div>
+        <div class="value
+          {% if subscription_info.status == 'trial' %}status-trial
+          {% elif subscription_info.status == 'active' %}status-active
+          {% elif subscription_info.status == 'lifetime' %}status-lifetime
+          {% elif subscription_info.status == 'grace_period' %}status-grace
+          {% else %}status-expired{% endif %}">
+          {{ subscription_info.get_status_display }}
+        </div>
+      </div>
+      <div class="qac-info-item">
+        <div class="label">Kalan Süre</div>
+        <div class="value">
+          {% if subscription_info.status == 'lifetime' %}
+            ♾ Ömür Boyu
+          {% elif subscription_info.status == 'trial' and subscription_info.trial_ends_at %}
+            {{ subscription_info.trial_ends_at|date:"d.m.Y" }}
+          {% elif subscription_info.status == 'active' and subscription_info.current_period_end %}
+            {{ subscription_info.current_period_end|date:"d.m.Y" }}
+          {% else %}
+            —
+          {% endif %}
+        </div>
+      </div>
+      {% if subscription_info.coupon %}
+      <div class="qac-info-item" style="grid-column: span 2;">
+        <div class="label">Mevcut Kupon</div>
+        <div class="value"><span class="coupon-badge">{{ subscription_info.coupon.code }}</span></div>
+      </div>
+      {% endif %}
+    </div>
+    <div style="margin-top: 16px;">
+      <a href="{% url 'admin:subscriptions_subscription_change' subscription_info.pk %}"
+         style="font-size:0.85rem; color:#6366f1; text-decoration:none;">
+        → Abonelik detayına git
+      </a>
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="qac-card">
+    <h2>🏷 Aktif Kuponlar</h2>
+    {% if active_coupons %}
+    <div class="coupon-list-preview">
+      <table>
+        <thead>
+          <tr>
+            <th>Kod</th>
+            <th>İndirim</th>
+            <th>Kullanım</th>
+            <th>Son Geçerlilik</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for c in active_coupons %}
+          <tr>
+            <td><span class="coupon-badge">{{ c.code }}</span></td>
+            <td>{{ c.discount_display }}</td>
+            <td>
+              {% if c.max_uses %}{{ c.current_uses }}/{{ c.max_uses }}{% else %}{{ c.current_uses }}/∞{% endif %}
+            </td>
+            <td>
+              {% if c.valid_until %}{{ c.valid_until|date:"d.m.Y" }}{% else %}Süresiz{% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+      <p style="color:#94a3b8; font-size:0.9rem;">Henüz aktif kupon bulunmuyor.</p>
+    {% endif %}
+  </div>
+
+</div>
+{% endblock %}

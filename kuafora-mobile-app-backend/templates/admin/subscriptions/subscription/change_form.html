@@ -6,7 +6,12 @@
   {% if change and not is_popup %}
     <li>
       <a href="{% url 'admin:subscriptions_subscription_apply_coupon' original.pk %}" class="historylink">
-        Kupon Uygula
+        🎟 Kupon Uygula
+      </a>
+    </li>
+    <li>
+      <a href="{% url 'admin:subscriptions_subscription_quick_apply' %}" class="historylink">
+        ⚡ Hızlı Kupon
       </a>
     </li>
   {% endif %}
