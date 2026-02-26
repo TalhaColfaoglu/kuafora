@@ -434,32 +434,43 @@ def admin_dashboard_view(request):
         yearly_active_guest_only_devices = yearly_breakdown["guest_only_devices"]
         all_time_active_guest_only_devices = all_time_breakdown["guest_only_devices"]
 
-        # Fallback: UserActivityLog henüz veri içermiyorsa last_login bazlı hesapla
-        if daily_active_users == 0 and weekly_active_users == 0:
-            daily_active_auth_users = app_users_qs.filter(last_login__date=today).count()
-            weekly_active_auth_users = app_users_qs.filter(last_login__gte=week_start).count()
-            monthly_active_auth_users = app_users_qs.filter(last_login__gte=month_start).count()
-            yearly_active_auth_users = app_users_qs.filter(last_login__gte=year_start).count()
-            all_time_active_auth_users = app_users_qs.filter(last_login__isnull=False).count()
-            daily_active_users = daily_active_auth_users
-            weekly_active_users = weekly_active_auth_users
-            monthly_active_users = monthly_active_auth_users
-            yearly_active_users = yearly_active_auth_users
-            all_time_active_users = all_time_active_auth_users
-            daily_active_net = daily_active_auth_users
-            weekly_active_net = weekly_active_auth_users
-            monthly_active_net = monthly_active_auth_users
-            yearly_active_net = yearly_active_auth_users
-            all_time_active_net = all_time_active_auth_users
+        # Fallback: Herhangi bir metrik 0 ise last_login bazlı değerle destekle.
+        # Not: Koşul artık AND değil OR - her metrik bağımsız olarak kontrol edilir.
+        ll_daily = app_users_qs.filter(last_login__date=today).count()
+        ll_weekly = app_users_qs.filter(last_login__gte=week_start).count()
+        ll_monthly = app_users_qs.filter(last_login__gte=month_start).count()
+        ll_yearly = app_users_qs.filter(last_login__gte=year_start).count()
+        ll_all_time = app_users_qs.filter(last_login__isnull=False).count()
+
+        if daily_active_users == 0 and ll_daily > 0:
+            daily_active_auth_users = ll_daily
+            daily_active_users = ll_daily
+            daily_active_net = ll_daily
             daily_active_guest_only_devices = 0
+        if weekly_active_users == 0 and ll_weekly > 0:
+            weekly_active_auth_users = ll_weekly
+            weekly_active_users = ll_weekly
+            weekly_active_net = ll_weekly
             weekly_active_guest_only_devices = 0
+        if monthly_active_users == 0 and ll_monthly > 0:
+            monthly_active_auth_users = ll_monthly
+            monthly_active_users = ll_monthly
+            monthly_active_net = ll_monthly
             monthly_active_guest_only_devices = 0
+        if yearly_active_users == 0 and ll_yearly > 0:
+            yearly_active_auth_users = ll_yearly
+            yearly_active_users = ll_yearly
+            yearly_active_net = ll_yearly
             yearly_active_guest_only_devices = 0
+        if all_time_active_users == 0 and ll_all_time > 0:
+            all_time_active_auth_users = ll_all_time
+            all_time_active_users = ll_all_time
+            all_time_active_net = ll_all_time
             all_time_active_guest_only_devices = 0
 
     except Exception as e:
         print(f"Error calculating active users: {e}")
-        # Fallback son çare: last_login bazlı
+        # Son çare fallback: last_login bazlı
         try:
             daily_active_auth_users = app_users_qs.filter(last_login__date=today).count()
             weekly_active_auth_users = app_users_qs.filter(last_login__gte=week_start).count()
@@ -479,10 +490,8 @@ def admin_dashboard_view(request):
         monthly_active_net = monthly_active_auth_users
         yearly_active_net = yearly_active_auth_users
         all_time_active_net = all_time_active_auth_users
-        daily_active_guest_only_devices = 0
-        weekly_active_guest_only_devices = 0
-        monthly_active_guest_only_devices = 0
-        yearly_active_guest_only_devices = 0
+        daily_active_guest_only_devices = weekly_active_guest_only_devices = 0
+        monthly_active_guest_only_devices = yearly_active_guest_only_devices = 0
         all_time_active_guest_only_devices = 0
     
     # Son 1 ay içerisinde uygulamaya girmeyen aktif kullanıcılar (uygulama kullanıcıları)

@@ -4793,9 +4793,11 @@ class CalendarStatusViewSet(viewsets.ReadOnlyModelViewSet):
             }
         
         now = dj_tz.now()
-        current_time = now.time()
+        local_tz = dj_tz.get_current_timezone()
+        now_local = now.astimezone(local_tz)
+        current_time = now_local.time()  # Turkey wall-clock time
         # Bugün değilse veya şu an çalışma saatleri dışındaysa çalışmıyor
-        if date != now.date():
+        if date != now_local.date():
             return {
                 'staff_id': staff.id,
                 'staff_name': getattr(staff.user, 'full_name', None) or staff.user.email,
@@ -4825,12 +4827,13 @@ class CalendarStatusViewSet(viewsets.ReadOnlyModelViewSet):
         # Mola kontrolü: 1) Haftalık periyodik mola 2) İleri tarihe atanmış BreakWindow
         is_on_break = False
         break_ends_in = None
-        if date == now.date():
+        if date == now_local.date():
             # 1) Haftalık periyodik mola (StaffWorkingHours break_start_time/break_end_time)
-            if break_start_time and break_end_time and break_start_time <= current_time <= break_end_time:
+            # Bitiş saati dahil DEĞİL: break_end_time 14:00 ise 14:00'da mola bitmiştir
+            if break_start_time and break_end_time and break_start_time <= current_time < break_end_time:
                 is_on_break = True
                 break_end_dt = dj_tz.make_aware(datetime.combine(date, break_end_time))
-                break_ends_in = int((break_end_dt - now).total_seconds() / 60)
+                break_ends_in = max(0, int((break_end_dt - now).total_seconds() / 60))
             # 2) İleri tarihe atanmış günlük mola (BreakWindow)
             if not is_on_break:
                 from app.barbers.models import BreakWindow
@@ -4843,7 +4846,7 @@ class CalendarStatusViewSet(viewsets.ReadOnlyModelViewSet):
                 if break_windows:
                     is_on_break = True
                     break_end_dt = dj_tz.make_aware(datetime.combine(date, break_windows.end_time))
-                    break_ends_in = int((break_end_dt - now).total_seconds() / 60)
+                    break_ends_in = max(0, int((break_end_dt - now).total_seconds() / 60))
         
         status_message = None
         if is_on_break and break_end_time:
@@ -4876,9 +4879,15 @@ class CalendarStatusViewSet(viewsets.ReadOnlyModelViewSet):
         
         try:
             barbershop = Barbershop.objects.get(id=barbershop_id)
-            now = timezone.now() # aware datetime
-            today = now.date()
-            current_time = now.time()
+            # IMPORTANT: timezone.now() returns UTC. We must convert to local Turkey time
+            # before comparing with TimeField values (stored as Turkey local wall-clock time).
+            # Without this, UTC 13:30 compared with Turkey break 12:00-14:00 gives a false
+            # positive because 12:00 <= 13:30 < 14:00, even though Turkey time is 16:30 (after break).
+            now = timezone.now()  # UTC aware datetime
+            local_tz = timezone.get_current_timezone()  # Europe/Istanbul
+            now_local = now.astimezone(local_tz)
+            today = now_local.date()        # Today in Turkey
+            current_time = now_local.time() # Current wall-clock time in Turkey
             weekday_code_map = {0: "MON", 1: "TUE", 2: "WED", 3: "THU", 4: "FRI", 5: "SAT", 6: "SUN"}
             
             # ÖNCE DailyOverride kontrolü yap - bu en yüksek önceliğe sahip
@@ -4943,7 +4952,7 @@ class CalendarStatusViewSet(viewsets.ReadOnlyModelViewSet):
                         status_message = f"Geç Açılış ({override.start_time.strftime('%H:%M')})"
                         # Calculate minutes until open
                         open_dt = timezone.make_aware(datetime.combine(today, override.start_time))
-                        minutes_until_open = int((open_dt - now).total_seconds() / 60)
+                        minutes_until_open = max(0, int((open_dt - now).total_seconds() / 60))
                 elif override.override_scope == 'early_closing':
                     if override.end_time and current_time >= override.end_time:
                         is_open = False
@@ -4957,7 +4966,7 @@ class CalendarStatusViewSet(viewsets.ReadOnlyModelViewSet):
                             status_message = f"Mola ({override.end_time.strftime('%H:%M')} bitiş)"
                             break_end_time = override.end_time.strftime('%H:%M')
                             end_dt = timezone.make_aware(datetime.combine(today, override.end_time))
-                            minutes_until_open = int((end_dt - now).total_seconds() / 60)
+                            minutes_until_open = max(0, int((end_dt - now).total_seconds() / 60))
 
             # 2. Check Holiday Override & Official Holiday (if no specific override block found yet)
             if is_open: # Only check if not already closed by override
@@ -4972,7 +4981,7 @@ class CalendarStatusViewSet(viewsets.ReadOnlyModelViewSet):
                             is_open = False
                             status_message = f"Açılış: {decision.open_time.strftime('%H:%M')}"
                             open_dt = timezone.make_aware(datetime.combine(today, decision.open_time))
-                            minutes_until_open = int((open_dt - now).total_seconds() / 60)
+                            minutes_until_open = max(0, int((open_dt - now).total_seconds() / 60))
                         elif decision.close_time and current_time >= decision.close_time:
                             is_open = False
                             status_message = "Kapalı"
@@ -5006,7 +5015,7 @@ class CalendarStatusViewSet(viewsets.ReadOnlyModelViewSet):
                             is_open = False
                             status_message = f"Açılış: {start_time.strftime('%H:%M')}"
                             open_dt = timezone.make_aware(datetime.combine(today, start_time))
-                            minutes_until_open = int((open_dt - now).total_seconds() / 60)
+                            minutes_until_open = max(0, int((open_dt - now).total_seconds() / 60))
                         # Kapanış saatinden sonra veya eşitse kapalı
                         elif current_time >= end_time:
                             is_open = False
@@ -5031,7 +5040,7 @@ class CalendarStatusViewSet(viewsets.ReadOnlyModelViewSet):
                                 status_message = f"Mola ({shop_hours.break_end_time.strftime('%H:%M')} bitiş)"
                                 break_end_time = shop_hours.break_end_time.strftime('%H:%M')
                                 end_dt = timezone.make_aware(datetime.combine(today, shop_hours.break_end_time))
-                                minutes_until_open = int((end_dt - now).total_seconds() / 60)
+                                minutes_until_open = max(0, int((end_dt - now).total_seconds() / 60))
                             else:
                                 status_message = "Açık"
                         else:
@@ -5050,7 +5059,7 @@ class CalendarStatusViewSet(viewsets.ReadOnlyModelViewSet):
                                 status_message = f"Mola ({shop_break.end_time.strftime('%H:%M')} bitiş)"
                                 break_end_time = shop_break.end_time.strftime('%H:%M')
                                 end_dt = timezone.make_aware(datetime.combine(today, shop_break.end_time))
-                                minutes_until_open = int((end_dt - now).total_seconds() / 60)
+                                minutes_until_open = max(0, int((end_dt - now).total_seconds() / 60))
                             else:
                                 status_message = "Açık"
 
@@ -5070,9 +5079,36 @@ class CalendarStatusViewSet(viewsets.ReadOnlyModelViewSet):
                 if shop_hours and shop_hours.end_time:
                     closing_time_str = shop_hours.end_time.strftime('%H:%M')
             elif not is_open and not is_break:
-                # Kapalıysa ve mola değilse opening time'ı göster
-                if shop_hours and shop_hours.start_time:
+                # Kapalıysa ve mola değilse bir sonraki açılış zamanını göster.
+                # Eğer bugün kapanış saati geçtiyse (current_time >= end_time), bugünün açılış saati geçmiştir;
+                # o zaman yarın veya sonraki açık günü göster (geçmiş saat göstermemek için).
+                already_closed_today = (
+                    shop_hours is not None
+                    and shop_hours.end_time is not None
+                    and current_time >= shop_hours.end_time
+                )
+                if not already_closed_today and shop_hours and shop_hours.start_time:
+                    # Henüz açılmamış (bugünün açılış saati ilerleride) → bugünün açılış saatini göster
                     opening_time_str = shop_hours.start_time.strftime('%H:%M')
+                else:
+                    # Bugün kapandı → yarın veya en yakın açık günü bul
+                    for i in range(1, 8):
+                        next_weekday = (today.weekday() + i) % 7
+                        next_day_code = weekday_code_map.get(next_weekday)
+                        next_hours = ShopWorkingHours.objects.filter(
+                            barbershop=barbershop,
+                            day_of_week=next_day_code,
+                            is_closed=False,
+                        ).first()
+                        if next_hours and next_hours.start_time:
+                            opening_time_str = next_hours.start_time.strftime('%H:%M')
+                            if i == 1:
+                                status_message = f"Yarın {opening_time_str}'da açılacak"
+                            else:
+                                day_tr = {0: 'Pazartesi', 1: 'Salı', 2: 'Çarşamba', 3: 'Perşembe',
+                                          4: 'Cuma', 5: 'Cumartesi', 6: 'Pazar'}
+                                status_message = f"{day_tr.get(next_weekday, '')} {opening_time_str}'da açılacak"
+                            break
             
             # Active staff count hesaplama - sadece açıksa query yap
             active_staff_count = 0

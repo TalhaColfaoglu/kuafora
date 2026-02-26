@@ -157,6 +157,20 @@ class LoginView(generics.GenericAPIView):
         user.last_login = timezone.now()
         user.save(update_fields=['last_login'])
         refresh = RefreshToken.for_user(user)
+
+        # Track UserActivityLog for DAU/WAU/MAU metrics
+        try:
+            from app.analytics.signals import track_user_activity
+            device_id = (
+                request.META.get('HTTP_X_DEVICE_ID')
+                or request.data.get('device_id')
+                or f"user_{user.id}"
+            )
+            app_type = request.data.get('app_type') or 'main'
+            track_user_activity(user=user, device_id=device_id, app_type=app_type, request=request)
+        except Exception:
+            pass  # Tracking hatası girişi engellemez
+
         return Response({
             "access": str(refresh.access_token),
             "refresh": str(refresh),

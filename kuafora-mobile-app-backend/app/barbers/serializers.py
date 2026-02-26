@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import logging
+
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from rest_framework import serializers
@@ -31,6 +33,74 @@ from .models import (
     ShopHolidayOverride,
     DailyOverride,
 )
+
+logger = logging.getLogger(__name__)
+
+
+# Staff/user avatars are shown in both public (main app) and authenticated (partner) clients.
+# When user photos are stored in private S3/CloudFront, direct `.url` may return 403.
+# For staff listings we return a short-lived S3 presigned URL when AWS is configured.
+_USER_PHOTO_SIGNED_URL_EXPIRES = 300  # 5 minutes
+_S3_CLIENT = None
+
+
+def _get_s3_client():
+    global _S3_CLIENT
+    if _S3_CLIENT is not None:
+        return _S3_CLIENT
+    try:
+        import boto3
+
+        _S3_CLIENT = boto3.client(
+            "s3",
+            region_name=getattr(settings, "AWS_S3_REGION_NAME", "eu-central-1"),
+            aws_access_key_id=getattr(settings, "AWS_ACCESS_KEY_ID", None),
+            aws_secret_access_key=getattr(settings, "AWS_SECRET_ACCESS_KEY", None),
+        )
+        return _S3_CLIENT
+    except Exception as e:
+        logger.warning("S3 client init failed: %s", e)
+        _S3_CLIENT = None
+        return None
+
+
+def _presign_file_field(file_field) -> str | None:
+    """Return a short-lived presigned URL for a Django FileField, if possible."""
+    if not file_field:
+        return None
+    bucket_name = getattr(settings, "AWS_STORAGE_BUCKET_NAME", None)
+    key = getattr(file_field, "name", None) or ""
+    if not bucket_name or not key:
+        return None
+    if not (getattr(settings, "AWS_ACCESS_KEY_ID", None) and getattr(settings, "AWS_SECRET_ACCESS_KEY", None)):
+        return None
+    client = _get_s3_client()
+    if client is None:
+        return None
+    try:
+        return client.generate_presigned_url(
+            "get_object",
+            Params={"Bucket": bucket_name, "Key": key},
+            ExpiresIn=_USER_PHOTO_SIGNED_URL_EXPIRES,
+        )
+    except Exception as e:
+        logger.warning("Presign failed key=%s err=%s", key, e)
+        return None
+
+
+def _public_media_uri(serializer: serializers.Serializer, raw_url: str | None) -> str | None:
+    """Make media URLs reachable by rewriting internal hosts to PUBLIC_API_ORIGIN."""
+    if not raw_url:
+        return None
+    request = getattr(serializer, "context", {}).get("request") if hasattr(serializer, "context") else None
+    if request is None:
+        return raw_url
+    try:
+        from app.core.url_utils import build_public_media_uri
+
+        return build_public_media_uri(request, raw_url) or raw_url
+    except Exception:
+        return raw_url
 
 
 class BarbershopImageSerializer(serializers.ModelSerializer):
@@ -327,15 +397,9 @@ class BarbershopSerializer(serializers.ModelSerializer):
             except (ValueError, TypeError):
                 attrs['longitude'] = None
         
-        # Google Maps link: gevşek validasyon - http/https ile başlayan herhangi bir link kabul
-        link_val = attrs.get('google_maps_link') or (getattr(self, 'initial_data', {}) or {}).get('google_maps_link')
-        if link_val and str(link_val).strip():
-            link = str(link_val).strip()
-            if not (link.startswith('http://') or link.startswith('https://')):
-                raise serializers.ValidationError({
-                    'google_maps_link': 'Link http:// veya https:// ile başlamalıdır.'
-                })
-        
+        # Google Maps link: zorunlu değil, format doğrulaması yok - herhangi bir metin kabul
+        # (Partner uygulamasında ilk kayıtta validation yok, direkt devam edebilsinler)
+
         # External booking validation
         system_type = attrs.get('system_type')
         external_booking = attrs.get('external_booking', {})
@@ -436,16 +500,25 @@ class StaffSerializer(serializers.ModelSerializer):
     def get_user_image_url(self, obj):
         u = getattr(obj, "user", None)
         if u and u.image:
-            return u.image.url
+            signed = _presign_file_field(u.image)
+            if signed:
+                return signed
+            return _public_media_uri(self, u.image.url) or u.image.url
         return None
 
     @extend_schema_field(serializers.CharField(allow_null=True))
     def get_user_image_thumb_url(self, obj):
         u = getattr(obj, "user", None)
         if u and u.image_thumb:
-            return u.image_thumb.url
+            signed = _presign_file_field(u.image_thumb)
+            if signed:
+                return signed
+            return _public_media_uri(self, u.image_thumb.url) or u.image_thumb.url
         elif u and u.image:
-            return u.image.url
+            signed = _presign_file_field(u.image)
+            if signed:
+                return signed
+            return _public_media_uri(self, u.image.url) or u.image.url
         return None
 
     @extend_schema_field(serializers.DictField)
