@@ -458,10 +458,14 @@ class BarbershopViewSet(viewsets.ReadOnlyModelViewSet):
         original_pagination = self.pagination_class
         self.pagination_class = None
         try:
-            staff = Staff.objects.filter(barbershop_id=pk).prefetch_related(
-                "staff_working_hours"
+            staff = (
+                Staff.objects.filter(barbershop_id=pk)
+                .select_related("user")
+                .prefetch_related("staff_working_hours")
+                .order_by("-is_admin", "id")
             )
-            serializer = StaffSerializer(staff, many=True)
+            # Provide request context so media/image URLs are built correctly.
+            serializer = StaffSerializer(staff, many=True, context=self.get_serializer_context())
             return Response(serializer.data)
         finally:
             self.pagination_class = original_pagination

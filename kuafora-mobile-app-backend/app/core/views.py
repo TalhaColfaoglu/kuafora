@@ -196,10 +196,17 @@ def version_check(request):
             # Play Store URL
             if latest_version.play_store_url:
                 response_data['play_store_url'] = latest_version.play_store_url
-            elif platform == 'android':
-                response_data['play_store_url'] = 'https://play.google.com/store/apps/details?id=com.kuafora.app'
             else:
-                response_data['play_store_url'] = 'https://apps.apple.com/app/id...'  # iOS App Store URL'i buraya eklenebilir
+                # Defaults (admin panelde boş bırakılırsa bile doğru uygulamaya yönlensin)
+                if platform == 'android':
+                    if app_type == 'partner':
+                        response_data['play_store_url'] = 'https://play.google.com/store/apps/details?id=com.kuafora.vitrin'
+                    else:
+                        response_data['play_store_url'] = 'https://play.google.com/store/apps/details?id=com.kuafora.app'
+                else:
+                    # iOS AppStore ID'ler netleşince admin panelden URL girilmesi önerilir.
+                    # Yine de boş kalırsa en azından bir placeholder döndür.
+                    response_data['play_store_url'] = 'https://apps.apple.com/app/id...'
         
         return Response(response_data, status=status.HTTP_200_OK)
         

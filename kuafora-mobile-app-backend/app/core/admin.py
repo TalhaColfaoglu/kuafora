@@ -10,15 +10,15 @@ class AppVersionAdmin(admin.ModelAdmin):
         'app_type_display',
         'version_name',
         'version_code',
-        'force_update_display',
-        'min_version_display',
-        'is_active',  # Gerçek field (list_editable için gerekli)
+        'force_update',      # hızlı toggle
+        'min_version_code',  # eşik (opsiyonel)
+        'is_active',         # aktif kayıt
         'release_date',
     ]
     list_filter = ['platform', 'app_type', 'force_update', 'is_active', 'release_date']
     search_fields = ['version_name', 'version_code', 'update_message']
     readonly_fields = ['created_at', 'updated_at']
-    list_editable = ['is_active']  # Artık list_display'de olduğu için çalışacak
+    list_editable = ['force_update', 'min_version_code', 'is_active']
     ordering = ['-platform', '-app_type', '-version_code']
     
     fieldsets = (
@@ -40,7 +40,16 @@ class AppVersionAdmin(admin.ModelAdmin):
         }),
     )
     
-    actions = ['activate_versions', 'deactivate_versions', 'set_force_update', 'unset_force_update']
+    actions = [
+        'activate_versions',
+        'deactivate_versions',
+        'set_force_update',
+        'unset_force_update',
+        'activate_as_only_active',
+        'force_update_to_selected_build',
+        'set_min_version_to_selected_build',
+        'clear_min_version',
+    ]
     
     def platform_display(self, obj):
         icons = {'android': '🤖', 'ios': '🍎'}
@@ -62,23 +71,6 @@ class AppVersionAdmin(admin.ModelAdmin):
         )
     app_type_display.short_description = 'Uygulama'
     
-    def force_update_display(self, obj):
-        if obj.force_update:
-            return format_html(
-                '<span style="background: #f44336; color: white; padding: 3px 8px; border-radius: 3px; font-weight: bold;">⚠️ ZORUNLU</span>'
-            )
-        return format_html('<span style="color: #999;">İsteğe bağlı</span>')
-    force_update_display.short_description = 'Güncelleme Türü'
-    
-    def min_version_display(self, obj):
-        if obj.min_version_code:
-            return format_html(
-                '<span style="background: #ff9800; color: white; padding: 3px 8px; border-radius: 3px;">Build &lt; {}</span>',
-                obj.min_version_code
-            )
-        return '-'
-    min_version_display.short_description = 'Min. Versiyon'
-    
     # Actions
     def activate_versions(self, request, queryset):
         count = queryset.update(is_active=True)
@@ -99,3 +91,67 @@ class AppVersionAdmin(admin.ModelAdmin):
         count = queryset.update(force_update=False)
         self.message_user(request, f'{count} versiyonun zorunlu güncelleme işareti kaldırıldı.')
     unset_force_update.short_description = '✓ Zorunlu güncellemeyi kaldır'
+
+    def activate_as_only_active(self, request, queryset):
+        """
+        Seçilen kayıt(lar)ı kendi (platform, app_type) grubunda tek aktif yapar.
+        Aynı grupta birden fazla seçilirse en yüksek version_code aktif kalır.
+        """
+        from .models import AppVersion
+        updated = 0
+        groups = {}
+        for v in queryset:
+            groups.setdefault((v.platform, v.app_type), []).append(v)
+        for (platform, app_type), items in groups.items():
+            winner = sorted(items, key=lambda x: x.version_code, reverse=True)[0]
+            AppVersion.objects.filter(platform=platform, app_type=app_type).exclude(pk=winner.pk).update(is_active=False)
+            if not winner.is_active:
+                AppVersion.objects.filter(pk=winner.pk).update(is_active=True)
+            updated += 1
+        self.message_user(request, f'{updated} grup için tek aktif versiyon ayarlandı.')
+    activate_as_only_active.short_description = '⭐ Seçileni grupta tek aktif yap (diğerlerini kapat)'
+
+    def force_update_to_selected_build(self, request, queryset):
+        """
+        Seçilen build'i zorunlu güncelleme yapar ve kendi grubunda tek aktif hale getirir.
+        """
+        from .models import AppVersion
+        updated = 0
+        groups = {}
+        for v in queryset:
+            groups.setdefault((v.platform, v.app_type), []).append(v)
+        for (platform, app_type), items in groups.items():
+            winner = sorted(items, key=lambda x: x.version_code, reverse=True)[0]
+            AppVersion.objects.filter(platform=platform, app_type=app_type).exclude(pk=winner.pk).update(is_active=False)
+            AppVersion.objects.filter(pk=winner.pk).update(is_active=True, force_update=True)
+            updated += 1
+        self.message_user(request, f'{updated} grup için zorunlu güncelleme ayarlandı (seçilen build).')
+    force_update_to_selected_build.short_description = '🚫 Zorunlu güncelleme (seçilen build) + tek aktif'
+
+    def set_min_version_to_selected_build(self, request, queryset):
+        """
+        min_version_code = seçilen kaydın version_code.
+        Bu, "build < X ise zorunlu" eşiğini hızlı ayarlamak için kullanılır.
+        Not: Force update kapalıyken (force_update=False) min_version_code dikkate alınır.
+        """
+        from .models import AppVersion
+        updated = 0
+        for v in queryset:
+            AppVersion.objects.filter(pk=v.pk).update(min_version_code=v.version_code)
+            updated += 1
+        self.message_user(request, f'{updated} kayıt için min_version_code = version_code yapıldı.')
+    set_min_version_to_selected_build.short_description = '⬆️ min_version_code = seçilen build'
+
+    def clear_min_version(self, request, queryset):
+        count = queryset.update(min_version_code=None)
+        self.message_user(request, f'{count} kaydın min_version_code alanı temizlendi.')
+    clear_min_version.short_description = '🧹 min_version_code temizle'
+
+    def save_model(self, request, obj, form, change):
+        """
+        Aynı (platform, app_type) için birden fazla aktif kayıt kafa karıştırıyor.
+        Bir kayıt aktif kaydedilirse, aynı grubun diğerlerini otomatik pasifler.
+        """
+        super().save_model(request, obj, form, change)
+        if obj.is_active:
+            AppVersion.objects.filter(platform=obj.platform, app_type=obj.app_type).exclude(pk=obj.pk).update(is_active=False)
