@@ -874,8 +874,43 @@ def _compute_shop_status(barbershop_id: int, ts: datetime) -> dict:
     Dönen şema:
     {status, source, message, next_change, open_interval:{start,end}, breaks:[]}
     """
+    from zoneinfo import ZoneInfo
     from django.core.cache import cache
-    key = f"shop_status:{barbershop_id}:{ts.date().strftime('%Y-%m-%d')}"
+
+    def _business_tz():
+        # Zaman kritik: shop saatleri TR "duvar saati" olarak tutuluyor.
+        # Sunucu TIME_ZONE yanlış olsa bile doğru sonuç için sabit TZ kullan.
+        # İleride barbershop bazlı timezone eklenirse buradan okunmalı.
+        tz_name = getattr(settings, "BUSINESS_TIME_ZONE", None) or "Europe/Istanbul"
+        try:
+            return ZoneInfo(tz_name)
+        except Exception:
+            return timezone.get_current_timezone()
+
+    local_ts = timezone.localtime(ts, _business_tz())
+    date = local_ts.date()
+    key = f"shop_status:{barbershop_id}:{date.strftime('%Y-%m-%d')}"
+
+    def _time_in_range(cur, start, end) -> bool:
+        """End is exclusive. Supports midnight-wrapping intervals."""
+        if not (start and end and cur is not None):
+            return False
+        if start <= end:
+            return start <= cur < end
+        # Wraps midnight (e.g. 22:00-06:00)
+        return cur >= start or cur < end
+
+    def _dt_for_time(base_date, t):
+        tz = _business_tz()
+        return datetime.combine(base_date, t).replace(tzinfo=tz)
+
+    def _next_occurrence_dt(now_local_dt, t):
+        """Next occurrence of wall-clock time t (today if in future, else tomorrow)."""
+        candidate = _dt_for_time(now_local_dt.date(), t)
+        if candidate > now_local_dt:
+            return candidate
+        return _dt_for_time(now_local_dt.date() + timedelta(days=1), t)
+
     def _cache_and_return(payload: dict, timeout: int = 60):
         payload.setdefault("active_break", None)
         cache.set(key, payload, timeout=timeout)
@@ -890,9 +925,7 @@ def _compute_shop_status(barbershop_id: int, ts: datetime) -> dict:
             cache.delete(key)
         else:
             return cached
-    # 1) DailyOverride (bugün)
-    local_ts = timezone.localtime(ts)
-    date = local_ts.date()
+    # 1) DailyOverride (bugün) - local_ts/date already computed in business TZ
     shop = Barbershop.objects.filter(id=barbershop_id).first()
     if not shop:
         return {
@@ -949,13 +982,13 @@ def _compute_shop_status(barbershop_id: int, ts: datetime) -> dict:
     active_break_override = None
     for o in ov_shop:
         if o.override_scope == 'time_range_closed' and o.start_time and o.end_time:
-            if o.start_time <= now_time <= o.end_time:
+            if _time_in_range(now_time, o.start_time, o.end_time):
                 active_break_override = o
                 break
 
     if active_break_override:
-        end_dt = timezone.make_aware(datetime.combine(date, active_break_override.end_time))
         end_str = active_break_override.end_time.strftime('%H:%M')
+        end_dt = _next_occurrence_dt(local_ts, active_break_override.end_time)
         data = {
             "status": "closed",
             "source": "BREAK_OVERRIDE",
@@ -977,14 +1010,14 @@ def _compute_shop_status(barbershop_id: int, ts: datetime) -> dict:
             scope=BreakWindow.Scope.SHOP,
             date=date,
             start_time__lte=now_time,
-            end_time__gte=now_time,
+            end_time__gt=now_time,  # end exclusive
         )
         .order_by("start_time")
         .first()
     )
     if shop_break:
-        end_dt = timezone.make_aware(datetime.combine(date, shop_break.end_time))
         end_str = shop_break.end_time.strftime('%H:%M')
+        end_dt = _next_occurrence_dt(local_ts, shop_break.end_time)
         data = {
             "status": "closed",
             "source": "BREAK",
@@ -1008,7 +1041,7 @@ def _compute_shop_status(barbershop_id: int, ts: datetime) -> dict:
         )
         msg, next_change = _message_for_state(open_interval, breaks, local_ts)
         data = {
-            "status": _open_closed_now(open_interval, breaks, local_ts),
+            "status": _open_closed_now(open_interval, breaks, local_ts, time_in_range=_time_in_range),
             "source": "SPECIAL_DAY",
             "message": msg,
             "next_change": next_change,
@@ -1034,7 +1067,7 @@ def _compute_shop_status(barbershop_id: int, ts: datetime) -> dict:
             open_interval = (shov.open_time, shov.close_time)
             msg, next_change = _message_for_state(open_interval, [], local_ts)
             data = {
-                "status": _open_closed_now(open_interval, [], local_ts),
+                "status": _open_closed_now(open_interval, [], local_ts, time_in_range=_time_in_range),
                 "source": "OFFICIAL_HOLIDAY",
                 "message": msg,
                 "next_change": next_change,
@@ -1052,7 +1085,7 @@ def _compute_shop_status(barbershop_id: int, ts: datetime) -> dict:
     shop_hours = ShopWorkingHours.objects.filter(barbershop=shop, day_of_week=code).first()
     active_break = None
     if shop_hours and shop_hours.break_start_time and shop_hours.break_end_time:
-        if shop_hours.break_start_time <= now_time <= shop_hours.break_end_time:
+        if _time_in_range(now_time, shop_hours.break_start_time, shop_hours.break_end_time):
             active_break = {
                 "label": "Mola",
                 "start_time": shop_hours.break_start_time.strftime('%H:%M'),
@@ -1070,7 +1103,7 @@ def _compute_shop_status(barbershop_id: int, ts: datetime) -> dict:
             day_of_week=code,
             is_closed=False,
             start_time__lte=now_time,
-            end_time__gte=now_time
+            end_time__gt=now_time  # end exclusive
         ).exclude(
             # Exclude staff with full_day_closed override
             staff__overrides__override_type='staff_individual',
@@ -1081,7 +1114,8 @@ def _compute_shop_status(barbershop_id: int, ts: datetime) -> dict:
         ).count()
     
     # Açık/kapalı = dükkan saatleri + mola; personel sayısı sadece bilgi (kartlarda "açık" dükkan saatine göre)
-    final_status = _open_closed_now(open_interval, breaks, local_ts)
+    # Use end-exclusive + midnight-wrapping safe open/closed calculation
+    final_status = _open_closed_now(open_interval, breaks, local_ts, time_in_range=_time_in_range)
 
     data = {
         "status": final_status,
@@ -1168,40 +1202,60 @@ def _to_list_breaks(breaks):
     return payload
 
 
-def _open_closed_now(open_interval, breaks, ts):
+def _open_closed_now(open_interval, breaks, ts, time_in_range=None):
+    """Return 'open'/'closed' for a local datetime. End is exclusive, supports midnight-wrapping."""
     if not open_interval or not open_interval[0] or not open_interval[1]:
         return "closed"
-    start_dt = timezone.make_aware(datetime.combine(ts.date(), open_interval[0]))
-    end_dt = timezone.make_aware(datetime.combine(ts.date(), open_interval[1]))
-    if not (start_dt <= ts <= end_dt):
+    cur = ts.time()
+    _tir = time_in_range
+    if _tir is None:
+        def _tir(cur_t, start_t, end_t):
+            if start_t <= end_t:
+                return start_t <= cur_t < end_t
+            return cur_t >= start_t or cur_t < end_t
+    if not _tir(cur, open_interval[0], open_interval[1]):
         return "closed"
-    # Closed if currently in a break
     for b in breaks:
-        bs = timezone.make_aware(datetime.combine(ts.date(), b["start"]))
-        be = timezone.make_aware(datetime.combine(ts.date(), b["end"]))
-        if bs <= ts <= be:
+        if _tir(cur, b["start"], b["end"]):
             return "closed"
     return "open"
 
 
 def _message_for_state(open_interval, breaks, ts):
+    """Human message + next_change (ISO) for a local datetime. End exclusive + midnight-wrapping."""
     if not open_interval or not open_interval[0] or not open_interval[1]:
-        # Yarın açılış tahmini
         return ("Yarın açılacak.", None)
-    start_dt = timezone.make_aware(datetime.combine(ts.date(), open_interval[0]))
-    end_dt = timezone.make_aware(datetime.combine(ts.date(), open_interval[1]))
-    if ts < start_dt:
-        return (f"{open_interval[0].strftime('%H:%M')}'de açılacak.", start_dt.isoformat())
-    if ts > end_dt:
-        # Tomorrow open (simple)
-        return ("Yarın açılacak.", None)
-    # Within day window; check if in break
+    cur = ts.time()
+
+    def _tir(cur_t, start_t, end_t):
+        if start_t <= end_t:
+            return start_t <= cur_t < end_t
+        return cur_t >= start_t or cur_t < end_t
+
+    def _dt_for(base_date, t):
+        return datetime.combine(base_date, t).replace(tzinfo=ts.tzinfo)
+
+    # Break?
     for b in breaks:
-        bs = timezone.make_aware(datetime.combine(ts.date(), b["start"]))
-        be = timezone.make_aware(datetime.combine(ts.date(), b["end"]))
-        if bs <= ts <= be:
-            return ("Şu an mola.", be.isoformat())
-    return (f"{open_interval[1].strftime('%H:%M')}’a kadar açık.", end_dt.isoformat())
+        if _tir(cur, b["start"], b["end"]):
+            # next change at break end (today if end after cur, else tomorrow for wrapping)
+            next_dt = _dt_for(ts.date(), b["end"])
+            if next_dt <= ts:
+                next_dt = _dt_for(ts.date() + timedelta(days=1), b["end"])
+            return ("Şu an mola.", next_dt.isoformat())
+
+    # Open window?
+    if _tir(cur, open_interval[0], open_interval[1]):
+        end_dt = _dt_for(ts.date(), open_interval[1])
+        if end_dt <= ts:
+            end_dt = _dt_for(ts.date() + timedelta(days=1), open_interval[1])
+        return (f"{open_interval[1].strftime('%H:%M')}’a kadar açık.", end_dt.isoformat())
+
+    # Closed: next open at start time
+    start_dt = _dt_for(ts.date(), open_interval[0])
+    if start_dt <= ts:
+        start_dt = _dt_for(ts.date() + timedelta(days=1), open_interval[0])
+    return (f"{open_interval[0].strftime('%H:%M')}'de açılacak.", start_dt.isoformat())
 
 
 """Test-only viewset removed"""
@@ -4695,6 +4749,7 @@ class CalendarStatusViewSet(viewsets.ReadOnlyModelViewSet):
     def _calculate_staff_status(self, staff, date):
         """Personel durumunu hesapla"""
         from django.utils import timezone as dj_tz
+        from zoneinfo import ZoneInfo
         
         # Haftanın günü kodu (MON..SUN)
         weekday_code_map = {0: "MON", 1: "TUE", 2: "WED", 3: "THU", 4: "FRI", 5: "SAT", 6: "SUN"}
@@ -4800,10 +4855,14 @@ class CalendarStatusViewSet(viewsets.ReadOnlyModelViewSet):
                 'active_overrides': []
             }
         
-        now = dj_tz.now()
-        local_tz = dj_tz.get_current_timezone()
-        now_local = now.astimezone(local_tz)
-        current_time = now_local.time()  # Turkey wall-clock time
+        now_utc = dj_tz.now()
+        tz_name = getattr(settings, "BUSINESS_TIME_ZONE", None) or "Europe/Istanbul"
+        try:
+            business_tz = ZoneInfo(tz_name)
+        except Exception:
+            business_tz = dj_tz.get_current_timezone()
+        now_local = dj_tz.localtime(now_utc, business_tz)
+        current_time = now_local.time()  # Business wall-clock time
         # Bugün değilse veya şu an çalışma saatleri dışındaysa çalışmıyor
         if date != now_local.date():
             return {
@@ -4840,8 +4899,8 @@ class CalendarStatusViewSet(viewsets.ReadOnlyModelViewSet):
             # Bitiş saati dahil DEĞİL: break_end_time 14:00 ise 14:00'da mola bitmiştir
             if break_start_time and break_end_time and break_start_time <= current_time < break_end_time:
                 is_on_break = True
-                break_end_dt = dj_tz.make_aware(datetime.combine(date, break_end_time))
-                break_ends_in = max(0, int((break_end_dt - now).total_seconds() / 60))
+                break_end_dt = datetime.combine(date, break_end_time).replace(tzinfo=business_tz)
+                break_ends_in = max(0, int((break_end_dt - now_local).total_seconds() / 60))
             # 2) İleri tarihe atanmış günlük mola (BreakWindow)
             if not is_on_break:
                 from app.barbers.models import BreakWindow
@@ -4853,8 +4912,8 @@ class CalendarStatusViewSet(viewsets.ReadOnlyModelViewSet):
                 ).first()
                 if break_windows:
                     is_on_break = True
-                    break_end_dt = dj_tz.make_aware(datetime.combine(date, break_windows.end_time))
-                    break_ends_in = max(0, int((break_end_dt - now).total_seconds() / 60))
+                    break_end_dt = datetime.combine(date, break_windows.end_time).replace(tzinfo=business_tz)
+                    break_ends_in = max(0, int((break_end_dt - now_local).total_seconds() / 60))
         
         status_message = None
         if is_on_break and break_end_time:
@@ -4880,6 +4939,7 @@ class CalendarStatusViewSet(viewsets.ReadOnlyModelViewSet):
     def now(self, request):
         """Get current live status for a barbershop with minutes until open info"""
         from django.utils import timezone
+        from zoneinfo import ZoneInfo
         barbershop_id = request.query_params.get('barbershop_id')
         
         if not barbershop_id:
@@ -4887,13 +4947,15 @@ class CalendarStatusViewSet(viewsets.ReadOnlyModelViewSet):
         
         try:
             barbershop = Barbershop.objects.get(id=barbershop_id)
-            # IMPORTANT: timezone.now() returns UTC. We must convert to local Turkey time
-            # before comparing with TimeField values (stored as Turkey local wall-clock time).
-            # Without this, UTC 13:30 compared with Turkey break 12:00-14:00 gives a false
-            # positive because 12:00 <= 13:30 < 14:00, even though Turkey time is 16:30 (after break).
-            now = timezone.now()  # UTC aware datetime
-            local_tz = timezone.get_current_timezone()  # Europe/Istanbul
-            now_local = now.astimezone(local_tz)
+            # Zaman kritik: shop saatleri TR duvar saati olarak tutuluyor.
+            # Sunucu TIME_ZONE yanlış olsa bile doğru sonuç için BUSINESS_TIME_ZONE (varsayılan Europe/Istanbul) kullan.
+            now_utc = timezone.now()  # UTC aware datetime
+            tz_name = getattr(settings, "BUSINESS_TIME_ZONE", None) or "Europe/Istanbul"
+            try:
+                business_tz = ZoneInfo(tz_name)
+            except Exception:
+                business_tz = timezone.get_current_timezone()
+            now_local = timezone.localtime(now_utc, business_tz)
             today = now_local.date()        # Today in Turkey
             current_time = now_local.time() # Current wall-clock time in Turkey
             weekday_code_map = {0: "MON", 1: "TUE", 2: "WED", 3: "THU", 4: "FRI", 5: "SAT", 6: "SUN"}
@@ -4959,8 +5021,8 @@ class CalendarStatusViewSet(viewsets.ReadOnlyModelViewSet):
                         is_open = False
                         status_message = f"Geç Açılış ({override.start_time.strftime('%H:%M')})"
                         # Calculate minutes until open
-                        open_dt = timezone.make_aware(datetime.combine(today, override.start_time))
-                        minutes_until_open = max(0, int((open_dt - now).total_seconds() / 60))
+                        open_dt = datetime.combine(today, override.start_time).replace(tzinfo=business_tz)
+                        minutes_until_open = max(0, int((open_dt - now_local).total_seconds() / 60))
                 elif override.override_scope == 'early_closing':
                     if override.end_time and current_time >= override.end_time:
                         is_open = False
@@ -4973,8 +5035,8 @@ class CalendarStatusViewSet(viewsets.ReadOnlyModelViewSet):
                             is_break = True
                             status_message = f"Mola ({override.end_time.strftime('%H:%M')} bitiş)"
                             break_end_time = override.end_time.strftime('%H:%M')
-                            end_dt = timezone.make_aware(datetime.combine(today, override.end_time))
-                            minutes_until_open = max(0, int((end_dt - now).total_seconds() / 60))
+                            end_dt = datetime.combine(today, override.end_time).replace(tzinfo=business_tz)
+                            minutes_until_open = max(0, int((end_dt - now_local).total_seconds() / 60))
 
             # 2. Check Holiday Override & Official Holiday (if no specific override block found yet)
             if is_open: # Only check if not already closed by override
@@ -4988,8 +5050,8 @@ class CalendarStatusViewSet(viewsets.ReadOnlyModelViewSet):
                         if decision.open_time and current_time < decision.open_time:
                             is_open = False
                             status_message = f"Açılış: {decision.open_time.strftime('%H:%M')}"
-                            open_dt = timezone.make_aware(datetime.combine(today, decision.open_time))
-                            minutes_until_open = max(0, int((open_dt - now).total_seconds() / 60))
+                            open_dt = datetime.combine(today, decision.open_time).replace(tzinfo=business_tz)
+                            minutes_until_open = max(0, int((open_dt - now_local).total_seconds() / 60))
                         elif decision.close_time and current_time >= decision.close_time:
                             is_open = False
                             status_message = "Kapalı"
@@ -5022,8 +5084,8 @@ class CalendarStatusViewSet(viewsets.ReadOnlyModelViewSet):
                         if current_time < start_time:
                             is_open = False
                             status_message = f"Açılış: {start_time.strftime('%H:%M')}"
-                            open_dt = timezone.make_aware(datetime.combine(today, start_time))
-                            minutes_until_open = max(0, int((open_dt - now).total_seconds() / 60))
+                            open_dt = datetime.combine(today, start_time).replace(tzinfo=business_tz)
+                            minutes_until_open = max(0, int((open_dt - now_local).total_seconds() / 60))
                         # Kapanış saatinden sonra veya eşitse kapalı
                         elif current_time >= end_time:
                             is_open = False
@@ -5047,8 +5109,8 @@ class CalendarStatusViewSet(viewsets.ReadOnlyModelViewSet):
                                 is_break = True
                                 status_message = f"Mola ({shop_hours.break_end_time.strftime('%H:%M')} bitiş)"
                                 break_end_time = shop_hours.break_end_time.strftime('%H:%M')
-                                end_dt = timezone.make_aware(datetime.combine(today, shop_hours.break_end_time))
-                                minutes_until_open = max(0, int((end_dt - now).total_seconds() / 60))
+                                end_dt = datetime.combine(today, shop_hours.break_end_time).replace(tzinfo=business_tz)
+                                minutes_until_open = max(0, int((end_dt - now_local).total_seconds() / 60))
                             else:
                                 status_message = "Açık"
                         else:
@@ -5066,8 +5128,8 @@ class CalendarStatusViewSet(viewsets.ReadOnlyModelViewSet):
                                 is_break = True
                                 status_message = f"Mola ({shop_break.end_time.strftime('%H:%M')} bitiş)"
                                 break_end_time = shop_break.end_time.strftime('%H:%M')
-                                end_dt = timezone.make_aware(datetime.combine(today, shop_break.end_time))
-                                minutes_until_open = max(0, int((end_dt - now).total_seconds() / 60))
+                                end_dt = datetime.combine(today, shop_break.end_time).replace(tzinfo=business_tz)
+                                minutes_until_open = max(0, int((end_dt - now_local).total_seconds() / 60))
                             else:
                                 status_message = "Açık"
 
@@ -6328,17 +6390,25 @@ class PartnerHolidayOverrideViewSet(viewsets.ModelViewSet):
         break_end_time = staff_hours.break_end_time or (shop_hours.break_end_time if shop_hours else None)
         
         # Şu anki zamanı kontrol et (mola saatinde mi?)
-        now = timezone.now()
-        current_time = timezone.localtime(now).time()
+        from zoneinfo import ZoneInfo
+        now_utc = timezone.now()
+        tz_name = getattr(settings, "BUSINESS_TIME_ZONE", None) or "Europe/Istanbul"
+        try:
+            business_tz = ZoneInfo(tz_name)
+        except Exception:
+            business_tz = timezone.get_current_timezone()
+        now_local = timezone.localtime(now_utc, business_tz)
+        current_time = now_local.time()
         is_on_break = False
         break_ends_in = None
         
         if break_start_time and break_end_time:
-            if break_start_time <= current_time <= break_end_time:
+            # End exclusive: break_end_time'da mola bitmiştir.
+            if break_start_time <= current_time < break_end_time:
                 is_on_break = True
                 # Mola bitişine kalan dakika
-                break_end_dt = timezone.make_aware(datetime.combine(date, break_end_time))
-                break_ends_in = int((break_end_dt - now).total_seconds() / 60)
+                break_end_dt = datetime.combine(date, break_end_time).replace(tzinfo=business_tz)
+                break_ends_in = int((break_end_dt - now_local).total_seconds() / 60)
         
         return {
             'staff_id': staff.id,
