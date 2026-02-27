@@ -521,6 +521,28 @@ class StaffSerializer(serializers.ModelSerializer):
             return _public_media_uri(self, u.image.url) or u.image.url
         return None
 
+    def to_representation(self, instance):
+        """
+        Ensure staff avatar URLs are reachable in both apps.
+        Staff photos can be stored in private S3; direct `.url` or CDN rewrites may 403.
+        If AWS is configured, return short-lived presigned URLs for `photo` and `photo_thumb`.
+        """
+        data = super().to_representation(instance)
+        try:
+            for attr, key in (("photo_thumb", "photo_thumb"), ("photo", "photo")):
+                ff = getattr(instance, attr, None)
+                if not ff:
+                    continue
+                signed = _presign_file_field(ff)
+                if signed:
+                    data[key] = signed
+                else:
+                    raw = data.get(key)
+                    data[key] = _public_media_uri(self, raw) or raw
+        except Exception:
+            pass
+        return data
+
     @extend_schema_field(serializers.DictField)
     def get_weekly_schedule(self, obj):
         # Ana uygulama (barber detail) her zaman mon..sun 7 gün bekliyor; eksik günler Kapalı sayılıyor.
