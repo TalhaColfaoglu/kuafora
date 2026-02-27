@@ -1039,7 +1039,8 @@ def _compute_shop_status(barbershop_id: int, ts: datetime) -> dict:
         open_interval, breaks = _effective_shop_hours_with_breaks(
             shop, date, extra_closed=[(top.start_time, top.end_time)]
         )
-        msg, next_change = _message_for_state(open_interval, breaks, local_ts)
+        open_interval = _apply_shop_time_overrides(open_interval, ov_shop)
+        msg, next_change = _message_for_state(open_interval, breaks, local_ts, shop=shop)
         data = {
             "status": _open_closed_now(open_interval, breaks, local_ts, time_in_range=_time_in_range),
             "source": "SPECIAL_DAY",
@@ -1065,7 +1066,8 @@ def _compute_shop_status(barbershop_id: int, ts: datetime) -> dict:
             return _cache_and_return(data)
         if shov.status == 'custom_hours':
             open_interval = (shov.open_time, shov.close_time)
-            msg, next_change = _message_for_state(open_interval, [], local_ts)
+            open_interval = _apply_shop_time_overrides(open_interval, ov_shop)
+            msg, next_change = _message_for_state(open_interval, [], local_ts, shop=shop)
             data = {
                 "status": _open_closed_now(open_interval, [], local_ts, time_in_range=_time_in_range),
                 "source": "OFFICIAL_HOLIDAY",
@@ -1077,7 +1079,8 @@ def _compute_shop_status(barbershop_id: int, ts: datetime) -> dict:
             return _cache_and_return(data)
     # 4) WeeklySchedule
     open_interval, breaks = _effective_shop_hours_with_breaks(shop, date)
-    msg, next_change = _message_for_state(open_interval, breaks, local_ts)
+    open_interval = _apply_shop_time_overrides(open_interval, ov_shop)
+    msg, next_change = _message_for_state(open_interval, breaks, local_ts, shop=shop)
     
     # Haftalık periyodik mola kontrolü (şu an mola saatinde mi?)
     weekday_code_map = {0: "MON", 1: "TUE", 2: "WED", 3: "THU", 4: "FRI", 5: "SAT", 6: "SUN"}
@@ -1177,6 +1180,25 @@ def _effective_shop_hours_with_breaks(shop, date, extra_closed=None):
     return open_interval, breaks
 
 
+def _apply_shop_time_overrides(open_interval, ov_shop):
+    """Apply shop_global overrides that affect opening window (late_opening/early_closing)."""
+    if not open_interval or not open_interval[0] or not open_interval[1]:
+        return open_interval
+    start_t, end_t = open_interval
+    # Late opening: shift start forward
+    late = ov_shop.filter(override_scope='late_opening', start_time__isnull=False).order_by('-created_at').first()
+    if late and late.start_time and start_t and late.start_time > start_t:
+        start_t = late.start_time
+    # Early closing: shift end backward
+    early = ov_shop.filter(override_scope='early_closing', end_time__isnull=False).order_by('-created_at').first()
+    if early and early.end_time and end_t and early.end_time < end_t:
+        end_t = early.end_time
+    # If overrides make window invalid, treat as closed for that day
+    if start_t and end_t and start_t >= end_t:
+        return (None, None)
+    return (start_t, end_t)
+
+
 def _to_dict_interval(interval):
     start, end = interval if interval else (None, None)
     if not start or not end:
@@ -1221,10 +1243,28 @@ def _open_closed_now(open_interval, breaks, ts, time_in_range=None):
     return "open"
 
 
-def _message_for_state(open_interval, breaks, ts):
+def _message_for_state(open_interval, breaks, ts, shop=None):
     """Human message + next_change (ISO) for a local datetime. End exclusive + midnight-wrapping."""
     if not open_interval or not open_interval[0] or not open_interval[1]:
-        return ("Yarın açılacak.", None)
+        # Eğer yarın da kapalıysa "açılacak" gibi yanıltıcı mesaj verme.
+        # Shop varsa bir sonraki açık günü bul; sadece yarın açıksa saat ver.
+        if shop is not None:
+            weekday_code_map = {0: "MON", 1: "TUE", 2: "WED", 3: "THU", 4: "FRI", 5: "SAT", 6: "SUN"}
+            for i in range(1, 8):
+                next_weekday = (ts.date().weekday() + i) % 7
+                next_day_code = weekday_code_map.get(next_weekday)
+                next_hours = ShopWorkingHours.objects.filter(
+                    barbershop=shop,
+                    day_of_week=next_day_code,
+                    is_closed=False,
+                ).first()
+                if next_hours and next_hours.start_time:
+                    if i == 1:
+                        start_dt = datetime.combine(ts.date() + timedelta(days=1), next_hours.start_time).replace(tzinfo=ts.tzinfo)
+                        return (f"Yarın {next_hours.start_time.strftime('%H:%M')}'da açılacak", start_dt.isoformat())
+                    return ("Kapalı", None)
+            return ("Kapalı", None)
+        return ("Kapalı", None)
     cur = ts.time()
 
     def _tir(cur_t, start_t, end_t):
@@ -1255,7 +1295,10 @@ def _message_for_state(open_interval, breaks, ts):
     start_dt = _dt_for(ts.date(), open_interval[0])
     if start_dt <= ts:
         start_dt = _dt_for(ts.date() + timedelta(days=1), open_interval[0])
-    return (f"{open_interval[0].strftime('%H:%M')}'de açılacak.", start_dt.isoformat())
+    # Sadece yarın açılıyorsa saat ver; değilse "Kapalı" göster.
+    if start_dt.date() == (ts.date() + timedelta(days=1)):
+        return (f"{open_interval[0].strftime('%H:%M')}'de açılacak.", start_dt.isoformat())
+    return ("Kapalı", None)
 
 
 """Test-only viewset removed"""
@@ -4940,6 +4983,7 @@ class CalendarStatusViewSet(viewsets.ReadOnlyModelViewSet):
         """Get current live status for a barbershop with minutes until open info"""
         from django.utils import timezone
         from zoneinfo import ZoneInfo
+        from datetime import time as _time
         barbershop_id = request.query_params.get('barbershop_id')
         
         if not barbershop_id:
@@ -5157,28 +5201,48 @@ class CalendarStatusViewSet(viewsets.ReadOnlyModelViewSet):
                     and shop_hours.end_time is not None
                     and current_time >= shop_hours.end_time
                 )
-                if not already_closed_today and shop_hours and shop_hours.start_time:
-                    # Henüz açılmamış (bugünün açılış saati ilerleride) → bugünün açılış saatini göster
+                # BUGFIX: Bugün kapalıysa veya yarın da kapalıysa "09:00'da açılacak" gibi yanıltıcı mesaj verme.
+                # Kural: Saatli açılış metni yalnızca "bugün daha sonra" veya "yarın gerçekten açık" ise gösterilir.
+                can_open_later_today = (
+                    shop_hours is not None
+                    and not shop_hours.is_closed
+                    and shop_hours.start_time is not None
+                    and current_time < shop_hours.start_time
+                )
+                if can_open_later_today and not already_closed_today:
                     opening_time_str = shop_hours.start_time.strftime('%H:%M')
                 else:
-                    # Bugün kapandı → yarın veya en yakın açık günü bul
+                    # Bir sonraki açık günü bul; override/holiday/toggle dahil gerçek duruma göre karar ver.
+                    # _compute_shop_status gün bazında tek kaynak; open_interval varsa o günün saatleri var demektir.
+                    next_open_found = False
                     for i in range(1, 8):
-                        next_weekday = (today.weekday() + i) % 7
-                        next_day_code = weekday_code_map.get(next_weekday)
-                        next_hours = ShopWorkingHours.objects.filter(
-                            barbershop=barbershop,
-                            day_of_week=next_day_code,
-                            is_closed=False,
-                        ).first()
-                        if next_hours and next_hours.start_time:
-                            opening_time_str = next_hours.start_time.strftime('%H:%M')
+                        candidate_date = today + timedelta(days=i)
+                        probe_ts = datetime.combine(candidate_date, _time(12, 0)).replace(tzinfo=business_tz)
+                        day_data = _compute_shop_status(barbershop.id, probe_ts)
+                        # Toggle "open" ise saat yok; sadece yarınsa mesaj ver, aksi halde kapalı yaz.
+                        if day_data.get('source') == 'TOGGLE' and day_data.get('status') == 'open':
+                            next_open_found = True
                             if i == 1:
+                                opening_time_str = None
+                                status_message = "Yarın açık"
+                            else:
+                                opening_time_str = None
+                                status_message = "Kapalı"
+                            break
+                        interval = day_data.get('open_interval') or {}
+                        start_s = (interval.get('start') or '').strip() if isinstance(interval, dict) else ''
+                        if start_s:
+                            next_open_found = True
+                            if i == 1:
+                                opening_time_str = start_s
                                 status_message = f"Yarın {opening_time_str}'da açılacak"
                             else:
-                                day_tr = {0: 'Pazartesi', 1: 'Salı', 2: 'Çarşamba', 3: 'Perşembe',
-                                          4: 'Cuma', 5: 'Cumartesi', 6: 'Pazar'}
-                                status_message = f"{day_tr.get(next_weekday, '')} {opening_time_str}'da açılacak"
+                                opening_time_str = None
+                                status_message = "Kapalı"
                             break
+                    if not next_open_found:
+                        opening_time_str = None
+                        status_message = "Kapalı"
             
             # Active staff count hesaplama - sadece açıksa query yap
             active_staff_count = 0
