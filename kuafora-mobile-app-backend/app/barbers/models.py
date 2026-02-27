@@ -567,8 +567,8 @@ class Service(models.Model):
     barbershop = models.ForeignKey(Barbershop, on_delete=models.CASCADE, related_name="services")
     category = models.ForeignKey(ServiceCategory, on_delete=models.CASCADE, related_name="services", null=True, blank=True)
     name = models.CharField(max_length=150)
-    price = models.DecimalField(max_digits=10, decimal_places=2)
-    duration = models.PositiveIntegerField(help_text="Duration in minutes")
+    price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, help_text="Opsiyonel — bazı işletmeler fiyatı gizli tutar")
+    duration = models.PositiveIntegerField(null=True, blank=True, help_text="Duration in minutes — randevu modunda zorunlu, bilgi modunda opsiyonel")
     is_active = models.BooleanField(default=True)
     target_gender = models.CharField(
         max_length=10,
@@ -590,8 +590,8 @@ class StaffService(models.Model):
     """
     staff = models.ForeignKey(Staff, on_delete=models.CASCADE, related_name="staff_services")
     service = models.ForeignKey(Service, on_delete=models.CASCADE, related_name="staff_offerings")
-    price = models.DecimalField(max_digits=10, decimal_places=2)
-    duration_minutes = models.PositiveIntegerField()
+    price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, help_text="Opsiyonel — girilmezse dükkan hizmetinin fiyatı kullanılır")
+    duration_minutes = models.PositiveIntegerField(null=True, blank=True, help_text="Opsiyonel — girilmezse dükkan hizmetinin süresi kullanılır")
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

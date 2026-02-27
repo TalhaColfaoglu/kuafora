@@ -2250,15 +2250,19 @@ class PartnerStaffViewSet(viewsets.ModelViewSet):
                 all_staff = Staff.objects.filter(barbershop=barbershop).exclude(id=staff.id)
                 
                 if delete_shop:
-                    # Salonu sil
-                    if all_staff.exists():
-                        return Response(
-                            {"detail": "Cannot delete shop: other staff members exist"},
-                            status=400
-                        )
-                    
+                    # Tek personel ise salonu sil; başka personel varsa yetki devret ve sadece çık
                     with transaction.atomic():
-                        # Salonu ve tüm ilişkili verileri sil
+                        other_staff = all_staff.first()
+                        if other_staff is not None:
+                            # Başka personel var: yetkiyi ona devret, kendini sil (salon kalır)
+                            other_staff.is_admin = True
+                            other_staff.save(update_fields=["is_admin"])
+                            staff.delete()
+                            return Response(
+                                {"detail": "Admin transferred and resigned successfully"},
+                                status=200
+                            )
+                        # Tek personel: salonu ve kendini sil
                         barbershop_id = barbershop.id
                         barbershop.delete()
                         return Response(

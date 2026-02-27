@@ -759,10 +759,19 @@ class ServiceSerializer(serializers.ModelSerializer):
     
     def get_price_range(self, obj):
         from .models import StaffService
-        staff_prices = StaffService.objects.filter(service=obj, is_active=True).values_list('price', flat=True)
+        staff_prices = list(
+            StaffService.objects.filter(service=obj, is_active=True, price__isnull=False)
+            .values_list('price', flat=True)
+        )
         if not staff_prices:
+            if obj.price is None:
+                return None  # Fiyat girilmemiş — müşteri uygulaması "Fiyat belirtilmemiş" gösterir
             return {'min': float(obj.price), 'max': float(obj.price)}
-        return {'min': float(min(staff_prices)), 'max': float(max(staff_prices))}
+        base = float(obj.price) if obj.price is not None else None
+        prices = [float(p) for p in staff_prices]
+        if base is not None:
+            prices.append(base)
+        return {'min': min(prices), 'max': max(prices)}
 
 
 class LastViewedSerializer(serializers.ModelSerializer):
