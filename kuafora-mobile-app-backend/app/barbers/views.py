@@ -919,7 +919,9 @@ def _compute_shop_status(barbershop_id: int, ts: datetime) -> dict:
     cached = cache.get(key)
     if cached:
         # Eğer DailyOverride varsa cache'i bypass et - manuel değişiklikler hemen yansımalı
-        do = DailyOverride.objects.filter(barbershop_id=barbershop_id, date=ts.date()).first()
+        # Cache anahtarı business TZ'ye göre hesaplanan local date ile atılıyor.
+        # DailyOverride kontrolü de aynı local date ile yapılmalı.
+        do = DailyOverride.objects.filter(barbershop_id=barbershop_id, date=date).first()
         if do:
             # DailyOverride varsa cache'i temizle ve yeniden hesapla
             cache.delete(key)
@@ -1077,6 +1079,22 @@ def _compute_shop_status(barbershop_id: int, ts: datetime) -> dict:
                 "breaks": [],
             }
             return _cache_and_return(data)
+    else:
+        # Shop-specific holiday decision yoksa resmi tatilde varsayılan kapalı
+        try:
+            if OfficialHoliday.objects.filter(country_code='TR', date=date).exists():
+                data = {
+                    "status": "closed",
+                    "source": "OFFICIAL_HOLIDAY",
+                    "message": "Bugün Kapalı (Resmi Tatil)",
+                    "next_change": None,
+                    "open_interval": None,
+                    "breaks": [],
+                }
+                return _cache_and_return(data)
+        except Exception:
+            # Tatil tablosu yoksa / hata varsa haftalık plana düş
+            pass
     # 4) WeeklySchedule
     open_interval, breaks = _effective_shop_hours_with_breaks(shop, date)
     open_interval = _apply_shop_time_overrides(open_interval, ov_shop)
@@ -5000,6 +5018,65 @@ class CalendarStatusViewSet(viewsets.ReadOnlyModelViewSet):
             except Exception:
                 business_tz = timezone.get_current_timezone()
             now_local = timezone.localtime(now_utc, business_tz)
+
+            # Tek kaynak: tüm override/tatil/mola/saat hesaplarını _compute_shop_status yapar.
+            # Böylece "çalışma saatleri açık ama Kapalı yazıyor" gibi tutarsızlıklar engellenir.
+            status_data = _compute_shop_status(barbershop.id, now_utc)
+            status = (status_data.get("status") or "closed").strip().lower()
+            is_open = status == "open"
+
+            active_break = status_data.get("active_break")
+            is_break = isinstance(active_break, dict) and bool(active_break)
+
+            status_message = (status_data.get("message") or "").strip() or ("Açık" if is_open else "Kapalı")
+
+            opening_time = None
+            closing_time = None
+            interval = status_data.get("open_interval")
+            if isinstance(interval, dict):
+                opening_time = (interval.get("start") or None)
+                closing_time = (interval.get("end") or None)
+
+            minutes_until_open = None
+            break_end_time = None
+            next_change = status_data.get("next_change")
+            if next_change:
+                try:
+                    next_dt = datetime.fromisoformat(next_change)
+                    minutes_until_open = max(0, int((next_dt - now_local).total_seconds() / 60))
+                    if is_break:
+                        break_end_time = (active_break.get("end_time") if isinstance(active_break, dict) else None) or timezone.localtime(next_dt, business_tz).strftime("%H:%M")
+                except Exception:
+                    minutes_until_open = None
+
+            active_staff_count = int(status_data.get("active_staff_count") or 0)
+            note_val = status_data.get("note") or ""
+            note = note_val.strip() if isinstance(note_val, str) else str(note_val).strip()
+
+            resp_data = {
+                "is_open": is_open,
+                "is_break": is_break,
+                "status_message": status_message,
+                "note": note,
+                "minutes_until_open": minutes_until_open,
+                "break_end_time": break_end_time,
+                "source": status_data.get("source"),
+                "opening_time": opening_time,
+                "closing_time": closing_time,
+                "has_staff_working": active_staff_count > 0,
+                "active_staff_count": active_staff_count,
+                # Client compatibility: if present, include active_break
+                "active_break": active_break if isinstance(active_break, dict) else None,
+            }
+
+            return Response(
+                resp_data,
+                headers={
+                    "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
+                    "Pragma": "no-cache",
+                    "Expires": "0",
+                },
+            )
             today = now_local.date()        # Today in Turkey
             current_time = now_local.time() # Current wall-clock time in Turkey
             weekday_code_map = {0: "MON", 1: "TUE", 2: "WED", 3: "THU", 4: "FRI", 5: "SAT", 6: "SUN"}
