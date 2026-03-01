@@ -3,9 +3,15 @@ from rest_framework.response import Response
 from django.utils import timezone
 from django.db.models import Sum, Count, F, Q
 from django.db.models.functions import TruncDate
-from datetime import timedelta, datetime
+from datetime import timedelta, datetime, date
 from app.barbers.models import Barbershop, Staff, ViewEvent, Favorite, Review
 from app.appointments.models import Appointment, AppointmentStatus
+
+try:
+    # Optional fallback if ViewEvent is not wired on some clients yet.
+    from app.analytics.models import ScreenView
+except Exception:  # pragma: no cover
+    ScreenView = None
 
 class BarbershopAdvancedStatsView(generics.GenericAPIView):
     permission_classes = [permissions.IsAuthenticated]
@@ -56,28 +62,114 @@ class BarbershopAdvancedStatsView(generics.GenericAPIView):
                 return 100 if current > 0 else 0
             return round(((current - previous) / previous) * 100, 1)
 
+        def _views_unique_from_view_events(qs):
+            """Compute total views + unique visitors from ViewEvent queryset."""
+            total = qs.count()
+            # Auth users
+            auth_users = qs.filter(user__isnull=False).values_list('user_id', flat=True).distinct().count()
+            # Devices seen with authenticated users (to avoid double-counting guest->auth on same device)
+            auth_devices_qs = qs.filter(user__isnull=False, device_id__isnull=False).values_list('device_id', flat=True).distinct()
+            # Guest-only devices (exclude any device that also had authenticated traffic in the same window)
+            guest_only_devices = (
+                qs.filter(user__isnull=True, device_id__isnull=False)
+                .exclude(device_id__in=auth_devices_qs)
+                .values_list('device_id', flat=True)
+                .distinct()
+                .count()
+            )
+            unique = auth_users + guest_only_devices
+            return total, unique
+
+        def _views_unique_from_screen_views(*, start_dt, end_dt):
+            """Fallback: compute total views + unique visitors from analytics ScreenView if present."""
+            if ScreenView is None:
+                return 0, 0
+            base = ScreenView.objects.filter(
+                app_type='main',
+                screen_name='BarberDetailScreen',
+                timestamp__range=(start_dt, end_dt),
+            ).filter(
+                Q(metadata__barbershop_id=shop.id) | Q(metadata__barbershop_id=str(shop.id))
+            )
+            total = base.count()
+            auth_users = base.filter(user__isnull=False).values_list('user_id', flat=True).distinct().count()
+            auth_devices_qs = base.filter(user__isnull=False, device_id__isnull=False).values_list('device_id', flat=True).distinct()
+            guest_only_devices = (
+                base.filter(user__isnull=True, device_id__isnull=False)
+                .exclude(device_id__in=auth_devices_qs)
+                .values_list('device_id', flat=True)
+                .distinct()
+                .count()
+            )
+            unique = auth_users + guest_only_devices
+            return total, unique
+
+        def _views_unique(*, start_dt, end_dt):
+            """Primary: ViewEvent; fallback: ScreenView (if ViewEvent is empty)."""
+            ve_qs = ViewEvent.objects.filter(barbershop=shop, viewed_at__range=(start_dt, end_dt))
+            total, unique = _views_unique_from_view_events(ve_qs)
+            if total == 0:
+                total2, unique2 = _views_unique_from_screen_views(start_dt=start_dt, end_dt=end_dt)
+                if total2 > 0:
+                    return total2, unique2, "screen_view"
+            return total, unique, "view_event"
+
+        def _range_for_dates(sd: date, ed: date):
+            return (
+                timezone.make_aware(datetime.combine(sd, datetime.min.time())),
+                timezone.make_aware(datetime.combine(ed, datetime.max.time())),
+            )
+
+        def _unique_cards():
+            """Return fixed-period unique visitor counts regardless of selected range."""
+            # Day boundaries based on server/business timezone (timezone.now()).
+            d_today = today
+            d_week_start = d_today - timedelta(days=d_today.weekday())  # Monday
+            d_month_start = date(d_today.year, d_today.month, 1)
+            d_year_start = date(d_today.year, 1, 1)
+
+            # All time: start from first known view date if possible, else shop.created_at, else 2020-01-01
+            d_all_start = date(2020, 1, 1)
+            try:
+                first_ve = ViewEvent.objects.filter(barbershop=shop).order_by("viewed_at").values_list("viewed_at", flat=True).first()
+                if first_ve:
+                    d_all_start = first_ve.date()
+                elif getattr(shop, "created_at", None):
+                    d_all_start = shop.created_at.date()
+            except Exception:
+                try:
+                    if getattr(shop, "created_at", None):
+                        d_all_start = shop.created_at.date()
+                except Exception:
+                    pass
+
+            def pack(key: str, label: str, sd: date, ed: date):
+                sdt, edt = _range_for_dates(sd, ed)
+                v, u, src = _views_unique(start_dt=sdt, end_dt=edt)
+                return key, {
+                    "label": label,
+                    "start": sd.isoformat(),
+                    "end": ed.isoformat(),
+                    "unique": int(u or 0),
+                    "views": int(v or 0),
+                    "source": src,
+                }
+
+            out = dict([
+                pack("daily", "Bugün", d_today, d_today),
+                pack("weekly", "Bu hafta", d_week_start, d_today),
+                pack("monthly", "Bu ay", d_month_start, d_today),
+                pack("yearly", "Bu yıl", d_year_start, d_today),
+                pack("all_time", "Tüm zamanlar", d_all_start, d_today),
+            ])
+            return out
+
         # --- A. INTERACTION METRICS (For ALL Shops) ---
         
         # 1. Total Views
-        curr_views = ViewEvent.objects.filter(barbershop=shop, viewed_at__range=(range_start, range_end)).count()
-        prev_views = ViewEvent.objects.filter(barbershop=shop, viewed_at__range=(prev_start, prev_end)).count()
+        curr_views, curr_unique, curr_views_source = _views_unique(start_dt=range_start, end_dt=range_end)
+        prev_views, prev_unique, _ = _views_unique(start_dt=prev_start, end_dt=prev_end)
         
-        # 2. Unique Visitors (user_id veya device_id'ye göre tekil sayım)
-        # Giriş yapmış kullanıcılar için user_id, misafirler için device_id kullanılır
-        curr_qs = ViewEvent.objects.filter(barbershop=shop, viewed_at__range=(range_start, range_end))
-        prev_qs = ViewEvent.objects.filter(barbershop=shop, viewed_at__range=(prev_start, prev_end))
-        
-        # Giriş yapmış kullanıcılar (user not null)
-        curr_unique_users = curr_qs.filter(user__isnull=False).values('user').distinct().count()
-        prev_unique_users = prev_qs.filter(user__isnull=False).values('user').distinct().count()
-        
-        # Misafir kullanıcılar (user null, device_id not null)
-        curr_unique_devices = curr_qs.filter(user__isnull=True, device_id__isnull=False).values('device_id').distinct().count()
-        prev_unique_devices = prev_qs.filter(user__isnull=True, device_id__isnull=False).values('device_id').distinct().count()
-        
-        curr_unique = curr_unique_users + curr_unique_devices
-        prev_unique = prev_unique_users + prev_unique_devices
-
         # 3. Favorites Gained
         # 3. Favorites Gained
         # 3. Favorites Gained
@@ -109,14 +201,38 @@ class BarbershopAdvancedStatsView(generics.GenericAPIView):
             "reviews": {"total": curr_reviews, "trend": calc_trend(curr_reviews, prev_reviews)},
         }
 
+        # Fixed-period unique visitors cards for partner stats screen (no selection needed).
+        try:
+            unique_visitors_cards = _unique_cards()
+        except Exception:
+            unique_visitors_cards = {}
+
         # Stock-style daily views chart for vitrin app
-        views_chart_qs = (
-            ViewEvent.objects.filter(barbershop=shop, viewed_at__range=(range_start, range_end))
-            .annotate(date=TruncDate("viewed_at"))
-            .values("date")
-            .annotate(views=Count("id"))
-            .order_by("date")
-        )
+        if curr_views_source == "view_event":
+            views_chart_qs = (
+                ViewEvent.objects.filter(barbershop=shop, viewed_at__range=(range_start, range_end))
+                .annotate(date=TruncDate("viewed_at"))
+                .values("date")
+                .annotate(views=Count("id"))
+                .order_by("date")
+            )
+        else:
+            # Fallback chart from ScreenView (if present)
+            if ScreenView is None:
+                views_chart_qs = []
+            else:
+                views_chart_qs = (
+                    ScreenView.objects.filter(
+                        app_type='main',
+                        screen_name='BarberDetailScreen',
+                        timestamp__range=(range_start, range_end),
+                    )
+                    .filter(Q(metadata__barbershop_id=shop.id) | Q(metadata__barbershop_id=str(shop.id)))
+                    .annotate(date=TruncDate("timestamp"))
+                    .values("date")
+                    .annotate(views=Count("id"))
+                    .order_by("date")
+                )
         views_chart = [
             {"date": row["date"], "views": row["views"] or 0}
             for row in views_chart_qs
@@ -288,6 +404,7 @@ class BarbershopAdvancedStatsView(generics.GenericAPIView):
                 "days": days_diff
             },
             "interactions": interactions,
+            "unique_visitors_cards": unique_visitors_cards,
             "reviews_list": reviews_data,
             "booking_stats": booking_stats,
             "staff_performance": staff_performance,

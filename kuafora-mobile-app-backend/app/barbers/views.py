@@ -4635,6 +4635,12 @@ class PartnerSpecialMessageViewSet(viewsets.ModelViewSet):
                 created_by=request.user,
                 is_active=True,
             )
+            # Favorilere ekleyen kullanıcılara duyuru bildirimi gönder (in-app + push outbox)
+            try:
+                from app.notifications.utils import notify_favoriters_about_announcement
+                notify_favoriters_about_announcement(admin_staff.barbershop, obj)
+            except Exception:
+                pass
             # target_staff ids varsa bağla
             try:
                 staff_ids = request.data.get('target_staff') or []

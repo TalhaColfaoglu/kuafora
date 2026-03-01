@@ -6,8 +6,10 @@ from django.contrib.auth import get_user_model
 
 from app.notifications.models import Notification
 from app.barbers.models import Favorite, Barbershop, Review, Staff
+from app.barbers.models import SpecialMessage
 from app.campaigns.models import Campaign
 from app.subscriptions.models import Subscription
+from app.appointments.models import NotificationEvent
 
 User = get_user_model()
 
@@ -81,15 +83,94 @@ def notify_favoriters_about_campaign(barbershop: Barbershop, campaign: Campaign)
     if not users:
         return 0
 
-    title = f"Favori kuaförünüzden kampanya: {barbershop.name}"
-    body = f"{campaign.name} kampanyası başladı."
-    return bulk_notify_users(
+    # Better copy + proper type for filtering.
+    title = f"Yeni kampanya: {barbershop.name}"
+    # Try to include discount info.
+    discount = ""
+    try:
+        if getattr(campaign, "discount_type", "") == "percent":
+            discount = f"%{int(float(campaign.discount_value))} indirim"
+        elif getattr(campaign, "discount_type", "") == "fixed_amount":
+            discount = f"{campaign.discount_value}₺ indirim"
+        elif getattr(campaign, "discount_type", "") == "fixed_price":
+            discount = f"{campaign.discount_value}₺ sabit fiyat"
+    except Exception:
+        discount = ""
+    body = f"{campaign.name} {('- ' + discount) if discount else ''}".strip()
+
+    created = bulk_notify_users(
+        users,
+        title=title,
+        body=body,
+        type_="promo",
+        reference_id=str(campaign.id),
+    )
+
+    # Enqueue real push for delivery worker.
+    try:
+        NotificationEvent.objects.create(
+            topic="favorite_campaign",
+            payload={
+                "user_ids": [u.id for u in users if getattr(u, "id", None)],
+                "title": title,
+                "body": body,
+                "data": {
+                    "type": "promo",
+                    "campaign_id": str(campaign.id),
+                    "shop_id": str(barbershop.id),
+                },
+            },
+        )
+    except Exception:
+        # Never break the main flow.
+        pass
+
+    return created
+
+
+def notify_favoriters_about_announcement(barbershop: Barbershop, message: SpecialMessage) -> int:
+    """
+    When a shop posts an announcement (SpecialMessage), notify all users who favorited the shop.
+    """
+    favorites = (
+        Favorite.objects.filter(barbershop=barbershop)
+        .select_related("user")
+        .only("user__id", "user__full_name", "user__email")
+    )
+    users = [fav.user for fav in favorites if fav.user_id]
+    if not users:
+        return 0
+
+    title = f"{barbershop.name} duyuru paylaştı"
+    snippet = (message.title or "").strip() or "Yeni duyuru"
+    body = snippet
+
+    created = bulk_notify_users(
         users,
         title=title,
         body=body,
         type_="system",
-        reference_id=str(campaign.id),
+        reference_id=str(message.id),
     )
+
+    try:
+        NotificationEvent.objects.create(
+            topic="favorite_announcement",
+            payload={
+                "user_ids": [u.id for u in users if getattr(u, "id", None)],
+                "title": title,
+                "body": body,
+                "data": {
+                    "type": "announcement",
+                    "announcement_id": str(message.id),
+                    "shop_id": str(barbershop.id),
+                },
+            },
+        )
+    except Exception:
+        pass
+
+    return created
 
 
 def notify_shop_admins_about_subscription(subscription: Subscription, title: str, body: str) -> int:
