@@ -2213,6 +2213,35 @@ class PartnerStaffViewSet(viewsets.ModelViewSet):
                 )
                 
                 logger.info(f"[PartnerStaffViewSet CREATE] Staff created successfully: id={staff.id}")
+
+                # Varsayılan: personel, dükkanın tüm hizmetlerini kullanabilsin.
+                # Not: price/duration_minutes boş bırakılırsa dükkanın fiyat/süre değerleri devralınır.
+                try:
+                    shop_services = list(
+                        Service.objects.filter(barbershop=shop, is_active=True).only("id")
+                    )
+                    if shop_services:
+                        StaffService.objects.bulk_create(
+                            [
+                                StaffService(
+                                    staff=staff,
+                                    service=svc,
+                                    price=None,
+                                    duration_minutes=None,
+                                    is_active=True,
+                                )
+                                for svc in shop_services
+                            ],
+                            ignore_conflicts=True,
+                            batch_size=500,
+                        )
+                except Exception as e:
+                    # Defaults seed hatası personel eklemeyi bozmasın
+                    logger.warning(
+                        "[PartnerStaffViewSet CREATE] default services seed failed staff_id=%s err=%s",
+                        getattr(staff, "id", None),
+                        e,
+                    )
                 
                 # Serializer ile response döndür
                 serializer = self.get_serializer(staff)
@@ -5966,7 +5995,33 @@ class StaffServiceViewSet(viewsets.ModelViewSet):
             staff_qs = staff_qs.filter(barbershop_id=barbershop_id)
         staff = staff_qs.order_by('-is_admin', '-id').first()
         if staff:
-            return StaffService.objects.filter(staff=staff).select_related('service', 'service__category')
+            qs = StaffService.objects.filter(staff=staff).select_related('service', 'service__category')
+            # Eğer hiç hizmet seçilmemişse: varsayılan olarak dükkanın tüm hizmetlerini seed et
+            # (personel eklenmiş ama hizmet set edilmemiş olabilir).
+            try:
+                if not qs.exists():
+                    shop_services = list(
+                        Service.objects.filter(barbershop=staff.barbershop, is_active=True).only("id")
+                    )
+                    if shop_services:
+                        StaffService.objects.bulk_create(
+                            [
+                                StaffService(
+                                    staff=staff,
+                                    service=svc,
+                                    price=None,
+                                    duration_minutes=None,
+                                    is_active=True,
+                                )
+                                for svc in shop_services
+                            ],
+                            ignore_conflicts=True,
+                            batch_size=500,
+                        )
+                        qs = StaffService.objects.filter(staff=staff).select_related('service', 'service__category')
+            except Exception:
+                pass
+            return qs
         return StaffService.objects.none()
     
     def create(self, request, *args, **kwargs):
@@ -6071,15 +6126,26 @@ class StaffServiceViewSet(viewsets.ModelViewSet):
             if svc.barbershop_id != staff.barbershop_id:
                 continue
             use_shop = bool(it.get('use_shop_price', False))
-            price = svc.price if use_shop else it.get('price', svc.price)
+            # Varsayılan/miras: use_shop_price=true ise DB'de NULL tut → dükkan fiyatını devral
+            price = None if use_shop else it.get('price', None)
+            duration_minutes = None if use_shop else it.get('duration_minutes', None)
             # Upsert
             ss = StaffService.objects.filter(staff=staff, service=svc).order_by('created_at','id')
             if ss.exists():
                 inst = ss.first(); ss.exclude(id=inst.id).delete()
-                inst.price = price; inst.is_active = True; inst.save(update_fields=['price','is_active','updated_at'])
+                inst.price = price
+                inst.duration_minutes = duration_minutes
+                inst.is_active = True
+                inst.save(update_fields=['price', 'duration_minutes', 'is_active', 'updated_at'])
                 updated.append(inst.id)
             else:
-                inst = StaffService.objects.create(staff=staff, service=svc, price=price, duration_minutes=svc.duration or 30, is_active=True)
+                inst = StaffService.objects.create(
+                    staff=staff,
+                    service=svc,
+                    price=price,
+                    duration_minutes=duration_minutes,
+                    is_active=True,
+                )
                 updated.append(inst.id)
         return Response({"detail": "ok", "updated_count": len(updated)})
 

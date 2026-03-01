@@ -65,6 +65,31 @@ def _active_breakdown(*, start_date: date, end_date: date, app_type: str = "main
     }
 
 
+def _net_active_identifiers(*, start_date: date, end_date: date, app_type: str = "main") -> set[str]:
+    """Return a stable set of identifiers to compare activity between windows.
+
+    - Authenticated users: `u:<user_id>`
+    - Guest-only devices: `g:<device_id>` (devices that did not have auth activity in the same window)
+    """
+    if not app_type:
+        app_type = "main"
+
+    qs = UserActivityLog.objects.filter(
+        activity_date__gte=start_date,
+        activity_date__lte=end_date,
+        app_type=app_type,
+    )
+    auth_user_ids = set(qs.filter(user__isnull=False).values_list("user_id", flat=True).distinct())
+    auth_device_ids = set(qs.filter(user__isnull=False).values_list("device_id", flat=True).distinct())
+    guest_device_ids = set(qs.filter(user__isnull=True).values_list("device_id", flat=True).distinct())
+    guest_only_device_ids = guest_device_ids - auth_device_ids
+
+    out: set[str] = set()
+    out.update({f"u:{uid}" for uid in auth_user_ids if uid})
+    out.update({f"g:{did}" for did in guest_only_device_ids if did})
+    return out
+
+
 def _usage_stats(now, today, week_start_date, month_ago):
     """Analytics tablolarından kullanım metrikleri: harita yükleme, uygulama açılma, salon görüntülenmesi, en çok kullanılan özellikler/ekranlar.
     week_start_date: son 7 günün ilk günü (today - 6) için date."""
@@ -733,30 +758,7 @@ def admin_dashboard_view(request):
         monthly_avg_logins = 0.0
     
     # En sık giriş yapan kullanıcılar (son 30 gün)
-    try:
-        top_frequent_users_raw = UserActivityLog.objects.filter(
-            activity_date__gte=month_ago,
-            activity_date__lte=today,
-            app_type='main',
-            user__isnull=False
-        ).values('user', 'user__email', 'user__full_name').annotate(
-            total_logins=Sum('login_count'),
-            days_active=Count('activity_date', distinct=True)
-        ).order_by('-total_logins')[:10]
-        
-        # Ortalama giriş/gün hesapla
-        top_frequent_users = []
-        for item in top_frequent_users_raw:
-            avg_per_day = round(item['total_logins'] / item['days_active'], 1) if item['days_active'] > 0 else 0
-            top_frequent_users.append({
-                'user__email': item['user__email'],
-                'user__full_name': item['user__full_name'],
-                'total_logins': item['total_logins'],
-                'days_active': item['days_active'],
-                'avg_per_day': avg_per_day,
-            })
-    except Exception:
-        top_frequent_users = []
+    # Not: "en aktif kullanıcılar" listelerini dashboard'dan kaldırıyoruz (istek üzerine).
     
     # ==================== RETENTION VE CHURN METRİKLERİ (PROFESYONEL) ====================
     
@@ -810,36 +812,40 @@ def admin_dashboard_view(request):
         users_registered_30_days_ago = 0
         active_from_30_days_ago = 0
     
-    # Monthly Churn Rate (Son 30 günde aktif olan ama son 7 günde hiç giriş yapmayan - Industry Standard)
+    # Monthly Churn Rate (Son 30 gün vs önceki 30 gün karşılaştırmalı, tutarlı tanım)
     try:
-        # Son 30 günde aktif olan kullanıcılar (ActivityLog + last_login fallback)
-        active_in_last_30_days = UserActivityLog.objects.filter(
-            activity_date__gte=month_ago,
-            activity_date__lte=today,
-            app_type='main',
-            user__isnull=False
-        ).values('user').distinct().count()
+        # 30 günlük pencereleri tam ve tutarlı al:
+        # - current_30: [today-29, today]
+        # - prev_30:    [today-59, today-30]
+        current_30_start = today - timedelta(days=29)
+        prev_30_end = current_30_start - timedelta(days=1)
+        prev_30_start = prev_30_end - timedelta(days=29)
 
-        active_in_last_7_days = UserActivityLog.objects.filter(
-            activity_date__gte=week_start_date,
-            activity_date__lte=today,
-            app_type='main',
-            user__isnull=False
-        ).values('user').distinct().count()
+        prev_net = _net_active_identifiers(start_date=prev_30_start, end_date=prev_30_end, app_type="main")
+        curr_net = _net_active_identifiers(start_date=current_30_start, end_date=today, app_type="main")
 
-        # Fallback: UserActivityLog boşsa last_login kullan
-        if active_in_last_30_days == 0:
-            active_in_last_30_days = app_users_qs.filter(last_login__gte=month_start).count()
-            active_in_last_7_days = app_users_qs.filter(last_login__gte=week_start).count()
+        # Fallback: ActivityLog hiç yoksa (örn. tracking yeni devreye girdi) sadece authenticated kullanıcılar için last_login bazlı churn hesapla
+        if not prev_net and not curr_net:
+            prev_auth = set(
+                app_users_qs.filter(
+                    last_login__date__gte=prev_30_start,
+                    last_login__date__lte=prev_30_end,
+                ).values_list("id", flat=True)
+            )
+            curr_auth = set(
+                app_users_qs.filter(
+                    last_login__date__gte=current_30_start,
+                    last_login__date__lte=today,
+                ).values_list("id", flat=True)
+            )
+            prev_net = {f"u:{uid}" for uid in prev_auth if uid}
+            curr_net = {f"u:{uid}" for uid in curr_auth if uid}
 
-        # Churned = Son 30 günde aktif ama son 7 günde değil
-        churned_users = max(active_in_last_30_days - active_in_last_7_days, 0)
-
-        churn_rate = calculate_percentage(churned_users, active_in_last_30_days) if active_in_last_30_days > 0 else 0.0
+        churned_users = len(prev_net - curr_net) if prev_net else 0
+        churn_rate = calculate_percentage(churned_users, len(prev_net)) if prev_net else 0.0
     except Exception:
         churn_rate = 0.0
         churned_users = 0
-        active_in_last_30_days = 0
     
     # Activation Rate (İlk 24 saat içinde giriş yapan kullanıcılar - Onboarding başarısı)
     try:
@@ -919,12 +925,7 @@ def admin_dashboard_view(request):
     avg_reviews_per_user = round(total_reviews / users_with_reviews, 2) if users_with_reviews > 0 else 0
     
     # ==================== TOP KULLANICILAR ====================
-    
-    # En aktif uygulama kullanıcıları (son girişe göre)
-    top_active_users = app_users_qs.filter(
-        is_active=True,
-        last_login__isnull=False
-    ).order_by('-last_login')[:10].values('email', 'full_name', 'last_login', 'created_at')
+    # İstek üzerine kaldırıldı.
     
     # ==================== HAFTALIK TREND ====================
     
@@ -967,6 +968,64 @@ def admin_dashboard_view(request):
 
     # ==================== KULLANIM / ANALYTICS (Harita, uygulama açılma, özellik/ekran) ====================
     usage_stats = _usage_stats(now, today, week_start_date, month_ago)
+
+    # Uygulamaya giriş sayısı (UserActivityLog.login_count) — "aktif kullanıcı x kaç kere girmişler"
+    try:
+        def _sum_logins(start_d: date, end_d: date) -> dict:
+            agg = UserActivityLog.objects.filter(
+                activity_date__gte=start_d,
+                activity_date__lte=end_d,
+                app_type="main",
+            ).aggregate(
+                total=Sum("login_count"),
+                auth_total=Sum("login_count", filter=Q(user__isnull=False)),
+                guest_total=Sum("login_count", filter=Q(user__isnull=True)),
+            )
+            return {
+                "total": int(agg.get("total") or 0),
+                "auth_total": int(agg.get("auth_total") or 0),
+                "guest_total": int(agg.get("guest_total") or 0),
+            }
+
+        daily_logins = _sum_logins(today, today)
+        weekly_logins = _sum_logins(week_start_date, today)
+        monthly_logins = _sum_logins(month_ago, today)
+
+        usage_stats["app_logins_today"] = daily_logins["total"]
+        usage_stats["app_logins_week"] = weekly_logins["total"]
+        usage_stats["app_logins_month"] = monthly_logins["total"]
+
+        usage_stats["app_logins_today_per_active"] = round(daily_logins["total"] / daily_active_net, 2) if daily_active_net else 0.0
+        usage_stats["app_logins_week_per_active"] = round(weekly_logins["total"] / weekly_active_net, 2) if weekly_active_net else 0.0
+        usage_stats["app_logins_month_per_active"] = round(monthly_logins["total"] / monthly_active_net, 2) if monthly_active_net else 0.0
+    except Exception:
+        usage_stats.setdefault("app_logins_today", 0)
+        usage_stats.setdefault("app_logins_week", 0)
+        usage_stats.setdefault("app_logins_month", 0)
+        usage_stats.setdefault("app_logins_today_per_active", 0.0)
+        usage_stats.setdefault("app_logins_week_per_active", 0.0)
+        usage_stats.setdefault("app_logins_month_per_active", 0.0)
+
+    # Ek: oturum kalitesi (UserSession) — ortalama oturum süresi ve ekran/oturum
+    try:
+        from app.analytics.models import UserSession
+        avg_week = UserSession.objects.filter(app_type="main", start_time__gte=week_start).aggregate(
+            avg_duration=Avg("duration"),
+            avg_screens=Avg("screen_count"),
+        )
+        avg_month = UserSession.objects.filter(app_type="main", start_time__gte=month_start).aggregate(
+            avg_duration=Avg("duration"),
+            avg_screens=Avg("screen_count"),
+        )
+        usage_stats["avg_session_minutes_week"] = round(((avg_week.get("avg_duration") or 0.0) / 60.0), 1)
+        usage_stats["avg_session_minutes_month"] = round(((avg_month.get("avg_duration") or 0.0) / 60.0), 1)
+        usage_stats["avg_screens_per_session_week"] = round((avg_week.get("avg_screens") or 0.0), 1)
+        usage_stats["avg_screens_per_session_month"] = round((avg_month.get("avg_screens") or 0.0), 1)
+    except Exception:
+        usage_stats.setdefault("avg_session_minutes_week", 0.0)
+        usage_stats.setdefault("avg_session_minutes_month", 0.0)
+        usage_stats.setdefault("avg_screens_per_session_week", 0.0)
+        usage_stats.setdefault("avg_screens_per_session_month", 0.0)
     
     # ==================== VERSİYON YÖNETİMİ ====================
     try:
@@ -1083,13 +1142,10 @@ def admin_dashboard_view(request):
                 'weekly_active_trend': weekly_active_trend,
                 'max_weekly_active': max_weekly_active,
                 'has_weekly_active_trend': any(w['count'] > 0 for w in weekly_active_trend),
-                # Top kullanıcılar
-                'top_active_users': list(top_active_users),
                 # Giriş sıklığı metrikleri
                 'daily_login_frequency': round(daily_login_frequency, 1),
                 'weekly_avg_logins': round(weekly_avg_logins, 1),
                 'monthly_avg_logins': round(monthly_avg_logins, 1),
-                'top_frequent_users': list(top_frequent_users),
             },
             'barbershops': {
                 'total': total_barbershops,

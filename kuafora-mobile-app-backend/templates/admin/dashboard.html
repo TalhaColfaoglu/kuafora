@@ -934,6 +934,64 @@
         <p class="stat-value">{{ stats.usage.app_opens_month|floatformat:0 }}</p>
         <div class="stat-subtitle">Son 30 günde app_open</div>
     </div>
+
+    <div class="stat-card success">
+        <div class="stat-card-header">
+            <h3>Toplam giriş (bugün)</h3>
+            <div class="stat-card-icon">🔢</div>
+        </div>
+        <p class="stat-value">{{ stats.usage.app_logins_today|floatformat:0 }}</p>
+        <div class="stat-subtitle">Net aktif başına {{ stats.usage.app_logins_today_per_active|floatformat:2 }} giriş</div>
+    </div>
+    <div class="stat-card success">
+        <div class="stat-card-header">
+            <h3>Toplam giriş (bu hafta)</h3>
+            <div class="stat-card-icon">📆</div>
+        </div>
+        <p class="stat-value">{{ stats.usage.app_logins_week|floatformat:0 }}</p>
+        <div class="stat-subtitle">Net aktif başına {{ stats.usage.app_logins_week_per_active|floatformat:2 }} giriş</div>
+    </div>
+    <div class="stat-card success">
+        <div class="stat-card-header">
+            <h3>Toplam giriş (bu ay)</h3>
+            <div class="stat-card-icon">🧮</div>
+        </div>
+        <p class="stat-value">{{ stats.usage.app_logins_month|floatformat:0 }}</p>
+        <div class="stat-subtitle">Net aktif başına {{ stats.usage.app_logins_month_per_active|floatformat:2 }} giriş</div>
+    </div>
+
+    <div class="stat-card info">
+        <div class="stat-card-header">
+            <h3>Ort. oturum süresi (7 gün)</h3>
+            <div class="stat-card-icon">⏱️</div>
+        </div>
+        <p class="stat-value">{{ stats.usage.avg_session_minutes_week|floatformat:1 }} dk</p>
+        <div class="stat-subtitle">Son 7 gün (UserSession duration)</div>
+    </div>
+    <div class="stat-card info">
+        <div class="stat-card-header">
+            <h3>Ort. oturum süresi (30 gün)</h3>
+            <div class="stat-card-icon">⏱️</div>
+        </div>
+        <p class="stat-value">{{ stats.usage.avg_session_minutes_month|floatformat:1 }} dk</p>
+        <div class="stat-subtitle">Son 30 gün (UserSession duration)</div>
+    </div>
+    <div class="stat-card info">
+        <div class="stat-card-header">
+            <h3>Ort. ekran / oturum (7 gün)</h3>
+            <div class="stat-card-icon">🧭</div>
+        </div>
+        <p class="stat-value">{{ stats.usage.avg_screens_per_session_week|floatformat:1 }}</p>
+        <div class="stat-subtitle">Son 7 gün (screen_count / session)</div>
+    </div>
+    <div class="stat-card info">
+        <div class="stat-card-header">
+            <h3>Ort. ekran / oturum (30 gün)</h3>
+            <div class="stat-card-icon">🧭</div>
+        </div>
+        <p class="stat-value">{{ stats.usage.avg_screens_per_session_month|floatformat:1 }}</p>
+        <div class="stat-subtitle">Son 30 gün (screen_count / session)</div>
+    </div>
     <div class="stat-card purple">
         <div class="stat-card-header">
             <h3>Toplam salon görüntülenmesi (bugün)</h3>
@@ -1306,7 +1364,7 @@
             <div class="stat-card-icon">📉</div>
         </div>
         <p class="stat-value">{{ stats.users.churn_rate|floatformat:1 }}%</p>
-        <div class="stat-subtitle">Son 30 günde aktif ama son 7 günde giriş yapmayan</div>
+        <div class="stat-subtitle">Önceki 30 günde aktif olup son 30 günde hiç aktif olmayan</div>
         <div class="stat-subtitle" style="color: #D97706; font-size: 12px; margin-top: 4px; font-weight: 600;">
             {% if stats.users.churned_users > 0 %}
             {{ stats.users.churned_users }} kullanıcı churn oldu
@@ -1481,55 +1539,6 @@
     <div class="distribution-item">
         <span class="distribution-label">🏙️ {{ item.city }}</span>
         <span class="distribution-value">{{ item.count|floatformat:0 }} kullanıcı</span>
-    </div>
-    {% endfor %}
-</div>
-{% endif %}
-
-{% if stats.users.top_active_users %}
-<h2 class="section-title">
-    <span>⭐</span>
-    <span>En Aktif Kullanıcılar (Son Giriş)</span>
-</h2>
-<div class="top-users-list">
-    {% for user in stats.users.top_active_users %}
-    <div class="user-item">
-        <div class="user-info">
-            <div class="user-email">{{ user.email }}</div>
-            {% if user.full_name %}
-            <div class="user-name">{{ user.full_name }}</div>
-            {% endif %}
-            <div class="user-meta">
-                <span>Son giriş: {{ user.last_login|date:"d.m.Y H:i"|default:"Hiç giriş yapmamış" }}</span>
-                {% if user.created_at %}
-                <span>• Kayıt: {{ user.created_at|date:"d.m.Y" }}</span>
-                {% endif %}
-            </div>
-        </div>
-    </div>
-    {% endfor %}
-</div>
-{% endif %}
-
-{% if stats.users.top_frequent_users %}
-<h2 class="section-title">
-    <span>🔥</span>
-    <span>En Sık Giriş Yapan Kullanıcılar (Son 30 Gün)</span>
-</h2>
-<div class="top-users-list">
-    {% for user_data in stats.users.top_frequent_users %}
-    <div class="user-item">
-        <div class="user-info">
-            <div class="user-email">{{ user_data.user__email }}</div>
-            {% if user_data.user__full_name %}
-            <div class="user-name">{{ user_data.user__full_name }}</div>
-            {% endif %}
-            <div class="user-meta">
-                <span class="badge-success">{{ user_data.total_logins }} giriş</span>
-                <span>• {{ user_data.days_active }} gün aktif</span>
-                <span>• Ortalama: {{ user_data.avg_per_day|floatformat:1 }} giriş/gün</span>
-            </div>
-        </div>
     </div>
     {% endfor %}
 </div>

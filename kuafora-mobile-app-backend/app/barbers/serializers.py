@@ -554,6 +554,16 @@ class StaffSerializer(serializers.ModelSerializer):
         schedule = {d: {"start": -1, "end": -1} for d in WEEK_DAYS}
         today = timezone.localdate()
 
+        # Shop saatlerini hazırla (personel saatleri yoksa veya boş bırakıldıysa miras alınır)
+        shop_hours_by_day = {}
+        try:
+            for sh in ShopWorkingHours.objects.filter(barbershop_id=obj.barbershop_id):
+                day_code = (getattr(sh, "day_of_week", "") or "").lower()
+                if day_code:
+                    shop_hours_by_day[day_code] = sh
+        except Exception:
+            shop_hours_by_day = {}
+
         # 1. StaffWorkingHours (yeni model) — bugün geçerli segmentleri kullan
         new_hours = obj.staff_working_hours.filter(
             valid_from__lte=today
@@ -575,11 +585,20 @@ class StaffSerializer(serializers.ModelSerializer):
                     continue
                 if h.is_closed:
                     schedule[day_code] = {"start": -1, "end": -1}
-                elif h.start_time:
-                    schedule[day_code] = {
-                        "start": h.start_time.strftime("%H:%M"),
-                        "end": h.end_time.strftime("%H:%M") if h.end_time else "18:00"
-                    }
+                else:
+                    # Staff saatleri verilmişse onları kullan; boşsa dükkan saatlerini devral
+                    if h.start_time and h.end_time:
+                        schedule[day_code] = {
+                            "start": h.start_time.strftime("%H:%M"),
+                            "end": h.end_time.strftime("%H:%M"),
+                        }
+                    else:
+                        sh = shop_hours_by_day.get(day_code)
+                        if sh and not getattr(sh, "is_closed", False) and sh.start_time and sh.end_time:
+                            schedule[day_code] = {
+                                "start": sh.start_time.strftime("%H:%M"),
+                                "end": sh.end_time.strftime("%H:%M"),
+                            }
             return schedule
 
         # 2. Fallback: WorkSchedule (eski model)
@@ -592,6 +611,17 @@ class StaffSerializer(serializers.ModelSerializer):
                         "start": h.start_time.strftime("%H:%M"),
                         "end": h.end_time.strftime("%H:%M")
                     }
+
+        # 3. Hiç personel saati yoksa: varsayılan olarak dükkan saatleri
+        for day_code in WEEK_DAYS:
+            if schedule[day_code]["start"] != -1:
+                continue
+            sh = shop_hours_by_day.get(day_code)
+            if sh and not getattr(sh, "is_closed", False) and sh.start_time and sh.end_time:
+                schedule[day_code] = {
+                    "start": sh.start_time.strftime("%H:%M"),
+                    "end": sh.end_time.strftime("%H:%M"),
+                }
         return schedule
 
     def get_user_full_name(self, obj):
