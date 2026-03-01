@@ -9,7 +9,6 @@ from app.barbers.models import Favorite, Barbershop, Review, Staff
 from app.barbers.models import SpecialMessage
 from app.campaigns.models import Campaign
 from app.subscriptions.models import Subscription
-from app.appointments.models import NotificationEvent
 
 User = get_user_model()
 
@@ -103,28 +102,8 @@ def notify_favoriters_about_campaign(barbershop: Barbershop, campaign: Campaign)
         title=title,
         body=body,
         type_="promo",
-        reference_id=str(campaign.id),
+        reference_id=f"campaign:{campaign.id}|shop:{barbershop.id}",
     )
-
-    # Enqueue real push for delivery worker.
-    try:
-        NotificationEvent.objects.create(
-            topic="favorite_campaign",
-            payload={
-                "user_ids": [u.id for u in users if getattr(u, "id", None)],
-                "title": title,
-                "body": body,
-                "data": {
-                    "type": "promo",
-                    "campaign_id": str(campaign.id),
-                    "shop_id": str(barbershop.id),
-                },
-            },
-        )
-    except Exception:
-        # Never break the main flow.
-        pass
-
     return created
 
 
@@ -150,26 +129,8 @@ def notify_favoriters_about_announcement(barbershop: Barbershop, message: Specia
         title=title,
         body=body,
         type_="system",
-        reference_id=str(message.id),
+        reference_id=f"announcement:{message.id}|shop:{barbershop.id}",
     )
-
-    try:
-        NotificationEvent.objects.create(
-            topic="favorite_announcement",
-            payload={
-                "user_ids": [u.id for u in users if getattr(u, "id", None)],
-                "title": title,
-                "body": body,
-                "data": {
-                    "type": "announcement",
-                    "announcement_id": str(message.id),
-                    "shop_id": str(barbershop.id),
-                },
-            },
-        )
-    except Exception:
-        pass
-
     return created
 
 

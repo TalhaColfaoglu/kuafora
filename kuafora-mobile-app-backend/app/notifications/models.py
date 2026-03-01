@@ -45,45 +45,6 @@ class Notification(models.Model):
         return f"{self.user} - {self.title}"
 
 
-class DevicePushToken(models.Model):
-    """
-    Stores device tokens for sending real push notifications via FCM/APNs.
-    Token lifecycle is managed by the mobile apps.
-    """
-
-    class Platform(models.TextChoices):
-        ANDROID = "android", "Android"
-        IOS = "ios", "iOS"
-        WEB = "web", "Web"
-
-    user = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
-        related_name="push_tokens",
-    )
-    token = models.CharField(max_length=255, db_index=True)
-    platform = models.CharField(max_length=12, choices=Platform.choices)
-    device_id = models.CharField(max_length=120, blank=True, default="", help_text="Client-generated stable device id (optional).")
-    app_version = models.CharField(max_length=40, blank=True, default="")
-    is_active = models.BooleanField(default=True, db_index=True)
-    last_seen_at = models.DateTimeField(auto_now=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        verbose_name = "Push Token"
-        verbose_name_plural = "Push Tokens"
-        indexes = [
-            models.Index(fields=["user", "is_active"]),
-            models.Index(fields=["token", "is_active"]),
-        ]
-        constraints = [
-            models.UniqueConstraint(fields=["user", "token"], name="unique_user_token"),
-        ]
-
-    def __str__(self) -> str:  # pragma: no cover
-        return f"{self.user_id} {self.platform} {self.token[:12]}..."
-
-
 class BroadcastNotification(models.Model):
     """
     Admin panelinden gönderilen, çoklu kullanıcıya giden toplu bildirimler.

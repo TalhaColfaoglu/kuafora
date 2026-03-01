@@ -23,13 +23,6 @@ SECRET_KEY = env("SECRET_KEY", default="change-me")
 # Must be a Fernet key (44 chars, urlsafe base64). Generate: python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
 # Docker: add to env/backend.env (kuafora/env/backend.env), NOT to this repo's .env. Then: docker compose restart backend
 PHONE_ENCRYPTION_KEY = (env("PHONE_ENCRYPTION_KEY", default="") or "").strip().strip('"').strip("'")
-
-# ===== Push notifications (FCM) =====
-# Provide ONE of:
-# - FCM_SERVICE_ACCOUNT_JSON: service account json content (recommended)
-# - FCM_SERVICE_ACCOUNT_PATH: path to service account json file
-FCM_SERVICE_ACCOUNT_JSON = (env("FCM_SERVICE_ACCOUNT_JSON", default="") or "").strip()
-FCM_SERVICE_ACCOUNT_PATH = (env("FCM_SERVICE_ACCOUNT_PATH", default="") or "").strip()
 # Extend ALLOWED_HOSTS with safe defaults to avoid DisallowedHost in EC2 and container
 _allowed = set(env.list("ALLOWED_HOSTS", default=[]))
 _allowed.update({"*", "0.0.0.0", "localhost", "127.0.0.1", ".compute.amazonaws.com"})
