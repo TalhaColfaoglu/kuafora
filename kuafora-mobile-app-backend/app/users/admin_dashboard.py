@@ -711,7 +711,12 @@ def admin_dashboard_view(request):
         activity_date__lte=month_end_date,
         app_type='main',
     ).values('activity_date').annotate(count=Count('device_id', distinct=True)).order_by('activity_date')
-    activity_by_day = {item['activity_date']: item['count'] for item in activity_month}
+    activity_by_day = {}
+    for item in activity_month:
+        ad = item['activity_date']
+        if hasattr(ad, 'date'):
+            ad = ad.date()
+        activity_by_day[ad] = item['count']
     reg_month = app_users_qs.filter(
         created_at__date__gte=month_start_date,
         created_at__date__lte=month_end_date,
