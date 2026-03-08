@@ -173,22 +173,18 @@ class BarbershopViewSet(viewsets.ReadOnlyModelViewSet):
     def get_queryset(self):
         qs = super().get_queryset()
         
-        # Abonelik filtreleme: Sadece aktif aboneliği olanları göster (Ana uygulama için)
-        # Partner/Vitrin uygulaması include_inactive=true gönderebilir
+        # Liste filtreleme: Kayıt ve Kuafora'da görünmek her zaman ücretsiz.
+        # Abonelik şu an hiçbir erişimi kısıtlamaz; ileride sadece belirli özellikler paralı olacak.
         include_inactive = self.request.query_params.get("include_inactive", "").lower() == "true"
         
         if not include_inactive:
-            # Aktif abonelik durumları: trial, active, lifetime, grace_period
-            # Aboneliği olmayan veya suspended/cancelled olanları hariç tut
-            # Artık sadece aktif subscription'ı olanlar gösterilecek
-            # Banlı kuaförleri de filtrele (is_verified=False olanlar)
-            # İsimsiz kuaförleri de filtrele
+            # Banlı kuaförleri filtrele, admin onaylı ve isimli olanları göster
             qs = qs.filter(
-                subscription__status__in=['trial', 'active', 'lifetime', 'grace_period'],
-                is_verified=True,  # Banlı kuaförleri filtrele
-                is_approved=True,  # Admin onayı - sadece onaylanmış kuaförler ana uygulamada görünür
-                name__isnull=False  # İsimsiz kuaförleri filtrele
-            ).exclude(name='')  # Boş string isimleri de filtrele
+                is_verified=True,
+                is_approved=True,
+                name__isnull=False
+            ).exclude(name='')
+            qs = qs.annotate(_staff_count=Count('staff')).filter(_staff_count__gt=0)
         
         # Viewport filtreleme (Harita optimizasyonu)
         try:
@@ -216,27 +212,19 @@ class BarbershopViewSet(viewsets.ReadOnlyModelViewSet):
         return qs
 
     def get_object(self):
-        """Override to check subscription status for detail view"""
+        """Override to check ban and name for detail view (subscription does not gate access)."""
         obj = super().get_object()
         
-        # Ana uygulama için subscription kontrolü (detail view)
+        # Detail: Abonelik erişimi kısıtlamaz; sadece ban ve isim kontrolü
         include_inactive = self.request.query_params.get("include_inactive", "").lower() == "true"
         
         if not include_inactive:
-            # İsim kontrolü - İsimsiz kuaförleri engelle
             if not obj.name or obj.name.strip() == '':
                 from rest_framework.exceptions import NotFound
                 raise NotFound("Barbershop not found")
-            
-            # Ban kontrolü - Banlı kuaförleri engelle
             if not obj.is_verified:
                 from rest_framework.exceptions import NotFound
                 raise NotFound("Barbershop not found")
-            
-            # Aktif subscription kontrolü
-            if not hasattr(obj, 'subscription') or obj.subscription.status not in ['trial', 'active', 'lifetime', 'grace_period']:
-                from rest_framework.exceptions import NotFound
-                raise NotFound("Barbershop not found or subscription inactive")
         
         return obj
 
@@ -308,7 +296,7 @@ class BarbershopViewSet(viewsets.ReadOnlyModelViewSet):
         - Şehirde hiç kuaför yoksa şehir dönmez.
         - Şehir içinde ilçede hiç kuaför yoksa o ilçe dönmez.
         Not: Bu endpoint, BarbershopViewSet'in ana listeleme mantığıyla aynı "listelenebilir" kriterlerini uygular
-        (aktif subscription + is_verified + isim dolu). Böylece UI'da sadece seçilebilir seçenekler görünür.
+        (is_verified + is_approved + isim dolu). Böylece UI'da sadece seçilebilir seçenekler görünür.
         Pagination disabled: Returns a dictionary, not a list.
         """
         # Disable pagination for this action (returns dict, not list)
@@ -322,9 +310,8 @@ class BarbershopViewSet(viewsets.ReadOnlyModelViewSet):
             if not include_inactive:
                 qs = (
                     qs.filter(
-                        subscription__status__in=["trial", "active", "lifetime", "grace_period"],
                         is_verified=True,
-                        is_approved=True,  # Admin onayı - sadece onaylanmış kuaförler ana uygulamada görünür
+                        is_approved=True,
                         name__isnull=False,
                     )
                     .exclude(name="")
@@ -1331,16 +1318,14 @@ class LastViewedViewSet(mixins.ListModelMixin, mixins.CreateModelMixin, viewsets
         if getattr(self, "swagger_fake_view", False) or not self.request or self.request.user.is_anonymous:
             return LastViewed.objects.none()
         # return last 7 viewed for current user, most recent first
-        active_status = ['trial', 'active', 'lifetime', 'grace_period']
         return (
             LastViewed.objects
-            .select_related("barbershop", "barbershop__subscription")
+            .select_related("barbershop")
             .filter(
                 user=self.request.user,
                 barbershop__is_verified=True,
-                barbershop__is_approved=True,  # Admin onayı - sadece onaylanmış kuaförler ana uygulamada görünür
+                barbershop__is_approved=True,
                 barbershop__name__isnull=False,
-                barbershop__subscription__status__in=active_status,
             )
             .exclude(barbershop__name='')
             .order_by('-viewed_at')[:7]
@@ -2505,12 +2490,11 @@ class FavoriteListView(generics.ListAPIView):
         return (
             Barbershop.objects.filter(
                 favorited_by__user=self.request.user,
-                name__isnull=False,  # İsimsiz kuaförleri filtrele
-                is_verified=True,  # Banlı kuaförleri filtrele
-                is_approved=True,  # Admin onayı - sadece onaylanmış kuaförler ana uygulamada görünür
-                subscription__status__in=['trial', 'active', 'lifetime', 'grace_period']  # Aktif aboneliği olanları göster
+                name__isnull=False,
+                is_verified=True,
+                is_approved=True,
             )
-            .exclude(name='')  # Boş string isimleri de filtrele
+            .exclude(name='')
             .order_by("-favorited_by__created_at")
         )
 
@@ -2553,10 +2537,8 @@ class FavoriteToggleView(generics.GenericAPIView):
         except Barbershop.DoesNotExist:
             return Response({"error": "Barbershop not found"}, status=404)
         
-        # Banlı veya pasif abonelikli kuaförler için favori işlemini engelle
-        sub_status = getattr(getattr(barbershop, "subscription", None), "status", None)
-        is_active_sub = sub_status in ['trial', 'active', 'lifetime', 'grace_period']
-        if not barbershop.is_verified or not is_active_sub:
+        # Sadece banlı kuaförler favori olamaz; abonelik şu an önemsiz
+        if not barbershop.is_verified:
             return Response({"error": "Barbershop not available"}, status=404)
         
         favorite, created = Favorite.objects.get_or_create(

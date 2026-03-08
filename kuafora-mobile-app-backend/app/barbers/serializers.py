@@ -421,11 +421,9 @@ class BarbershopSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
-        # Banlı veya pasif abonelikli kuaförler için favorites_count'u sıfırla
+        # Sadece banlı kuaförlerde favorites_count sıfır; abonelik şu an önemsiz
         try:
-            status = getattr(instance, "subscription", None)
-            is_active_sub = status and getattr(status, "status", None) in ['trial', 'active', 'lifetime', 'grace_period']
-            if (not getattr(instance, "is_verified", True)) or (not is_active_sub):
+            if not getattr(instance, "is_verified", True):
                 data["favorites_count"] = 0
         except Exception:
             data["favorites_count"] = 0
@@ -886,9 +884,7 @@ class BarbershopWithFavoriteSerializer(serializers.ModelSerializer):
         data = super().to_representation(instance)
         _normalize_barbershop_image_urls(data, instance)
         try:
-            status = getattr(instance, "subscription", None)
-            is_active_sub = status and getattr(status, "status", None) in ['trial', 'active', 'lifetime', 'grace_period']
-            if (not getattr(instance, "is_verified", True)) or (not is_active_sub):
+            if not getattr(instance, "is_verified", True):
                 data["favorites_count"] = 0
         except Exception:
             data["favorites_count"] = 0

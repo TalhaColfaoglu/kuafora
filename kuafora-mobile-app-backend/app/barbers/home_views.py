@@ -3,7 +3,7 @@ from rest_framework.response import Response
 from rest_framework import permissions
 from django.utils import timezone
 from datetime import timedelta
-from django.db.models import Q
+from django.db.models import Q, Count
 from django.core.cache import cache
 import hashlib
 import math
@@ -43,15 +43,14 @@ class HomeDashboardApi(APIView):
         categories = ShopCategory.objects.filter(is_active=True)
         cat_data = ShopCategorySerializer(categories, many=True).data
 
-        # Base query for shops - Sadece aktif subscription'ı olanlar, ismi olanlar ve banlı olmayanlar
-        # Performance: select_related ve prefetch_related ile optimize et
-        from app.subscriptions.models import Subscription
+        # Base query: Kayıt/görünmek ücretsiz; abonelik şu an listeyi kısıtlamaz
         shops_qs = Barbershop.objects.filter(
-            subscription__status__in=['trial', 'active', 'lifetime', 'grace_period'],
             name__isnull=False,
-            is_verified=True,  # Banlı kuaförleri filtrele
-            is_approved=True  # Admin onayı - sadece onaylanmış kuaförler ana uygulamada görünür
-        ).exclude(name='').select_related('subscription').prefetch_related('images', 'categories')
+            is_verified=True,
+            is_approved=True
+        ).exclude(name='').prefetch_related('images', 'categories')
+        # Ana uygulama: takımda en az bir personeli olan salonlar gösterilir
+        shops_qs = shops_qs.annotate(_staff_count=Count('staff')).filter(_staff_count__gt=0)
 
         if city:
             shops_qs = shops_qs.filter(city__icontains=city)
@@ -100,16 +99,16 @@ class HomeDashboardApi(APIView):
         newest_data = [serialize_shop(s) for s in newest]
         top_rated_data = [serialize_shop(s) for s in top_rated]
 
-        # 4. Campaigns - Sadece onaylı, aktif aboneliği olan ve banlı olmayan barbershop'ların kampanyaları (detay 404 önlemi)
-        from app.subscriptions.models import Subscription
+        # 4. Campaigns - Onaylı, en az bir personeli olan barbershop'ların kampanyaları
+        shop_ids_with_staff = Barbershop.objects.annotate(_sc=Count('staff')).filter(_sc__gt=0).values_list('id', flat=True)
         active_campaigns = Campaign.objects.filter(
             is_active=True,
             start_date__lte=today,
             end_date__gte=today,
-            barbershop__subscription__status__in=['trial', 'active', 'lifetime', 'grace_period'],
             barbershop__is_verified=True,
-            barbershop__is_approved=True,  # Sadece onaylı kuaförler; aksi halde detay isteği 404 döner
-            barbershop__name__isnull=False
+            barbershop__is_approved=True,
+            barbershop__name__isnull=False,
+            barbershop_id__in=shop_ids_with_staff
         ).exclude(barbershop__name='').select_related('barbershop')
         
         if city:
@@ -134,15 +133,15 @@ class HomeDashboardApi(APIView):
                 "image": img_url
             })
 
-        # 5. Announcements - Son 30 günün aktif duyuruları; sadece onaylı kuaförler (detay 404 önlemi)
+        # 5. Announcements - Son 30 günün aktif duyuruları; onaylı ve personeli olan kuaförler
         from .models import SpecialMessage
         thirty_days_ago = timezone.now() - timedelta(days=30)
         announcements_qs = SpecialMessage.objects.filter(
             is_active=True,
-            barbershop__subscription__status__in=['trial', 'active', 'lifetime', 'grace_period'],
             barbershop__is_verified=True,
-            barbershop__is_approved=True,  # Sadece onaylı kuaförler; aksi halde detay isteği 404 döner
+            barbershop__is_approved=True,
             barbershop__name__isnull=False,
+            barbershop_id__in=shop_ids_with_staff,
             created_at__gte=thirty_days_ago
         ).exclude(barbershop__name='').select_related('barbershop').order_by('-created_at')
         

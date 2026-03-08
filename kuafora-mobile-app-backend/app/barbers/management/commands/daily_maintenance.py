@@ -42,22 +42,26 @@ class Command(BaseCommand):
         else:
             self.stdout.write("  No expired automatic announcements found")
         
-        # 4. Status precompute (gelecek 30 gün)
-        self.stdout.write("4. Precomputing shop statuses...")
+        # 4. Takım sayısı 0 olan salonları sil (kimse giriş yapıp düzenleyemiyor)
+        self.stdout.write("4. Deleting barbershops with zero staff...")
+        call_command('delete_zero_staff_barbershops', verbosity=1)
+
+        # 5. Status precompute (gelecek 30 gün)
+        self.stdout.write("5. Precomputing shop statuses...")
         call_command('precompute_day_status', days=30, verbosity=0)
         
-        # 5. Duyurular (yaklaşan tatiller)
-        self.stdout.write("5. Checking for upcoming announcements...")
+        # 6. Duyurular (yaklaşan tatiller)
+        self.stdout.write("6. Checking for upcoming announcements...")
         call_command('announce_calendar', mode='upcoming', verbosity=0)
         
-        # 6. Bugünkü duyurular (00:01'de çalışacak)
+        # 7. Bugünkü duyurular (00:01'de çalışacak)
         current_time = timezone.now()
         if current_time.hour == 0 and current_time.minute < 5:  # Gece yarısından sonra 5 dakika içinde
-            self.stdout.write("6. Activating today's announcements...")
+            self.stdout.write("7. Activating today's announcements...")
             call_command('announce_calendar', mode='today', verbosity=0)
             
             # 1 hafta önce duyurularını aktif et
-            self.stdout.write("7. Activating 1-week-before announcements...")
+            self.stdout.write("8. Activating 1-week-before announcements...")
             one_week_from_now = now + datetime.timedelta(days=7)
             one_week_messages = SpecialMessage.objects.filter(
                 source='automatic',
@@ -68,6 +72,6 @@ class Command(BaseCommand):
             if activated_count > 0:
                 self.stdout.write(f"  Activated {activated_count} 1-week-before announcements")
         else:
-            self.stdout.write("6. Skipping today's announcements (not midnight)")
+            self.stdout.write("7. Skipping today's announcements (not midnight)")
         
         self.stdout.write(self.style.SUCCESS("Daily maintenance completed successfully"))

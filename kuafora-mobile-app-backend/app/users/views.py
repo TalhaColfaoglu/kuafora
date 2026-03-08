@@ -9,7 +9,9 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework_simplejwt.tokens import RefreshToken
+from django.db import transaction
 from django.db.models import Count
+from django.db.utils import IntegrityError
 from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiParameter
 from django.conf import settings
 from django.utils import timezone
@@ -230,12 +232,20 @@ class DeleteAccountView(generics.GenericAPIView):
     def _delete_account(self, request):
         user = request.user
         user_id = str(user.pk)
+        logger.info("[DeleteAccount] Request received for user_id=%s", user_id)
         try:
-            user.delete()
+            with transaction.atomic():
+                user.delete()
             logger.info("[DeleteAccount] User account permanently deleted: %s", user_id)
             return Response(
                 {"detail": "Hesabınız kalıcı olarak silindi."},
                 status=status.HTTP_200_OK,
+            )
+        except IntegrityError as e:
+            logger.warning("[DeleteAccount] IntegrityError for user %s: %s", user_id, e)
+            return Response(
+                {"detail": "Hesap silinemedi. İlişkili veriler nedeniyle işlem gerçekleştirilemiyor. Destek ile iletişime geçin."},
+                status=status.HTTP_400_BAD_REQUEST,
             )
         except Exception as e:
             logger.exception("[DeleteAccount] Failed to delete user %s: %s", user_id, e)

@@ -559,59 +559,190 @@ def admin_dashboard_view(request):
     
     # ==================== GRAFİKLER (OPTİMİZE EDİLMİŞ) ====================
     
-    # Son 7 günlük kayıt grafiği (database sorgusu ile)
+    # ---- 7 Günlük veriler ----
     registration_chart = []
     max_registration_count = 0
-    
-    # Tek sorgu ile tüm günlerin kayıt sayılarını al (sadece uygulama kullanıcıları)
-    registration_data = app_users_qs.filter(
+    registration_data_7 = app_users_qs.filter(
         created_at__gte=timezone.make_aware(datetime.combine(today - timedelta(days=6), datetime.min.time()))
-    ).annotate(
-        date=TruncDate('created_at')
-    ).values('date').annotate(
-        count=Count('id')
-    ).order_by('date')
-    
-    # Dictionary'ye çevir (hızlı erişim için)
-    registration_dict = {item['date']: item['count'] for item in registration_data}
-    
+    ).annotate(date=TruncDate('created_at')).values('date').annotate(count=Count('id')).order_by('date')
+    registration_dict_7 = {item['date']: item['count'] for item in registration_data_7}
     for i in range(7):
-        day = today - timedelta(days=6-i)
-        count = registration_dict.get(day, 0)
+        day = today - timedelta(days=6 - i)
+        count = registration_dict_7.get(day, 0)
         if count > max_registration_count:
             max_registration_count = count
-        registration_chart.append({
-            'date': day.strftime('%d.%m'),
-            'count': count
-        })
-    
-    # Son 30 günlük aktif kullanıcı grafiği (benzersiz cihaz bazlı)
+        registration_chart.append({'date': day.strftime('%d.%m'), 'count': count})
+
+    # 7 günlük aktif kullanıcı
+    active_chart_7d = []
+    max_active_7d = 0
+    activity_7d = UserActivityLog.objects.filter(
+        activity_date__gte=today - timedelta(days=6),
+        activity_date__lte=today,
+        app_type='main'
+    ).values('activity_date').annotate(count=Count('device_id', distinct=True)).order_by('activity_date')
+    activity_dict_7d = {item['activity_date']: item['count'] for item in activity_7d}
+    for i in range(7):
+        day = today - timedelta(days=6 - i)
+        count = activity_dict_7d.get(day, 0)
+        if count > max_active_7d:
+            max_active_7d = count
+        active_chart_7d.append({'date': day.strftime('%d.%m'), 'count': count})
+
+    # ---- 30 Günlük veriler ----
+    registration_chart_30d = []
+    max_registration_30d = 0
+    registration_data_30 = app_users_qs.filter(
+        created_at__gte=timezone.make_aware(datetime.combine(today - timedelta(days=29), datetime.min.time()))
+    ).annotate(date=TruncDate('created_at')).values('date').annotate(count=Count('id')).order_by('date')
+    registration_dict_30 = {item['date']: item['count'] for item in registration_data_30}
+    for i in range(30):
+        day = today - timedelta(days=29 - i)
+        count = registration_dict_30.get(day, 0)
+        if count > max_registration_30d:
+            max_registration_30d = count
+        registration_chart_30d.append({'date': day.strftime('%d.%m'), 'count': count})
+
     daily_active_chart = []
     max_daily_active = 0
-    
-    # UserActivityLog'dan günlük aktif kullanıcı verilerini toplu olarak al
     activity_data = UserActivityLog.objects.filter(
         activity_date__gte=today - timedelta(days=29),
         activity_date__lte=today,
         app_type='main'
-    ).values('activity_date').annotate(
-        count=Count('device_id', distinct=True)
-    ).order_by('activity_date')
-    
-    # Dictionary'ye çevir (hızlı erişim için)
+    ).values('activity_date').annotate(count=Count('device_id', distinct=True)).order_by('activity_date')
     activity_dict = {item['activity_date']: item['count'] for item in activity_data}
-    
-    # Her gün için veriyi chart'a ekle
     for i in range(30):
-        day = today - timedelta(days=29-i)
+        day = today - timedelta(days=29 - i)
         count = activity_dict.get(day, 0)
-        
         if count > max_daily_active:
             max_daily_active = count
-        daily_active_chart.append({
-            'date': day.strftime('%d.%m'),
-            'count': count
+        daily_active_chart.append({'date': day.strftime('%d.%m'), 'count': count})
+
+    # ---- Aylık (son 12 ay) ----
+    from calendar import monthrange
+    monthly_active_chart = []
+    monthly_registration_chart = []
+    max_monthly_active = 0
+    max_monthly_registration = 0
+    for i in range(12):
+        # i=0: bu ay, i=1: geçen ay, ...
+        y, m = today.year, today.month
+        m -= i
+        while m <= 0:
+            m += 12
+            y -= 1
+        start_date = date(y, m, 1)
+        _, last_day = monthrange(y, m)
+        end_date = date(y, m, last_day)
+        if end_date > today:
+            end_date = today
+        try:
+            act_count = UserActivityLog.objects.filter(
+                activity_date__gte=start_date,
+                activity_date__lte=end_date,
+                app_type='main'
+            ).values('device_id').distinct().count()
+            if act_count == 0:
+                act_count = app_users_qs.filter(
+                    last_login__date__gte=start_date,
+                    last_login__date__lte=end_date,
+                ).count()
+        except Exception:
+            act_count = 0
+        reg_count = app_users_qs.filter(
+            created_at__date__gte=start_date,
+            created_at__date__lte=end_date,
+        ).count()
+        label = start_date.strftime('%Y-%m')
+        monthly_active_chart.append({'label': label, 'count': act_count})
+        monthly_registration_chart.append({'label': label, 'count': reg_count})
+        if act_count > max_monthly_active:
+            max_monthly_active = act_count
+        if reg_count > max_monthly_registration:
+            max_monthly_registration = reg_count
+    monthly_active_chart.reverse()
+    monthly_registration_chart.reverse()
+
+    # ---- Yıllık (son 5 yıl) ----
+    yearly_active_chart = []
+    yearly_registration_chart = []
+    max_yearly_active = 0
+    max_yearly_registration = 0
+    current_year = today.year
+    for i in range(5):
+        y = current_year - (4 - i)
+        start_date = date(y, 1, 1)
+        end_date = date(y, 12, 31)
+        if y == current_year:
+            end_date = today
+        try:
+            act_count = UserActivityLog.objects.filter(
+                activity_date__gte=start_date,
+                activity_date__lte=end_date,
+                app_type='main'
+            ).values('device_id').distinct().count()
+            if act_count == 0:
+                act_count = app_users_qs.filter(
+                    last_login__date__gte=start_date,
+                    last_login__date__lte=end_date,
+                ).count()
+        except Exception:
+            act_count = 0
+        reg_count = app_users_qs.filter(
+            created_at__date__gte=start_date,
+            created_at__date__lte=end_date,
+        ).count()
+        yearly_active_chart.append({'label': str(y), 'count': act_count})
+        yearly_registration_chart.append({'label': str(y), 'count': reg_count})
+        if act_count > max_yearly_active:
+            max_yearly_active = act_count
+        if reg_count > max_yearly_registration:
+            max_yearly_registration = reg_count
+
+    # ---- Takvim tarzı: Bu ay günlük aktif + kayıt sayıları (grid için) ----
+    _, last_day_of_month = monthrange(today.year, today.month)
+    month_start_date = date(today.year, today.month, 1)
+    month_end_date = date(today.year, today.month, last_day_of_month)
+    if month_end_date > today:
+        month_end_date = today
+    # Bu ay her gün için aktif (cihaz bazlı) ve kayıt sayısı
+    activity_month = UserActivityLog.objects.filter(
+        activity_date__gte=month_start_date,
+        activity_date__lte=month_end_date,
+        app_type='main',
+    ).values('activity_date').annotate(count=Count('device_id', distinct=True)).order_by('activity_date')
+    activity_by_day = {item['activity_date']: item['count'] for item in activity_month}
+    reg_month = app_users_qs.filter(
+        created_at__date__gte=month_start_date,
+        created_at__date__lte=month_end_date,
+    ).annotate(day=TruncDate('created_at')).values('day').annotate(count=Count('id')).order_by('day')
+    reg_by_day = {}
+    for item in reg_month:
+        d = item['day']
+        if hasattr(d, 'date'):
+            d = d.date()
+        reg_by_day[d] = item['count']
+    # Haftanın gününe göre hizalı grid: Pazartesi=0, ayın 1'i hangi günde başlıyorsa önce o kadar boş hücre
+    first_weekday = month_start_date.weekday()  # Python: Monday=0 .. Sunday=6
+    month_calendar_days = []
+    for _ in range(first_weekday):
+        month_calendar_days.append({'day': None, 'active': 0, 'registration': 0, 'is_today': False})
+    for d in range(1, last_day_of_month + 1):
+        day_date = date(today.year, today.month, d)
+        if day_date > today:
+            month_calendar_days.append({'day': d, 'active': 0, 'registration': 0, 'is_today': False, 'future': True})
+            continue
+        active_count = activity_by_day.get(day_date, 0)
+        if active_count == 0 and day_date == today:
+            active_count = daily_active_users
+        reg_count = reg_by_day.get(day_date, 0)
+        month_calendar_days.append({
+            'day': d,
+            'active': active_count,
+            'registration': reg_count,
+            'is_today': (day_date == today),
         })
+    calendar_month_name = month_start_date.strftime('%B %Y')  # locale'a göre; Türkçe için ayrı ay adı eklenebilir
     
     # ==================== BARBERSHOP İSTATİSTİKLERİ ====================
     
@@ -761,23 +892,40 @@ def admin_dashboard_view(request):
     # Not: "en aktif kullanıcılar" listelerini dashboard'dan kaldırıyoruz (istek üzerine).
     
     # ==================== RETENTION VE CHURN METRİKLERİ (PROFESYONEL) ====================
+    # Retention: cohort penceresi kullanılıyor (tek güne bağlı kalmıyor) + last_login yedeği
     
-    # 7-Day Retention (7 gün önce kayıt olanlardan hala aktif olanlar - Industry Standard)
-    seven_days_ago_date = today - timedelta(days=7)
+    # 7-Day Retention: 6–8 gün önce kayıt olan cohort, son 7 günde aktif = ActivityLog veya last_login
+    seven_days_ago_start = today - timedelta(days=8)
+    seven_days_ago_end = today - timedelta(days=6)
     try:
-        users_registered_7_days_ago = app_users_qs.filter(
-            created_at__date=seven_days_ago_date
-        ).count()
+        cohort_7d = set(
+            app_users_qs.filter(
+                created_at__date__gte=seven_days_ago_start,
+                created_at__date__lte=seven_days_ago_end,
+            ).values_list("id", flat=True)
+        )
+        users_registered_7_days_ago = len(cohort_7d)
         
-        # 7 gün önce kayıt olanlardan son 7 günde aktif olanlar
         if users_registered_7_days_ago > 0:
-            active_from_7_days_ago = UserActivityLog.objects.filter(
-                user__created_at__date=seven_days_ago_date,
-                activity_date__gte=seven_days_ago_date,
-                activity_date__lte=today,
-                app_type='main',
-                user__isnull=False
-            ).values('user').distinct().count()
+            # Retained: ActivityLog'da son 7 günde kayıt olan bu cohort'tan aktif olanlar
+            retained_by_activity = set(
+                UserActivityLog.objects.filter(
+                    user_id__in=cohort_7d,
+                    activity_date__gte=seven_days_ago_end,
+                    activity_date__lte=today,
+                    app_type='main',
+                    user__isnull=False,
+                ).values_list("user_id", flat=True).distinct()
+            )
+            # Yedek: last_login son 7 günde olan cohort üyeleri
+            retained_by_login = set(
+                app_users_qs.filter(
+                    id__in=cohort_7d,
+                    last_login__date__gte=seven_days_ago_end,
+                    last_login__date__lte=today,
+                ).values_list("id", flat=True)
+            )
+            active_from_7_days_ago = len(retained_by_activity | retained_by_login)
         else:
             active_from_7_days_ago = 0
         
@@ -787,22 +935,36 @@ def admin_dashboard_view(request):
         users_registered_7_days_ago = 0
         active_from_7_days_ago = 0
     
-    # 30-Day Retention (30 gün önce kayıt olanlardan hala aktif olanlar - Long-term engagement)
-    thirty_days_ago_date = today - timedelta(days=30)
+    # 30-Day Retention: 29–31 gün önce kayıt olan cohort, son 30 günde aktif
+    thirty_days_ago_start = today - timedelta(days=31)
+    thirty_days_ago_end = today - timedelta(days=29)
     try:
-        users_registered_30_days_ago = app_users_qs.filter(
-            created_at__date=thirty_days_ago_date
-        ).count()
+        cohort_30d = set(
+            app_users_qs.filter(
+                created_at__date__gte=thirty_days_ago_start,
+                created_at__date__lte=thirty_days_ago_end,
+            ).values_list("id", flat=True)
+        )
+        users_registered_30_days_ago = len(cohort_30d)
         
-        # 30 gün önce kayıt olanlardan son 30 günde aktif olanlar
         if users_registered_30_days_ago > 0:
-            active_from_30_days_ago = UserActivityLog.objects.filter(
-                user__created_at__date=thirty_days_ago_date,
-                activity_date__gte=thirty_days_ago_date,
-                activity_date__lte=today,
-                app_type='main',
-                user__isnull=False
-            ).values('user').distinct().count()
+            retained_by_activity_30 = set(
+                UserActivityLog.objects.filter(
+                    user_id__in=cohort_30d,
+                    activity_date__gte=thirty_days_ago_end,
+                    activity_date__lte=today,
+                    app_type='main',
+                    user__isnull=False,
+                ).values_list("user_id", flat=True).distinct()
+            )
+            retained_by_login_30 = set(
+                app_users_qs.filter(
+                    id__in=cohort_30d,
+                    last_login__date__gte=thirty_days_ago_end,
+                    last_login__date__lte=today,
+                ).values_list("id", flat=True)
+            )
+            active_from_30_days_ago = len(retained_by_activity_30 | retained_by_login_30)
         else:
             active_from_30_days_ago = 0
         
@@ -1167,6 +1329,20 @@ def admin_dashboard_view(request):
             'daily_active_chart': daily_active_chart,
             'max_daily_active': max_daily_active if max_daily_active > 0 else 1,
             'has_daily_active_trend': max_daily_active > 0,
+            'active_chart_7d': active_chart_7d,
+            'max_active_7d': max_active_7d if max_active_7d > 0 else 1,
+            'registration_chart_30d': registration_chart_30d,
+            'max_registration_30d': max_registration_30d if max_registration_30d > 0 else 1,
+            'monthly_active_chart': monthly_active_chart,
+            'monthly_registration_chart': monthly_registration_chart,
+            'max_monthly_active': max_monthly_active if max_monthly_active > 0 else 1,
+            'max_monthly_registration': max_monthly_registration if max_monthly_registration > 0 else 1,
+            'month_calendar_days': month_calendar_days,
+            'calendar_month_name': calendar_month_name,
+            'yearly_active_chart': yearly_active_chart,
+            'yearly_registration_chart': yearly_registration_chart,
+            'max_yearly_active': max_yearly_active if max_yearly_active > 0 else 1,
+            'max_yearly_registration': max_yearly_registration if max_yearly_registration > 0 else 1,
             'emails': {
                 'today_count': today_email_count,
                 'week_count': week_email_count,
