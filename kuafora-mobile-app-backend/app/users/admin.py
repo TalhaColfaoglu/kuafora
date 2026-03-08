@@ -35,7 +35,12 @@ class UserAdmin(BaseUserAdmin, ModelAdmin):
     ordering = ("email",)
     list_display = ("email", "full_name_display", "gender", "is_active_badge", "is_staff_badge", "is_superuser_badge")
     search_fields = ("email", "full_name")
-    
+    can_delete = True
+
+    def has_delete_permission(self, request, obj=None):
+        """Süper kullanıcı veya 'users.delete_user' yetkisi olan personel kullanıcı silebilir."""
+        return request.user.is_superuser or request.user.has_perm("users.delete_user")
+
     fieldsets = (
         (None, {"fields": ("email", "password")}),
         ("Kişisel Bilgiler", {"fields": ("full_name", "gender", "phone_masked", "image")} ),

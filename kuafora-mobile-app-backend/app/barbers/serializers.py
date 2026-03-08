@@ -480,6 +480,7 @@ class StaffSerializer(serializers.ModelSerializer):
     weekly_schedule = serializers.SerializerMethodField()
     user_image_url = serializers.SerializerMethodField()
     user_image_thumb_url = serializers.SerializerMethodField()
+    barbershop_uses_kuafora_appointments = serializers.SerializerMethodField()
 
     class Meta:
         model = Staff
@@ -490,7 +491,8 @@ class StaffSerializer(serializers.ModelSerializer):
             "rating_avg", "staff_services", "weekly_schedule",
             "auto_approval", "commission_rate", "appointment_interval",
             "instagram", "facebook", "twitter", "whatsapp",
-            "user_image_url", "user_image_thumb_url"
+            "user_image_url", "user_image_thumb_url",
+            "barbershop_uses_kuafora_appointments",
         )
         read_only_fields = ("total_reviews", "rating_avg", "experience_years", "photo_thumb", "user_image_url", "user_image_thumb_url")
 
@@ -518,6 +520,16 @@ class StaffSerializer(serializers.ModelSerializer):
                 return signed
             return _public_media_uri(self, u.image.url) or u.image.url
         return None
+
+    @extend_schema_field(serializers.BooleanField())
+    def get_barbershop_uses_kuafora_appointments(self, obj):
+        """Salon Kuafora randevu sistemini kullanıyorsa True. Partner uygulamada randevu ayarları kartı buna göre gösterilir."""
+        if not getattr(obj, "barbershop_id", None):
+            return False
+        barbershop = getattr(obj, "barbershop", None)
+        if not barbershop:
+            return False
+        return getattr(barbershop, "system_type", "info") == "booking"
 
     def to_representation(self, instance):
         """
