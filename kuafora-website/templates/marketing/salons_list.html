@@ -38,14 +38,15 @@
     font-size: 12px;
     text-transform: uppercase;
     letter-spacing: 0.14em;
-    color: rgba(255,255,255,0.72);
+    color: #fff;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.4);
     margin-bottom: 16px;
   }
   .salons-kicker::before {
     content: "";
     width: 30px;
     height: 1px;
-    background: rgba(255,255,255,0.35);
+    background: rgba(255,255,255,0.6);
   }
   .salons-hero h1 {
     font-family: "Cabinet Grotesk", "Inter", system-ui, sans-serif;
@@ -55,11 +56,14 @@
     letter-spacing: -0.04em;
     max-width: 10ch;
     margin: 0;
+    color: #fff;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.4), 0 4px 12px rgba(0,0,0,0.3);
   }
   .salons-hero p {
     margin: 18px 0 0;
     max-width: 62ch;
-    color: rgba(255,255,255,0.78);
+    color: rgba(255,255,255,0.95);
+    text-shadow: 0 1px 2px rgba(0,0,0,0.4);
     font-size: 16px;
     line-height: 1.7;
   }
@@ -133,10 +137,17 @@
     overflow: hidden;
     box-shadow: 0 18px 40px rgba(15, 23, 42, 0.06);
     transition: transform .25s ease, box-shadow .25s ease;
+    text-decoration: none;
+    color: inherit;
+    cursor: pointer;
   }
   .salon-card:hover {
     transform: translateY(-4px);
     box-shadow: 0 24px 48px rgba(15, 23, 42, 0.10);
+  }
+  .salon-card:focus-visible {
+    outline: 2px solid #0f766e;
+    outline-offset: 2px;
   }
   .salon-card-image {
     aspect-ratio: 4 / 3;
@@ -285,7 +296,7 @@
     {% if salons %}
       <div class="salons-grid">
         {% for salon in salons %}
-          <article class="salon-card">
+          <a href="{% url 'salon_detail' salon.slug %}" class="salon-card" aria-label="{{ salon.name }} detay sayfasına git">
             <div class="salon-card-image">
               {% if salon.main_image or salon.main_image_thumb %}
                 <img src="{{ salon.main_image|default:salon.main_image_thumb }}" alt="{{ salon.name }}" />
@@ -302,13 +313,13 @@
                 <div class="salon-card-meta">
                   <span class="salon-chip">★ {{ salon.rating_avg|default:"0.0" }}</span>
                 </div>
-                <a class="salon-card-link" href="{% url 'salon_detail' salon.slug %}">
+                <span class="salon-card-link">
                   Sayfayı aç
                   <span aria-hidden="true">→</span>
-                </a>
+                </span>
               </div>
             </div>
-          </article>
+          </a>
         {% endfor %}
       </div>
     {% else %}

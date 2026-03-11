@@ -272,8 +272,12 @@ def salon_detail(request, slug):
     description = (shop.get("description") or "").strip()
     fallback_description = f"{shop.get('name', 'Kuafora salonu')} - {shop.get('district', '')} {shop.get('city', '')}".strip()
 
+    google_maps_url = _normalize_google_maps_url(shop.get("google_maps_link"))
+    if not google_maps_url and lat is not None and lng is not None:
+        google_maps_url = f"https://www.google.com/maps?q={lat},{lng}"
+
     shop_links = {
-        "google_maps": _normalize_google_maps_url(shop.get("google_maps_link")),
+        "google_maps": google_maps_url,
         "instagram": _normalize_instagram_url(shop.get("instagram")),
         "facebook": _normalize_facebook_url(shop.get("facebook")),
         "twitter": _normalize_twitter_url(shop.get("twitter")),

@@ -27,6 +27,7 @@ from datetime import timedelta, datetime
 from .models import (
     Favorite,
     Barbershop,
+    _barbershop_slugify,
     BarbershopAppeal,
     Staff,
     StaffService,
@@ -1657,15 +1658,27 @@ class PartnerBarbershopViewSet(viewsets.ModelViewSet):
             "map_style",
         }
         data = {k: v for k, v in request.data.items() if k in allowed}
-        web_data = {k: v for k, v in request.data.items() if k in web_allowed}
+        web_data = {}
+        for k, v in request.data.items():
+            if k in web_allowed and v is not None:
+                web_data[k] = v.strip().lower() if isinstance(v, str) else v
         nested_web_data = request.data.get("web_settings")
         if isinstance(nested_web_data, dict):
             for key in web_allowed:
                 if key in nested_web_data:
-                    web_data[key] = nested_web_data[key]
+                    val = nested_web_data[key]
+                    if val is not None:
+                        web_data[key] = val.strip().lower() if isinstance(val, str) else val
         # phone alias desteği
         if "phone" in data and "phone_number" not in data:
             data["phone_number"] = data.pop("phone")
+        # Slug normalizasyonu: boşsa None, doluysa slugify (SlugField boşluk/özel karakter kabul etmez)
+        if "slug" in data:
+            raw = data["slug"]
+            if raw is None or str(raw).strip() == "":
+                data["slug"] = None
+            else:
+                data["slug"] = _barbershop_slugify(str(raw).strip()) or None
         serializer = self.get_serializer(instance, data=data, partial=partial)
         serializer.is_valid(raise_exception=True)
         self.perform_update(serializer)
