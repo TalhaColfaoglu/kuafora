@@ -219,23 +219,23 @@
           </a>
 
           <nav class="hidden lg:flex items-center gap-1 text-sm font-medium">
-            <a href="/" class="px-3 py-2 rounded-lg hover:bg-black/5 {% if request.path == '/' %}bg-black/5{% endif %}">Ana Sayfa</a>
-            <a href="{% url 'customer_app' %}" class="px-3 py-2 rounded-lg hover:bg-black/5">Müşteri Uygulaması</a>
-            <a href="{% url 'salons' %}" class="px-3 py-2 rounded-lg hover:bg-black/5">Salonlar</a>
-            <a href="/partner/kuafora-partner/" class="px-3 py-2 rounded-lg hover:bg-black/5">Partner</a>
-            <a href="{% url 'support' %}" class="px-3 py-2 rounded-lg hover:bg-black/5">Destek</a>
+            <a href="/" class="px-3 py-2 rounded-lg text-neutral-800 hover:bg-black/5 hover:text-neutral-900 {% if request.path == '/' %}bg-black/5 text-neutral-900{% endif %}">Ana Sayfa</a>
+            <a href="{% url 'customer_app' %}" class="px-3 py-2 rounded-lg text-neutral-800 hover:bg-black/5 hover:text-neutral-900">Müşteri Uygulaması</a>
+            <a href="{% url 'salons' %}" class="px-3 py-2 rounded-lg text-neutral-800 hover:bg-black/5 hover:text-neutral-900">Salonlar</a>
+            <a href="/partner/kuafora-partner/" class="px-3 py-2 rounded-lg text-neutral-800 hover:bg-black/5 hover:text-neutral-900">Partner</a>
+            <a href="{% url 'support' %}" class="px-3 py-2 rounded-lg text-neutral-800 hover:bg-black/5 hover:text-neutral-900">Destek</a>
             <div class="relative group">
-              <button type="button" class="px-3 py-2 rounded-lg hover:bg-black/5 inline-flex items-center gap-2">
+              <button type="button" class="px-3 py-2 rounded-lg text-neutral-800 hover:bg-black/5 hover:text-neutral-900 inline-flex items-center gap-2">
                 Yasal
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
                 </svg>
               </button>
               <div class="hidden group-hover:block absolute right-0 mt-2 w-56 bg-white border border-border rounded-xl shadow-lg overflow-hidden">
-                <a href="{% url 'legal_terms' %}" class="block px-4 py-3 text-sm hover:bg-surface">Kullanım Koşulları</a>
-                <a href="{% url 'legal_privacy' %}" class="block px-4 py-3 text-sm hover:bg-surface">Gizlilik Politikası</a>
-                <a href="{% url 'legal_kvkk' %}" class="block px-4 py-3 text-sm hover:bg-surface">KVKK Aydınlatma Metni</a>
-                <a href="{% url 'legal_cookies' %}" class="block px-4 py-3 text-sm hover:bg-surface">Çerez Politikası</a>
+                <a href="{% url 'legal_terms' %}" class="block px-4 py-3 text-sm text-neutral-800 hover:bg-surface">Kullanım Koşulları</a>
+                <a href="{% url 'legal_privacy' %}" class="block px-4 py-3 text-sm text-neutral-800 hover:bg-surface">Gizlilik Politikası</a>
+                <a href="{% url 'legal_kvkk' %}" class="block px-4 py-3 text-sm text-neutral-800 hover:bg-surface">KVKK Aydınlatma Metni</a>
+                <a href="{% url 'legal_cookies' %}" class="block px-4 py-3 text-sm text-neutral-800 hover:bg-surface">Çerez Politikası</a>
               </div>
             </div>
           </nav>
@@ -262,17 +262,17 @@
       <!-- Mobile menu -->
       <div id="mobile-menu" class="hidden lg:hidden border-t border-border bg-white">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 space-y-1 text-sm">
-          <a href="/" class="block px-3 py-3 rounded-xl hover:bg-surface">Ana Sayfa</a>
-          <a href="{% url 'customer_app' %}" class="block px-3 py-3 rounded-xl hover:bg-surface">Müşteri Uygulaması</a>
-          <a href="{% url 'salons' %}" class="block px-3 py-3 rounded-xl hover:bg-surface">Salonlar</a>
-          <a href="/partner/kuafora-partner/" class="block px-3 py-3 rounded-xl hover:bg-surface">Partner</a>
-          <a href="{% url 'support' %}" class="block px-3 py-3 rounded-xl hover:bg-surface">Destek</a>
+          <a href="/" class="block px-3 py-3 rounded-xl text-neutral-800 hover:bg-surface">Ana Sayfa</a>
+          <a href="{% url 'customer_app' %}" class="block px-3 py-3 rounded-xl text-neutral-800 hover:bg-surface">Müşteri Uygulaması</a>
+          <a href="{% url 'salons' %}" class="block px-3 py-3 rounded-xl text-neutral-800 hover:bg-surface">Salonlar</a>
+          <a href="/partner/kuafora-partner/" class="block px-3 py-3 rounded-xl text-neutral-800 hover:bg-surface">Partner</a>
+          <a href="{% url 'support' %}" class="block px-3 py-3 rounded-xl text-neutral-800 hover:bg-surface">Destek</a>
           <div class="pt-2 border-t border-border">
             <p class="px-3 py-2 text-xs uppercase tracking-wider text-muted font-semibold">Yasal</p>
-            <a href="{% url 'legal_terms' %}" class="block px-3 py-3 rounded-xl hover:bg-surface">Kullanım Koşulları</a>
-            <a href="{% url 'legal_privacy' %}" class="block px-3 py-3 rounded-xl hover:bg-surface">Gizlilik Politikası</a>
-            <a href="{% url 'legal_kvkk' %}" class="block px-3 py-3 rounded-xl hover:bg-surface">KVKK Aydınlatma Metni</a>
-            <a href="{% url 'legal_cookies' %}" class="block px-3 py-3 rounded-xl hover:bg-surface">Çerez Politikası</a>
+            <a href="{% url 'legal_terms' %}" class="block px-3 py-3 rounded-xl text-neutral-800 hover:bg-surface">Kullanım Koşulları</a>
+            <a href="{% url 'legal_privacy' %}" class="block px-3 py-3 rounded-xl text-neutral-800 hover:bg-surface">Gizlilik Politikası</a>
+            <a href="{% url 'legal_kvkk' %}" class="block px-3 py-3 rounded-xl text-neutral-800 hover:bg-surface">KVKK Aydınlatma Metni</a>
+            <a href="{% url 'legal_cookies' %}" class="block px-3 py-3 rounded-xl text-neutral-800 hover:bg-surface">Çerez Politikası</a>
           </div>
           <div class="pt-2">
             {% if request.resolver_match.url_name|slice:":7" == "partner" %}

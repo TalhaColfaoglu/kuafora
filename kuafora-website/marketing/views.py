@@ -111,6 +111,69 @@ def _maptiler_static_url(lat, lng) -> str | None:
     return f"https://api.maptiler.com/maps/streets/static/{lng},{lat},14/1200x520.png?key={key}"
 
 
+def _normalize_google_maps_url(raw: str | None) -> str | None:
+    """Google Maps linkini tıklanabilir URL'ye çevirir."""
+    if not raw or not (s := str(raw).strip()):
+        return None
+    if s.startswith("http://") or s.startswith("https://"):
+        return s
+    return f"https://{s}"
+
+
+def _normalize_instagram_url(raw: str | None) -> str | None:
+    """Instagram username veya URL'yi tam linke çevirir."""
+    if not raw or not (s := str(raw).strip()):
+        return None
+    if s.startswith("http://") or s.startswith("https://"):
+        return s
+    username = s.lstrip("@").split("/")[-1].split("?")[0]
+    if not username:
+        return None
+    return f"https://instagram.com/{username}"
+
+
+def _normalize_facebook_url(raw: str | None) -> str | None:
+    """Facebook username/page veya URL'yi tam linke çevirir."""
+    if not raw or not (s := str(raw).strip()):
+        return None
+    if s.startswith("http://") or s.startswith("https://"):
+        return s
+    if "facebook.com" in s or "fb.com" in s or "fb.me" in s:
+        return s if s.startswith("http") else f"https://{s}"
+    page = s.lstrip("/").split("/")[0].split("?")[0]
+    if not page:
+        return None
+    return f"https://facebook.com/{page}"
+
+
+def _normalize_twitter_url(raw: str | None) -> str | None:
+    """Twitter/X username veya URL'yi tam linke çevirir."""
+    if not raw or not (s := str(raw).strip()):
+        return None
+    if s.startswith("http://") or s.startswith("https://"):
+        return s
+    username = s.lstrip("@").split("/")[-1].split("?")[0]
+    if not username:
+        return None
+    return f"https://x.com/{username}"
+
+
+def _normalize_whatsapp_url(raw: str | None) -> str | None:
+    """WhatsApp numarasını wa.me linkine çevirir."""
+    if not raw or not (s := str(raw).strip()):
+        return None
+    if s.startswith("http://") or s.startswith("https://"):
+        return s
+    digits = "".join(c for c in s if c.isdigit())
+    if not digits:
+        return None
+    if digits.startswith("0") and len(digits) == 11:
+        digits = "9" + digits
+    elif not digits.startswith("90") and len(digits) <= 10:
+        digits = "90" + digits.lstrip("0")
+    return f"https://wa.me/{digits}"
+
+
 def home(request):
     # Görsel yoksa veya manifest'te yoksa placeholder göster; {% static %} kullanılmadığı için 500 olmaz
     try:
@@ -209,12 +272,21 @@ def salon_detail(request, slug):
     description = (shop.get("description") or "").strip()
     fallback_description = f"{shop.get('name', 'Kuafora salonu')} - {shop.get('district', '')} {shop.get('city', '')}".strip()
 
+    shop_links = {
+        "google_maps": _normalize_google_maps_url(shop.get("google_maps_link")),
+        "instagram": _normalize_instagram_url(shop.get("instagram")),
+        "facebook": _normalize_facebook_url(shop.get("facebook")),
+        "twitter": _normalize_twitter_url(shop.get("twitter")),
+        "whatsapp": _normalize_whatsapp_url(shop.get("whatsapp")),
+    }
+
     return render(
         request,
         "marketing/salon_detail.html",
         {
             "payload": payload,
             "shop": shop,
+            "shop_links": shop_links,
             "working_hours": payload.get("working_hours") or [],
             "services_grouped": payload.get("services_grouped") or [],
             "staff_list": payload.get("staff") or [],

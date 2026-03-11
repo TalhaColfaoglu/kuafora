@@ -139,7 +139,8 @@
     box-shadow: 0 24px 48px rgba(15, 23, 42, 0.10);
   }
   .salon-card-image {
-    aspect-ratio: 16 / 10;
+    aspect-ratio: 4 / 3;
+    max-height: 220px;
     background: linear-gradient(135deg, #dbeafe, #f5f3ff);
     overflow: hidden;
   }
@@ -229,12 +230,19 @@
     .salons-filter-grid { grid-template-columns: 1fr 1fr; }
   }
   @media (max-width: 720px) {
-    .salons-hero { padding: 28px 22px 64px; border-radius: 28px; }
-    .salons-filters { margin-top: -24px; padding: 18px; border-radius: 24px; }
-    .salons-filter-grid { grid-template-columns: 1fr; }
-    .salons-grid { grid-template-columns: 1fr; }
-    .salon-card h2 { font-size: 24px; }
-    .salons-toolbar { flex-direction: column; align-items: flex-start; }
+    .salons-shell { padding: 20px 16px 48px; }
+    .salons-hero { padding: 24px 18px 48px; border-radius: 20px; }
+    .salons-hero h1 { font-size: 28px; }
+    .salons-filters { margin-top: -20px; padding: 16px; border-radius: 20px; }
+    .salons-filter-grid { grid-template-columns: 1fr; gap: 12px; }
+    .salons-btn { min-height: 48px; width: 100%; }
+    .salons-grid { grid-template-columns: 1fr; gap: 16px; }
+    .salon-card-image { aspect-ratio: 4/3; max-height: 180px; }
+    .salon-card h2 { font-size: 22px; }
+    .salon-card-body { padding: 18px; }
+    .salons-toolbar { flex-direction: column; align-items: flex-start; gap: 12px; }
+    .salons-pagination a,
+    .salons-pagination span { min-width: 44px; height: 44px; }
   }
 </style>
 {% endblock %}
