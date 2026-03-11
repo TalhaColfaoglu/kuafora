@@ -1,0 +1,700 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ shop.name }} | Kuafora{% endblock %}
+{% block meta_description %}{{ page_description }}{% endblock %}
+{% block og_title %}{{ shop.name }} | Kuafora{% endblock %}
+{% block og_description %}{{ page_description }}{% endblock %}
+{% block twitter_title %}{{ shop.name }} | Kuafora{% endblock %}
+{% block twitter_description %}{{ page_description }}{% endblock %}
+{% block og_image %}{{ og_image|default:'https://kuafora.com/static/img/og-image.jpg' }}{% endblock %}
+{% block twitter_image %}{{ og_image|default:'https://kuafora.com/static/img/twitter-card.jpg' }}{% endblock %}
+
+{% block head %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Manrope:wght@400;500;700;800&family=Playfair+Display:wght@600;700;800&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
+{% if maptiler_key and shop.web_settings.map_style == 'embedded' and lat and lng %}
+  <link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet">
+{% endif %}
+<style>
+  :root {
+    --salon-accent: {{ theme.accent }};
+    --salon-accent-soft: {{ theme.accent_soft }};
+    --salon-page-bg: {{ theme.page_bg }};
+    --salon-surface: {{ theme.surface }};
+    --salon-text: {{ theme.text }};
+    --salon-muted: {{ theme.muted }};
+    --salon-border: {{ theme.border }};
+    --salon-heading-font: {{ heading_font_css|safe }};
+    --salon-body-font: {{ body_font_css|safe }};
+  }
+  .salon-page {
+    background:
+      radial-gradient(circle at top left, color-mix(in srgb, var(--salon-accent) 14%, transparent), transparent 28%),
+      linear-gradient(180deg, rgba(255,255,255,0.5), rgba(255,255,255,0.96)),
+      var(--salon-page-bg);
+    color: var(--salon-text);
+    font-family: var(--salon-body-font);
+  }
+  .salon-shell {
+    max-width: 1240px;
+    margin: 0 auto;
+    padding: 28px 20px 96px;
+  }
+  .salon-hero {
+    position: relative;
+    overflow: hidden;
+    border-radius: 34px;
+    background: linear-gradient(135deg, rgba(17,24,39,0.86), rgba(17,24,39,0.25));
+    min-height: 480px;
+    box-shadow: 0 26px 70px rgba(15, 23, 42, 0.16);
+    border: 1px solid rgba(255,255,255,0.32);
+  }
+  .salon-hero img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .salon-hero-overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(10, 12, 15, 0.18), rgba(10, 12, 15, 0.68));
+  }
+  .salon-hero-content {
+    position: absolute;
+    inset: auto 0 0 0;
+    padding: 32px;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    color: white;
+  }
+  .salon-badges { display: flex; flex-wrap: wrap; gap: 10px; }
+  .salon-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    border-radius: 999px;
+    padding: 10px 14px;
+    background: rgba(255,255,255,0.14);
+    border: 1px solid rgba(255,255,255,0.18);
+    backdrop-filter: blur(8px);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+  }
+  .salon-heading {
+    margin: 0;
+    font-family: var(--salon-heading-font);
+    font-size: clamp(40px, 6vw, 82px);
+    line-height: .95;
+    letter-spacing: -0.05em;
+    max-width: 10ch;
+  }
+  .salon-subtitle {
+    margin: 0;
+    max-width: 56ch;
+    font-size: 16px;
+    line-height: 1.7;
+    color: rgba(255,255,255,0.84);
+  }
+  .salon-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.35fr) minmax(320px, 0.8fr);
+    gap: 22px;
+    margin-top: 24px;
+  }
+  .salon-card {
+    background: rgba(255,255,255,0.88);
+    border: 1px solid var(--salon-border);
+    border-radius: 28px;
+    padding: 28px;
+    box-shadow: 0 18px 42px rgba(15, 23, 42, 0.06);
+  }
+  .salon-card h2 {
+    margin: 0 0 16px;
+    font-family: var(--salon-heading-font);
+    font-size: 30px;
+    line-height: 1;
+    letter-spacing: -0.04em;
+  }
+  .salon-card h3 {
+    margin: 0 0 14px;
+    font-family: var(--salon-heading-font);
+    font-size: 22px;
+    letter-spacing: -0.03em;
+  }
+  .salon-card p {
+    margin: 0;
+    color: var(--salon-muted);
+    line-height: 1.7;
+  }
+  .salon-summary {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16px;
+  }
+  .salon-summary-item {
+    border-radius: 22px;
+    background: linear-gradient(180deg, #fff, color-mix(in srgb, var(--salon-accent-soft) 50%, #fff));
+    border: 1px solid var(--salon-border);
+    padding: 18px;
+  }
+  .salon-summary-item strong {
+    display: block;
+    font-family: var(--salon-heading-font);
+    font-size: 36px;
+    letter-spacing: -0.05em;
+  }
+  .salon-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 24px;
+  }
+  .salon-action-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 14px 18px;
+    border-radius: 999px;
+    border: 1px solid var(--salon-border);
+    background: #fff;
+    color: var(--salon-text);
+    font-weight: 700;
+  }
+  .salon-action-btn.primary {
+    background: var(--salon-accent);
+    border-color: transparent;
+    color: white;
+  }
+  .salon-facts {
+    display: grid;
+    gap: 14px;
+  }
+  .salon-fact {
+    display: flex;
+    gap: 14px;
+    padding: 16px 0;
+    border-bottom: 1px solid var(--salon-border);
+  }
+  .salon-fact:last-child { border-bottom: 0; padding-bottom: 0; }
+  .salon-fact-kicker {
+    width: 44px;
+    height: 44px;
+    border-radius: 14px;
+    background: var(--salon-accent-soft);
+    color: var(--salon-accent);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    flex: 0 0 auto;
+  }
+  .salon-section-stack { display: grid; gap: 22px; }
+  .salon-gallery-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 14px;
+  }
+  .salon-gallery-grid img {
+    width: 100%;
+    aspect-ratio: 1;
+    object-fit: cover;
+    border-radius: 20px;
+    display: block;
+  }
+  .salon-gallery-strip {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(240px, 1fr);
+    gap: 14px;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    padding-bottom: 6px;
+  }
+  .salon-gallery-strip img {
+    width: 100%;
+    height: 360px;
+    object-fit: cover;
+    border-radius: 22px;
+    scroll-snap-align: start;
+  }
+  .services-list { display: grid; gap: 12px; }
+  .service-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    gap: 12px;
+    align-items: center;
+    border: 1px solid var(--salon-border);
+    border-radius: 20px;
+    padding: 14px 16px;
+    background: #fff;
+  }
+  .services-card-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+  }
+  .service-card {
+    border: 1px solid var(--salon-border);
+    border-radius: 22px;
+    padding: 18px;
+    background: linear-gradient(180deg, #fff, color-mix(in srgb, var(--salon-accent-soft) 45%, #fff));
+  }
+  .service-card strong,
+  .service-row strong {
+    display: block;
+    font-size: 17px;
+  }
+  .service-meta {
+    color: var(--salon-muted);
+    font-size: 13px;
+    margin-top: 6px;
+  }
+  .service-price {
+    font-family: var(--salon-heading-font);
+    font-size: 24px;
+    color: var(--salon-accent);
+    letter-spacing: -0.03em;
+  }
+  .category-block + .category-block { margin-top: 18px; }
+  .category-label {
+    margin: 0 0 12px;
+    color: var(--salon-text);
+    font-size: 15px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .hours-table { width: 100%; border-collapse: collapse; }
+  .hours-table tr + tr td,
+  .hours-table tr + tr th { border-top: 1px solid var(--salon-border); }
+  .hours-table th, .hours-table td { text-align: left; padding: 14px 0; }
+  .hours-table th { color: var(--salon-muted); font-weight: 700; width: 32%; }
+  .hours-table td.closed { color: #c0395c; font-weight: 700; }
+  .staff-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+  }
+  .staff-card {
+    background: #fff;
+    border: 1px solid var(--salon-border);
+    border-radius: 24px;
+    padding: 18px;
+  }
+  .staff-card-top {
+    display: flex;
+    gap: 14px;
+    align-items: center;
+    margin-bottom: 14px;
+  }
+  .staff-card-top img,
+  .staff-card-avatar {
+    width: 72px;
+    height: 72px;
+    border-radius: 22px;
+    object-fit: cover;
+    background: var(--salon-accent-soft);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    color: var(--salon-accent);
+  }
+  .staff-services {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 14px;
+  }
+  .staff-services span,
+  .feature-pill,
+  .social-link {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 999px;
+    padding: 8px 12px;
+    background: var(--salon-accent-soft);
+    color: var(--salon-accent);
+    font-size: 12px;
+    font-weight: 700;
+  }
+  .social-links { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 18px; }
+  .map-frame {
+    overflow: hidden;
+    border-radius: 24px;
+    border: 1px solid var(--salon-border);
+    min-height: 380px;
+    background: linear-gradient(180deg, #fff, var(--salon-accent-soft));
+  }
+  #salon-map { height: 380px; width: 100%; }
+  .salon-minimal-hero {
+    display: grid;
+    grid-template-columns: minmax(0, 1.1fr) minmax(280px, 0.9fr);
+    gap: 0;
+    overflow: hidden;
+    border-radius: 34px;
+    background: rgba(255,255,255,0.92);
+    border: 1px solid var(--salon-border);
+    box-shadow: 0 26px 70px rgba(15, 23, 42, 0.09);
+  }
+  .salon-minimal-copy {
+    padding: 42px 38px;
+    background:
+      radial-gradient(circle at top left, color-mix(in srgb, var(--salon-accent) 15%, transparent), transparent 28%),
+      #fff;
+  }
+  .salon-minimal-copy .salon-heading {
+    color: var(--salon-text);
+    max-width: 8ch;
+  }
+  .salon-minimal-copy .salon-subtitle { color: var(--salon-muted); }
+  .salon-minimal-media img { width: 100%; height: 100%; object-fit: cover; display: block; min-height: 100%; }
+  @media (max-width: 1040px) {
+    .salon-grid,
+    .salon-minimal-hero { grid-template-columns: 1fr; }
+    .salon-summary,
+    .services-card-grid,
+    .staff-grid,
+    .salon-gallery-grid { grid-template-columns: 1fr 1fr; }
+  }
+  @media (max-width: 720px) {
+    .salon-shell { padding-inline: 16px; }
+    .salon-hero { min-height: 420px; border-radius: 28px; }
+    .salon-hero-content,
+    .salon-card,
+    .salon-minimal-copy { padding: 22px; }
+    .salon-summary,
+    .services-card-grid,
+    .staff-grid,
+    .salon-gallery-grid { grid-template-columns: 1fr; }
+    .service-row { grid-template-columns: 1fr; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="salon-page">
+  <div class="salon-shell">
+    {% if shop.web_settings.hero_style == 'minimal' %}
+      <section class="salon-minimal-hero">
+        <div class="salon-minimal-copy">
+          <div class="salon-badges">
+            <span class="salon-badge">{{ shop.district }}{% if shop.city %}, {{ shop.city }}{% endif %}</span>
+            <span class="salon-badge">{{ shop.system_type|default:"info" }}</span>
+          </div>
+          <h1 class="salon-heading">{{ shop.name }}</h1>
+          <p class="salon-subtitle">{{ page_description }}</p>
+          <div class="salon-actions">
+            {% if shop.google_maps_link %}
+              <a class="salon-action-btn primary" href="{{ shop.google_maps_link }}" target="_blank" rel="noopener">Haritada Aç</a>
+            {% endif %}
+            {% if shop.phone_number %}
+              <a class="salon-action-btn" href="tel:{{ shop.phone_number }}">Ara</a>
+            {% endif %}
+          </div>
+        </div>
+        <div class="salon-minimal-media">
+          {% if shop.main_image %}
+            <img src="{{ shop.main_image }}" alt="{{ shop.name }}">
+          {% endif %}
+        </div>
+      </section>
+    {% elif shop.web_settings.hero_style == 'gallery_slider' %}
+      <section class="salon-card">
+        <div class="salon-badges">
+          <span class="salon-badge" style="background: var(--salon-accent-soft); color: var(--salon-accent); border-color: transparent;">{{ shop.district }}{% if shop.city %}, {{ shop.city }}{% endif %}</span>
+          <span class="salon-badge" style="background: var(--salon-accent-soft); color: var(--salon-accent); border-color: transparent;">{{ shop.total_reviews|default:0 }} değerlendirme</span>
+        </div>
+        <h1 class="salon-heading" style="color: var(--salon-text); max-width: 8ch; margin-top: 18px;">{{ shop.name }}</h1>
+        <p class="salon-subtitle" style="color: var(--salon-muted);">{{ page_description }}</p>
+        <div class="salon-gallery-strip" style="margin-top: 24px;">
+          {% if shop.main_image %}
+            <img src="{{ shop.main_image }}" alt="{{ shop.name }}">
+          {% endif %}
+          {% for image in shop.images %}
+            <img src="{{ image.image|default:image.image_thumb }}" alt="{{ shop.name }} galeri">
+          {% endfor %}
+        </div>
+      </section>
+    {% else %}
+      <section class="salon-hero">
+        {% if shop.main_image %}
+          <img src="{{ shop.main_image }}" alt="{{ shop.name }}">
+        {% endif %}
+        <div class="salon-hero-overlay"></div>
+        <div class="salon-hero-content">
+          <div class="salon-badges">
+            <span class="salon-badge">{{ shop.district }}{% if shop.city %}, {{ shop.city }}{% endif %}</span>
+            <span class="salon-badge">★ {{ shop.rating_avg|default:"0.0" }}</span>
+            <span class="salon-badge">{{ shop.total_reviews|default:0 }} değerlendirme</span>
+          </div>
+          <h1 class="salon-heading">{{ shop.name }}</h1>
+          <p class="salon-subtitle">{{ page_description }}</p>
+        </div>
+      </section>
+    {% endif %}
+
+    <div class="salon-grid">
+      <div class="salon-section-stack">
+        <section class="salon-card">
+          <div class="salon-summary">
+            <div class="salon-summary-item">
+              <span>Değerlendirme</span>
+              <strong>{{ shop.rating_avg|default:"0.0" }}</strong>
+            </div>
+            <div class="salon-summary-item">
+              <span>Yorum</span>
+              <strong>{{ shop.total_reviews|default:0 }}</strong>
+            </div>
+            <div class="salon-summary-item">
+              <span>Favori</span>
+              <strong>{{ shop.favorites_count|default:0 }}</strong>
+            </div>
+          </div>
+          {% if feature_labels %}
+            <div class="staff-services" style="margin-top: 22px;">
+              {% for feature in feature_labels %}
+                <span class="feature-pill">{{ feature.label }}</span>
+              {% endfor %}
+            </div>
+          {% endif %}
+          <div class="salon-actions">
+            {% if shop.google_maps_link %}
+              <a class="salon-action-btn primary" href="{{ shop.google_maps_link }}" target="_blank" rel="noopener">Google Maps'te Aç</a>
+            {% endif %}
+            {% if shop.phone_number %}
+              <a class="salon-action-btn" href="tel:{{ shop.phone_number }}">Telefon</a>
+            {% endif %}
+            {% if shop.whatsapp %}
+              <a class="salon-action-btn" href="{{ shop.whatsapp }}" target="_blank" rel="noopener">WhatsApp</a>
+            {% endif %}
+          </div>
+        </section>
+
+        {% if services_grouped %}
+          <section class="salon-card">
+            <h2>Hizmetler</h2>
+            {% if shop.web_settings.services_style == 'cards' %}
+              {% for group in services_grouped %}
+                <div class="category-block">
+                  <p class="category-label">{{ group.category }}</p>
+                  <div class="services-card-grid">
+                    {% for service in group.services %}
+                      <article class="service-card">
+                        <strong>{{ service.name }}</strong>
+                        <div class="service-meta">{{ service.duration }} dk</div>
+                        <div class="service-price">
+                          {% if service.price_range %}
+                            {% if service.price_range.min == service.price_range.max %}
+                              ₺{{ service.price_range.min|floatformat:0 }}
+                            {% else %}
+                              ₺{{ service.price_range.min|floatformat:0 }} - ₺{{ service.price_range.max|floatformat:0 }}
+                            {% endif %}
+                          {% else %}
+                            Fiyat sorunuz
+                          {% endif %}
+                        </div>
+                      </article>
+                    {% endfor %}
+                  </div>
+                </div>
+              {% endfor %}
+            {% elif shop.web_settings.services_style == 'category_list' %}
+              {% for group in services_grouped %}
+                <div class="category-block">
+                  <p class="category-label">{{ group.category }}</p>
+                  <div class="services-list">
+                    {% for service in group.services %}
+                      <div class="service-row">
+                        <div>
+                          <strong>{{ service.name }}</strong>
+                          <div class="service-meta">{{ service.duration }} dk</div>
+                        </div>
+                        <div class="service-meta">{{ group.category }}</div>
+                        <div class="service-price">
+                          {% if service.price_range %}₺{{ service.price_range.min|floatformat:0 }}{% else %}Sorunuz{% endif %}
+                        </div>
+                      </div>
+                    {% endfor %}
+                  </div>
+                </div>
+              {% endfor %}
+            {% else %}
+              {% for group in services_grouped %}
+                <div class="category-block">
+                  <p class="category-label">{{ group.category }}</p>
+                  <div class="services-list">
+                    {% for service in group.services %}
+                      <div class="service-row">
+                        <div>
+                          <strong>{{ service.name }}</strong>
+                          <div class="service-meta">{{ service.duration }} dk</div>
+                        </div>
+                        <div class="service-meta">
+                          {% if service.target_gender == 'male' %}Erkek{% elif service.target_gender == 'female' %}Kadın{% else %}Herkes{% endif %}
+                        </div>
+                        <div class="service-price">
+                          {% if service.price_range %}
+                            {% if service.price_range.min == service.price_range.max %}
+                              ₺{{ service.price_range.min|floatformat:0 }}
+                            {% else %}
+                              ₺{{ service.price_range.min|floatformat:0 }} - ₺{{ service.price_range.max|floatformat:0 }}
+                            {% endif %}
+                          {% else %}
+                            Sorunuz
+                          {% endif %}
+                        </div>
+                      </div>
+                    {% endfor %}
+                  </div>
+                </div>
+              {% endfor %}
+            {% endif %}
+          </section>
+        {% endif %}
+
+        {% if shop.images %}
+          <section class="salon-card">
+            <h2>Galeri</h2>
+            <div class="salon-gallery-grid">
+              {% for image in shop.images %}
+                <img src="{{ image.image|default:image.image_thumb }}" alt="{{ shop.name }} galeri">
+              {% endfor %}
+            </div>
+          </section>
+        {% endif %}
+
+        {% if staff_list %}
+          <section class="salon-card">
+            <h2>Ekip</h2>
+            <div class="staff-grid">
+              {% for staff in staff_list %}
+                <article class="staff-card">
+                  <div class="staff-card-top">
+                    {% if staff.photo_thumb or staff.photo or staff.user_image_thumb_url or staff.user_image_url %}
+                      <img src="{{ staff.photo_thumb|default:staff.photo|default:staff.user_image_thumb_url|default:staff.user_image_url }}" alt="{{ staff.user_full_name }}">
+                    {% else %}
+                      <div class="staff-card-avatar">{{ staff.user_full_name|default:"U"|slice:":1" }}</div>
+                    {% endif %}
+                    <div>
+                      <h3 style="margin:0;">{{ staff.user_full_name|default:staff.email }}</h3>
+                      {% if staff.bio %}<p>{{ staff.bio|truncatechars:120 }}</p>{% endif %}
+                    </div>
+                  </div>
+                  {% if staff.staff_services %}
+                    <div class="staff-services">
+                      {% for item in staff.staff_services|slice:":6" %}
+                        <span>{{ item.service_name }}</span>
+                      {% endfor %}
+                    </div>
+                  {% endif %}
+                </article>
+              {% endfor %}
+            </div>
+          </section>
+        {% endif %}
+      </div>
+
+      <div class="salon-section-stack">
+        <section class="salon-card">
+          <h2>Salon Bilgileri</h2>
+          <div class="salon-facts">
+            <div class="salon-fact">
+              <div class="salon-fact-kicker">01</div>
+              <div>
+                <strong>Adres</strong>
+                <p>{{ shop.address }}{% if shop.district or shop.city %}<br>{{ shop.district }}{% if shop.city %}, {{ shop.city }}{% endif %}{% endif %}</p>
+              </div>
+            </div>
+            <div class="salon-fact">
+              <div class="salon-fact-kicker">02</div>
+              <div>
+                <strong>Sistem Türü</strong>
+                <p>{% if shop.system_type == 'booking' %}Kuafora Randevu{% elif shop.system_type == 'external' %}Harici Randevu{% else %}Bilgi Sistemi{% endif %}</p>
+              </div>
+            </div>
+            {% if shop.phone_number %}
+              <div class="salon-fact">
+                <div class="salon-fact-kicker">03</div>
+                <div>
+                  <strong>Telefon</strong>
+                  <p><a href="tel:{{ shop.phone_number }}">{{ shop.phone_number }}</a></p>
+                </div>
+              </div>
+            {% endif %}
+          </div>
+          <div class="social-links">
+            {% if shop.instagram %}<a class="social-link" href="{{ shop.instagram }}" target="_blank" rel="noopener">Instagram</a>{% endif %}
+            {% if shop.facebook %}<a class="social-link" href="{{ shop.facebook }}" target="_blank" rel="noopener">Facebook</a>{% endif %}
+            {% if shop.twitter %}<a class="social-link" href="{{ shop.twitter }}" target="_blank" rel="noopener">X</a>{% endif %}
+            {% if shop.whatsapp %}<a class="social-link" href="{{ shop.whatsapp }}" target="_blank" rel="noopener">WhatsApp</a>{% endif %}
+          </div>
+        </section>
+
+        <section class="salon-card">
+          <h2>Çalışma Saatleri</h2>
+          <table class="hours-table">
+            {% for row in working_hours %}
+              <tr>
+                <th>{{ row.label }}</th>
+                <td class="{% if row.closed %}closed{% endif %}">{{ row.text }}</td>
+              </tr>
+            {% endfor %}
+          </table>
+        </section>
+
+        <section class="salon-card">
+          <h2>Konum</h2>
+          {% if shop.web_settings.map_style == 'static' %}
+            <div class="map-frame">
+              {% if maptiler_static_url %}
+                <img src="{{ maptiler_static_url }}" alt="{{ shop.name }} konum haritası" style="width:100%;height:100%;object-fit:cover;display:block;">
+              {% else %}
+                <div style="padding: 28px;">
+                  <p>Harita önizlemesi şu anda kullanılamıyor. Konumu Google Maps üzerinden açabilirsiniz.</p>
+                </div>
+              {% endif %}
+            </div>
+          {% else %}
+            <div class="map-frame">
+              {% if maptiler_key and lat and lng %}
+                <div id="salon-map"></div>
+              {% elif maptiler_static_url %}
+                <img src="{{ maptiler_static_url }}" alt="{{ shop.name }} konum haritası" style="width:100%;height:100%;object-fit:cover;display:block;">
+              {% else %}
+                <div style="padding: 28px;">
+                  <p>Konum verisi mevcut değil.</p>
+                </div>
+              {% endif %}
+            </div>
+          {% endif %}
+          {% if shop.google_maps_link %}
+            <div class="salon-actions">
+              <a class="salon-action-btn primary" href="{{ shop.google_maps_link }}" target="_blank" rel="noopener">Yol Tarifi Al</a>
+            </div>
+          {% endif %}
+        </section>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+  {% if maptiler_key and shop.web_settings.map_style == 'embedded' and lat and lng %}
+    <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+    <script>
+      document.addEventListener('DOMContentLoaded', function () {
+        const map = new maplibregl.Map({
+          container: 'salon-map',
+          style: 'https://api.maptiler.com/maps/streets-v2/style.json?key={{ maptiler_key }}',
+          center: [{{ lng }}, {{ lat }}],
+          zoom: 14
+        });
+        map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right');
+        new maplibregl.Marker({ color: '{{ theme.accent }}' }).setLngLat([{{ lng }}, {{ lat }}]).addTo(map);
+      });
+    </script>
+  {% endif %}
+{% endblock %}

@@ -30,6 +30,7 @@ from .views import (
     PartnerHolidayOverrideViewSet,
     ImpactPlusApi,
     ShopCategoryViewSet,
+    PublicWebsiteBarbershopDetailApi,
 )
 from app.subscriptions.views import SubscriptionViewSet
 from .home_views import HomeDashboardApi
@@ -62,6 +63,11 @@ router.register(r"calendar", CalendarStatusViewSet, basename="calendar-status")
 urlpatterns = [
     # Router'ı önce include et ki ViewSet action'ları çalışsın
     path("", include(router.urls)),
+    path(
+        "barbershops/website/<slug:slug>/",
+        PublicWebsiteBarbershopDetailApi.as_view(),
+        name="barbershop-website-detail",
+    ),
     
     # Robust toggle endpoints (avoid router clashes)
     path("toggle-today/", ToggleTodayApi.as_view(), name="toggle-today"),

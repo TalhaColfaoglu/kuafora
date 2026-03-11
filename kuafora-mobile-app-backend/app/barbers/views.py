@@ -56,6 +56,7 @@ from .serializers import (
     BarbershopWithFavoriteSerializer,
     FavoriteSerializer,
     BarbershopSerializer,
+    BarbershopWebSettingsSerializer,
     ReviewSerializer,
     ReviewReplySerializer,
     StaffSerializer,
@@ -147,7 +148,7 @@ class BarbershopViewSet(viewsets.ReadOnlyModelViewSet):
     """
     queryset = (
         Barbershop.objects.all()
-        .select_related("subscription")  # Optimize foreign key lookups (owner field doesn't exist in Barbershop model)
+        .select_related("subscription", "web_settings")  # Optimize foreign key lookups (owner field doesn't exist in Barbershop model)
         .prefetch_related("images", "services", "staff", "categories", "catalog")  # Optimize many-to-many and reverse FK
     )
     serializer_class = BarbershopSerializer
@@ -316,6 +317,7 @@ class BarbershopViewSet(viewsets.ReadOnlyModelViewSet):
                     )
                     .exclude(name="")
                 )
+                qs = qs.annotate(_staff_count=Count("staff")).filter(_staff_count__gt=0)
 
             # Kullanıcı girişliyse, ana listede uygulanan cinsiyet kuralı ile uyumlu olsun
             user = request.user
@@ -1375,6 +1377,131 @@ class LastViewedViewSet(mixins.ListModelMixin, mixins.CreateModelMixin, viewsets
         return
 
 
+class PublicWebsiteBarbershopDetailApi(generics.GenericAPIView):
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request, slug):
+        from .admin_views import FEATURE_LABELS, WEEKDAY_LABELS, WEEKDAY_ORDER
+        from .serializers import BarbershopDetailSerializer
+
+        shop = (
+            Barbershop.objects.filter(
+                slug=slug,
+                is_verified=True,
+                is_approved=True,
+                name__isnull=False,
+            )
+            .exclude(name="")
+            .select_related("web_settings", "subscription")
+            .prefetch_related(
+                "images",
+                "categories",
+                "catalog",
+                "shop_working_hours",
+                "service_categories__services",
+                "services__category",
+                "staff__staff_services__service",
+                "staff__staff_working_hours",
+                "staff__work_schedules",
+            )
+            .annotate(_staff_count=Count("staff"))
+            .filter(_staff_count__gt=0)
+            .first()
+        )
+        if not shop:
+            return Response({"detail": "Salon bulunamadı"}, status=status.HTTP_404_NOT_FOUND)
+
+        shop_data = BarbershopDetailSerializer(shop, context={"request": request}).data
+
+        services_grouped = []
+        for category in shop.service_categories.all():
+            services = list(category.services.filter(is_active=True).order_by("name"))
+            if not services:
+                continue
+            services_grouped.append(
+                {
+                    "category": category.name,
+                    "services": ServiceSerializer(services, many=True, context={"request": request}).data,
+                }
+            )
+
+        uncategorized_services = list(
+            shop.services.filter(is_active=True, category__isnull=True).order_by("name")
+        )
+        if uncategorized_services:
+            services_grouped.append(
+                {
+                    "category": "Diğer",
+                    "services": ServiceSerializer(
+                        uncategorized_services,
+                        many=True,
+                        context={"request": request},
+                    ).data,
+                }
+            )
+
+        working_hours = []
+        weekly_schedule = shop_data.get("weekly_schedule") or {}
+        for day_code in WEEKDAY_ORDER:
+            key = day_code.lower()
+            item = weekly_schedule.get(key) or {}
+            start = item.get("start")
+            end = item.get("end")
+            is_closed = start == -1 or end == -1
+            if is_closed:
+                text = "Kapalı"
+            elif start and end:
+                text = f"{start} – {end}"
+            else:
+                text = "—"
+            working_hours.append(
+                {
+                    "code": day_code,
+                    "label": WEEKDAY_LABELS.get(day_code, day_code),
+                    "text": text,
+                    "closed": is_closed,
+                }
+            )
+
+        feature_labels = [
+            {"id": feature_id, "label": FEATURE_LABELS.get(str(feature_id), str(feature_id))}
+            for feature_id in ((shop.features or []) if isinstance(shop.features, list) else [])
+        ]
+
+        staff_queryset = (
+            shop.staff.all()
+            .select_related("user", "barbershop")
+            .prefetch_related("staff_working_hours", "staff_services__service")
+            .order_by("-is_admin", "id")
+        )
+
+        return Response(
+            {
+                "shop": shop_data,
+                "working_hours": working_hours,
+                "services_grouped": services_grouped,
+                "staff": StaffSerializer(
+                    staff_queryset,
+                    many=True,
+                    context={"request": request},
+                ).data,
+                "feature_labels": feature_labels,
+                "web_settings": BarbershopWebSettingsSerializer(
+                    getattr(shop, "web_settings", None)
+                ).data
+                if getattr(shop, "web_settings", None)
+                else {
+                    "theme_color": "forest",
+                    "heading_font": "cabinet",
+                    "body_font": "satoshi",
+                    "hero_style": "single_image",
+                    "services_style": "cards",
+                    "map_style": "embedded",
+                },
+            }
+        )
+
+
 class TrackViewApi(generics.GenericAPIView):
     """
     Hem misafir hem de giriş yapmış kullanıcılar için görüntülenme takibi.
@@ -1485,7 +1612,11 @@ class PartnerBarbershopViewSet(viewsets.ModelViewSet):
             return Barbershop.objects.none()
         # Partner can manage barbershops where they have admin staff
         user = self.request.user
-        return Barbershop.objects.filter(staff__user=user, staff__is_admin=True).distinct()
+        return (
+            Barbershop.objects.filter(staff__user=user, staff__is_admin=True)
+            .select_related("web_settings")
+            .distinct()
+        )
 
     # No custom permissions; queryset is already restricted to admin-owned shops
     def update(self, request, *args, **kwargs):
@@ -1505,6 +1636,7 @@ class PartnerBarbershopViewSet(viewsets.ModelViewSet):
             "city",
             "district",
             "gender",
+            "slug",
             "google_maps_link",
             # Social
             "instagram",
@@ -1516,13 +1648,38 @@ class PartnerBarbershopViewSet(viewsets.ModelViewSet):
             # Hizmet süresi aralığı (10, 15, 20 dk)
             "service_duration_interval",
         }
+        web_allowed = {
+            "theme_color",
+            "heading_font",
+            "body_font",
+            "hero_style",
+            "services_style",
+            "map_style",
+        }
         data = {k: v for k, v in request.data.items() if k in allowed}
+        web_data = {k: v for k, v in request.data.items() if k in web_allowed}
+        nested_web_data = request.data.get("web_settings")
+        if isinstance(nested_web_data, dict):
+            for key in web_allowed:
+                if key in nested_web_data:
+                    web_data[key] = nested_web_data[key]
         # phone alias desteği
         if "phone" in data and "phone_number" not in data:
             data["phone_number"] = data.pop("phone")
         serializer = self.get_serializer(instance, data=data, partial=partial)
         serializer.is_valid(raise_exception=True)
         self.perform_update(serializer)
+        if web_data:
+            from .models import BarbershopWebSettings
+
+            web_settings, _ = BarbershopWebSettings.objects.get_or_create(barbershop=instance)
+            web_serializer = BarbershopWebSettingsSerializer(
+                web_settings,
+                data=web_data,
+                partial=True,
+            )
+            web_serializer.is_valid(raise_exception=True)
+            web_serializer.save()
         
         # Eğer barbershop reddedilmişse ve profil güncelleniyorsa,
         # reddetme bilgilerini temizle ve tekrar inceleme için hazırla
@@ -1532,8 +1689,9 @@ class PartnerBarbershopViewSet(viewsets.ModelViewSet):
             instance.is_verified = False  # Yeniden inceleme için
             instance.is_approved = False   # Açıkça False yap
             instance.save(update_fields=['rejection_reason', 'rejected_at', 'is_verified', 'is_approved'])
-        
-        return Response(serializer.data)
+
+        instance.refresh_from_db()
+        return Response(self.get_serializer(instance).data)
 
     @action(detail=True, methods=["patch"], url_path="status")
     def status(self, request, pk=None):

@@ -9,6 +9,7 @@ from drf_spectacular.utils import extend_schema_field
 from .models import (
     Favorite,
     Barbershop,
+    BarbershopWebSettings,
     BarbershopImage,
     BarbershopCatalog,
     Staff,
@@ -35,6 +36,14 @@ from .models import (
 )
 
 logger = logging.getLogger(__name__)
+DEFAULT_BARBERSHOP_WEB_SETTINGS = {
+    "theme_color": "forest",
+    "heading_font": "cabinet",
+    "body_font": "satoshi",
+    "hero_style": "single_image",
+    "services_style": "cards",
+    "map_style": "embedded",
+}
 
 
 # Staff/user avatars are shown in both public (main app) and authenticated (partner) clients.
@@ -246,6 +255,19 @@ class BarbershopCatalogSerializer(serializers.ModelSerializer):
         return value
 
 
+class BarbershopWebSettingsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = BarbershopWebSettings
+        fields = (
+            "theme_color",
+            "heading_font",
+            "body_font",
+            "hero_style",
+            "services_style",
+            "map_style",
+        )
+
+
 def _normalize_barbershop_image_urls(data, obj, keys=("main_image", "main_image_thumb")):
     """Internal host (Docker/backend) URL'lerini PUBLIC_API_ORIGIN ile değiştir; CloudFront veya api/media zaten çalışan URL'leri dokunma."""
     origin = (getattr(settings, "PUBLIC_API_ORIGIN", None) or "").strip().rstrip("/")
@@ -295,6 +317,7 @@ class BarbershopSerializer(serializers.ModelSerializer):
     phone = serializers.CharField(source='phone_number', required=False)  # Frontend'den gelen 'phone' field'ını 'phone_number' olarak map et
     categories = serializers.PrimaryKeyRelatedField(many=True, queryset=ShopCategory.objects.all(), required=False)
     weekly_schedule = serializers.SerializerMethodField()
+    web_settings = serializers.SerializerMethodField()
 
     def get_catalog(self, obj):
         """Sadece aktif katalog öğelerini döndür"""
@@ -306,6 +329,7 @@ class BarbershopSerializer(serializers.ModelSerializer):
         fields = (
             "id",
             "name",
+            "slug",
             "gender",
             "address",
             "system_type",
@@ -338,6 +362,7 @@ class BarbershopSerializer(serializers.ModelSerializer):
             # Social
             "instagram", "facebook", "twitter", "whatsapp",
             "features",
+            "web_settings",
         )
         read_only_fields = ("rating_avg", "total_reviews", "views_weekly", "favorites_count", "created_at", "updated_at", "main_image_thumb", "is_approved", "rejection_reason", "rejected_at")
         extra_kwargs = {
@@ -369,6 +394,13 @@ class BarbershopSerializer(serializers.ModelSerializer):
                     "end": h.end_time.strftime("%H:%M") if h.end_time else "18:00"
                 }
         return schedule
+
+    @extend_schema_field(BarbershopWebSettingsSerializer)
+    def get_web_settings(self, obj):
+        web_settings = getattr(obj, "web_settings", None)
+        if not web_settings:
+            return dict(DEFAULT_BARBERSHOP_WEB_SETTINGS)
+        return BarbershopWebSettingsSerializer(web_settings).data
 
     def validate(self, attrs):
         # phone aliası ile gelen değeri yakala.

@@ -5,6 +5,7 @@ from django.conf import settings
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.core.exceptions import ValidationError
 from django.core.files.storage import default_storage
+from django.utils.text import slugify
 from datetime import date
 from PIL import Image, ImageOps
 from io import BytesIO
@@ -87,6 +88,22 @@ def process_image(image_field, thumb_field=None, max_size=(1080, 1080), thumb_si
     except Exception as e:
         print(f"Error processing image: {e}")
 
+
+def _barbershop_slugify(value: str) -> str:
+    normalized = (value or "").strip().lower().translate(
+        str.maketrans(
+            {
+                "ı": "i",
+                "ğ": "g",
+                "ü": "u",
+                "ş": "s",
+                "ö": "o",
+                "ç": "c",
+            }
+        )
+    )
+    return slugify(normalized) or "salon"
+
 class ShopCategory(models.Model):
     name = models.CharField(max_length=100)
     slug = models.SlugField(unique=True, default="")
@@ -106,6 +123,7 @@ class Barbershop(models.Model):
         UNISEX = "unisex", "Unisex"
 
     name = models.CharField(max_length=200)
+    slug = models.SlugField(max_length=220, unique=True, blank=True, null=True, default=None)
     gender = models.CharField(max_length=7, choices=Gender.choices)
     address = models.CharField(max_length=255)
     city = models.CharField(max_length=100)
@@ -176,6 +194,15 @@ class Barbershop(models.Model):
     )
 
     def save(self, *args, **kwargs):
+        if not self.slug:
+            base_slug = _barbershop_slugify(self.name)
+            candidate = base_slug
+            suffix = 2
+            while Barbershop.objects.filter(slug=candidate).exclude(pk=self.pk).exists():
+                suffix_text = f"-{suffix}"
+                candidate = f"{base_slug[:220 - len(suffix_text)]}{suffix_text}"
+                suffix += 1
+            self.slug = candidate
         if self.pk:
             try:
                 old_instance = Barbershop.objects.get(pk=self.pk)
@@ -208,6 +235,85 @@ class Barbershop(models.Model):
 
     def __str__(self) -> str:  # pragma: no cover - trivial
         return self.name
+
+
+class BarbershopWebSettings(models.Model):
+    class ThemeColor(models.TextChoices):
+        FOREST = "forest", "Forest"
+        CHARCOAL = "charcoal", "Charcoal"
+        SAND = "sand", "Sand"
+        BURGUNDY = "burgundy", "Burgundy"
+        MIDNIGHT = "midnight", "Midnight"
+
+    class HeadingFont(models.TextChoices):
+        CABINET = "cabinet", "Cabinet Grotesk"
+        PLAYFAIR = "playfair", "Playfair Display"
+        MANROPE = "manrope", "Manrope"
+        SORA = "sora", "Sora"
+
+    class BodyFont(models.TextChoices):
+        SATOSHI = "satoshi", "Satoshi"
+        INTER = "inter", "Inter"
+        MANROPE = "manrope", "Manrope"
+        DM_SANS = "dm_sans", "DM Sans"
+
+    class HeroStyle(models.TextChoices):
+        SINGLE_IMAGE = "single_image", "Büyük Tek Görsel"
+        GALLERY_SLIDER = "gallery_slider", "Slayt / Galeri"
+        MINIMAL = "minimal", "Minimal"
+
+    class ServicesStyle(models.TextChoices):
+        LIST = "list", "Liste"
+        CARDS = "cards", "Kartlar"
+        CATEGORY_LIST = "category_list", "Kategori Başlıklarıyla Liste"
+
+    class MapStyle(models.TextChoices):
+        EMBEDDED = "embedded", "MapTiler Gömülü Harita"
+        STATIC = "static", "Statik Harita + Link"
+
+    barbershop = models.OneToOneField(
+        Barbershop,
+        on_delete=models.CASCADE,
+        related_name="web_settings",
+    )
+    theme_color = models.CharField(
+        max_length=20,
+        choices=ThemeColor.choices,
+        default=ThemeColor.FOREST,
+    )
+    heading_font = models.CharField(
+        max_length=20,
+        choices=HeadingFont.choices,
+        default=HeadingFont.CABINET,
+    )
+    body_font = models.CharField(
+        max_length=20,
+        choices=BodyFont.choices,
+        default=BodyFont.SATOSHI,
+    )
+    hero_style = models.CharField(
+        max_length=24,
+        choices=HeroStyle.choices,
+        default=HeroStyle.SINGLE_IMAGE,
+    )
+    services_style = models.CharField(
+        max_length=24,
+        choices=ServicesStyle.choices,
+        default=ServicesStyle.CARDS,
+    )
+    map_style = models.CharField(
+        max_length=20,
+        choices=MapStyle.choices,
+        default=MapStyle.EMBEDDED,
+    )
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Salon web sayfası ayarı"
+        verbose_name_plural = "Salon web sayfası ayarları"
+
+    def __str__(self) -> str:  # pragma: no cover - trivial
+        return f"{self.barbershop.name} web ayarları"
 
 
 class BarbershopAppeal(models.Model):

@@ -1,0 +1,326 @@
+{% extends 'base.html' %}
+
+{% block title %}Salonlar | Kuafora{% endblock %}
+{% block meta_description %}Kuafora üzerindeki onaylı salonları arayın, il ve ilçe filtreleriyle keşfedin.{% endblock %}
+
+{% block head %}
+<style>
+  .salons-page {
+    background:
+      radial-gradient(circle at top right, rgba(16,185,129,0.08), transparent 30%),
+      radial-gradient(circle at bottom left, rgba(14,165,233,0.08), transparent 28%),
+      #f7f8fb;
+  }
+  .salons-shell { max-width: 1200px; margin: 0 auto; padding: 32px 20px 80px; }
+  .salons-hero {
+    background: linear-gradient(135deg, #101418 0%, #1a222b 52%, #0f766e 100%);
+    color: white;
+    border-radius: 32px;
+    padding: 40px;
+    box-shadow: 0 24px 70px rgba(15, 23, 42, 0.16);
+    position: relative;
+    overflow: hidden;
+  }
+  .salons-hero::after {
+    content: "";
+    position: absolute;
+    inset: auto -120px -120px auto;
+    width: 280px;
+    height: 280px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.08);
+    filter: blur(6px);
+  }
+  .salons-kicker {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: rgba(255,255,255,0.72);
+    margin-bottom: 16px;
+  }
+  .salons-kicker::before {
+    content: "";
+    width: 30px;
+    height: 1px;
+    background: rgba(255,255,255,0.35);
+  }
+  .salons-hero h1 {
+    font-family: "Cabinet Grotesk", "Inter", system-ui, sans-serif;
+    font-size: clamp(34px, 6vw, 62px);
+    line-height: 0.98;
+    font-weight: 800;
+    letter-spacing: -0.04em;
+    max-width: 10ch;
+    margin: 0;
+  }
+  .salons-hero p {
+    margin: 18px 0 0;
+    max-width: 62ch;
+    color: rgba(255,255,255,0.78);
+    font-size: 16px;
+    line-height: 1.7;
+  }
+  .salons-filters {
+    margin-top: -32px;
+    position: relative;
+    z-index: 2;
+    background: rgba(255,255,255,0.84);
+    backdrop-filter: blur(18px);
+    border: 1px solid rgba(255,255,255,0.8);
+    border-radius: 28px;
+    box-shadow: 0 20px 50px rgba(15, 23, 42, 0.08);
+    padding: 24px;
+  }
+  .salons-filter-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr auto;
+    gap: 14px;
+  }
+  .salons-input,
+  .salons-select {
+    width: 100%;
+    border: 1px solid #dde3ea;
+    background: #fff;
+    border-radius: 18px;
+    padding: 16px 18px;
+    font-size: 15px;
+    color: #111827;
+    outline: none;
+    transition: border-color .2s ease, box-shadow .2s ease;
+  }
+  .salons-input:focus,
+  .salons-select:focus {
+    border-color: #0f766e;
+    box-shadow: 0 0 0 4px rgba(15,118,110,0.10);
+  }
+  .salons-btn {
+    border: 0;
+    border-radius: 18px;
+    padding: 0 24px;
+    min-height: 54px;
+    background: #111827;
+    color: #fff;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .salons-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    margin: 28px 0 18px;
+  }
+  .salons-toolbar p {
+    margin: 0;
+    color: #6b7280;
+    font-size: 14px;
+  }
+  .salons-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 20px;
+  }
+  .salon-card {
+    display: flex;
+    flex-direction: column;
+    min-height: 100%;
+    background: rgba(255,255,255,0.9);
+    border: 1px solid #e7ebf0;
+    border-radius: 26px;
+    overflow: hidden;
+    box-shadow: 0 18px 40px rgba(15, 23, 42, 0.06);
+    transition: transform .25s ease, box-shadow .25s ease;
+  }
+  .salon-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 24px 48px rgba(15, 23, 42, 0.10);
+  }
+  .salon-card-image {
+    aspect-ratio: 16 / 10;
+    background: linear-gradient(135deg, #dbeafe, #f5f3ff);
+    overflow: hidden;
+  }
+  .salon-card-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+  .salon-card-body { padding: 22px; display: flex; flex-direction: column; gap: 14px; flex: 1; }
+  .salon-card-meta { display: flex; gap: 8px; flex-wrap: wrap; }
+  .salon-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border-radius: 999px;
+    background: #eef6f5;
+    color: #0f766e;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 8px 12px;
+  }
+  .salon-card h2 {
+    margin: 0;
+    font-family: "Cabinet Grotesk", "Inter", system-ui, sans-serif;
+    font-size: 28px;
+    line-height: 1.05;
+    letter-spacing: -0.03em;
+    color: #111827;
+  }
+  .salon-card p {
+    margin: 0;
+    color: #6b7280;
+    font-size: 14px;
+    line-height: 1.65;
+  }
+  .salon-card-footer {
+    margin-top: auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+  }
+  .salon-card-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 700;
+    color: #111827;
+  }
+  .salons-empty {
+    background: rgba(255,255,255,0.92);
+    border: 1px dashed #d7dee7;
+    border-radius: 28px;
+    padding: 48px 28px;
+    text-align: center;
+    color: #6b7280;
+  }
+  .salons-empty h3 {
+    margin: 0 0 10px;
+    font-size: 24px;
+    color: #111827;
+    font-family: "Cabinet Grotesk", "Inter", system-ui, sans-serif;
+  }
+  .salons-pagination {
+    margin-top: 28px;
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+  }
+  .salons-pagination a,
+  .salons-pagination span {
+    min-width: 48px;
+    height: 48px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 18px;
+    border-radius: 999px;
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    color: #111827;
+    font-weight: 700;
+  }
+  @media (max-width: 1024px) {
+    .salons-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .salons-filter-grid { grid-template-columns: 1fr 1fr; }
+  }
+  @media (max-width: 720px) {
+    .salons-hero { padding: 28px 22px 64px; border-radius: 28px; }
+    .salons-filters { margin-top: -24px; padding: 18px; border-radius: 24px; }
+    .salons-filter-grid { grid-template-columns: 1fr; }
+    .salons-grid { grid-template-columns: 1fr; }
+    .salon-card h2 { font-size: 24px; }
+    .salons-toolbar { flex-direction: column; align-items: flex-start; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="salons-page">
+  <div class="salons-shell">
+    <section class="salons-hero">
+      <div class="salons-kicker">Kuafora Salon Dizini</div>
+      <h1>Şehrindeki salonları filtreleyip keşfet.</h1>
+      <p>İl, ilçe ve arama filtresiyle Kuafora üzerindeki onaylı salonları bulun. Her salonun kendi detay sayfasında görselleri, hizmetleri, konumu ve çalışma saatleri modern bir vitrin olarak sunulur.</p>
+    </section>
+
+    <form method="get" class="salons-filters">
+      <div class="salons-filter-grid">
+        <input class="salons-input" type="text" name="q" value="{{ search_query }}" placeholder="Salon adı, semt veya hizmet ara" />
+        <select class="salons-select" name="city" onchange="this.form.submit()">
+          <option value="">Tüm iller</option>
+          {% for city_name, districts in available_locations.items %}
+            <option value="{{ city_name }}" {% if city_name == selected_city %}selected{% endif %}>{{ city_name }}</option>
+          {% endfor %}
+        </select>
+        <select class="salons-select" name="district">
+          <option value="">Tüm ilçeler</option>
+          {% for district_name in selected_city_districts %}
+            <option value="{{ district_name }}" {% if district_name == selected_district %}selected{% endif %}>{{ district_name }}</option>
+          {% endfor %}
+        </select>
+        <button type="submit" class="salons-btn">Ara</button>
+      </div>
+    </form>
+
+    <div class="salons-toolbar">
+      <p>{{ salon_count }} sonuç bulundu{% if selected_city %} · {{ selected_city }}{% endif %}{% if selected_district %} / {{ selected_district }}{% endif %}</p>
+      {% if search_query or selected_city or selected_district %}
+        <a href="{% url 'salons' %}" class="salon-card-link">Filtreleri temizle</a>
+      {% endif %}
+    </div>
+
+    {% if salons %}
+      <div class="salons-grid">
+        {% for salon in salons %}
+          <article class="salon-card">
+            <div class="salon-card-image">
+              {% if salon.main_image or salon.main_image_thumb %}
+                <img src="{{ salon.main_image|default:salon.main_image_thumb }}" alt="{{ salon.name }}" />
+              {% endif %}
+            </div>
+            <div class="salon-card-body">
+              <div class="salon-card-meta">
+                <span class="salon-chip">{{ salon.district }}{% if salon.city %}, {{ salon.city }}{% endif %}</span>
+                <span class="salon-chip">{{ salon.total_reviews|default:0 }} değerlendirme</span>
+              </div>
+              <h2>{{ salon.name }}</h2>
+              <p>{{ salon.description|default:"Salon detaylarını görmek için sayfayı inceleyin."|truncatechars:140 }}</p>
+              <div class="salon-card-footer">
+                <div class="salon-card-meta">
+                  <span class="salon-chip">★ {{ salon.rating_avg|default:"0.0" }}</span>
+                </div>
+                <a class="salon-card-link" href="{% url 'salon_detail' salon.slug %}">
+                  Sayfayı aç
+                  <span aria-hidden="true">→</span>
+                </a>
+              </div>
+            </div>
+          </article>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="salons-empty">
+        <h3>Bu filtrelerle eşleşen salon bulunamadı</h3>
+        <p>Daha geniş bir il seçmeyi, ilçeyi temizlemeyi veya arama kelimesini kısaltmayı deneyin.</p>
+      </div>
+    {% endif %}
+
+    {% if next_url or prev_url %}
+      <div class="salons-pagination">
+        {% if prev_url %}
+          <a href="?q={{ search_query|urlencode }}&city={{ selected_city|urlencode }}&district={{ selected_district|urlencode }}&page={{ page_number|add:'-1' }}">Önceki</a>
+        {% endif %}
+        <span>{{ page_number }}</span>
+        {% if next_url %}
+          <a href="?q={{ search_query|urlencode }}&city={{ selected_city|urlencode }}&district={{ selected_district|urlencode }}&page={{ page_number|add:'1' }}">Sonraki</a>
+        {% endif %}
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

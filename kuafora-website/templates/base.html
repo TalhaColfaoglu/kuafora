@@ -221,6 +221,7 @@
           <nav class="hidden lg:flex items-center gap-1 text-sm font-medium">
             <a href="/" class="px-3 py-2 rounded-lg hover:bg-black/5 {% if request.path == '/' %}bg-black/5{% endif %}">Ana Sayfa</a>
             <a href="{% url 'customer_app' %}" class="px-3 py-2 rounded-lg hover:bg-black/5">Müşteri Uygulaması</a>
+            <a href="{% url 'salons' %}" class="px-3 py-2 rounded-lg hover:bg-black/5">Salonlar</a>
             <a href="/partner/kuafora-partner/" class="px-3 py-2 rounded-lg hover:bg-black/5">Partner</a>
             <a href="{% url 'support' %}" class="px-3 py-2 rounded-lg hover:bg-black/5">Destek</a>
             <div class="relative group">
@@ -263,6 +264,7 @@
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 space-y-1 text-sm">
           <a href="/" class="block px-3 py-3 rounded-xl hover:bg-surface">Ana Sayfa</a>
           <a href="{% url 'customer_app' %}" class="block px-3 py-3 rounded-xl hover:bg-surface">Müşteri Uygulaması</a>
+          <a href="{% url 'salons' %}" class="block px-3 py-3 rounded-xl hover:bg-surface">Salonlar</a>
           <a href="/partner/kuafora-partner/" class="block px-3 py-3 rounded-xl hover:bg-surface">Partner</a>
           <a href="{% url 'support' %}" class="block px-3 py-3 rounded-xl hover:bg-surface">Destek</a>
           <div class="pt-2 border-t border-border">
@@ -333,6 +335,7 @@
             <ul class="space-y-4">
               <li><a href="/" class="text-muted hover:text-primary transition-colors">Ana Sayfa</a></li>
               <li><a href="{% url 'customer_app' %}" class="text-muted hover:text-primary transition-colors">Müşteri Uygulaması</a></li>
+              <li><a href="{% url 'salons' %}" class="text-muted hover:text-primary transition-colors">Salonlar</a></li>
               <li><a href="/partner/kuafora-partner/" class="text-muted hover:text-primary transition-colors">Partner Uygulaması</a></li>
               <li><a href="{% url 'support' %}" class="text-muted hover:text-primary transition-colors">Destek</a></li>
             </ul>

@@ -45,6 +45,7 @@ for _h in ("localhost", "127.0.0.1"):
 
 # Şifre sıfırlama sayfası API'ye POST atarken kullanılacak API base URL (sonunda / yok)
 KUAFORA_API_URL = os.getenv("KUAFORA_API_URL", "https://api.kuafora.com").rstrip("/")
+MAPTILER_API_KEY = os.getenv("MAPTILER_API_KEY", "").strip()
 
 # Application definition
 INSTALLED_APPS = [

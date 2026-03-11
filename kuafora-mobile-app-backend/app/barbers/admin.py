@@ -15,6 +15,7 @@ from unfold.decorators import action
 from app.subscriptions.models import Subscription, SubscriptionPlan
 from .models import (
     Barbershop,
+    BarbershopWebSettings,
     BarbershopAppeal,
     BarbershopImage,
     BarbershopCatalog,
@@ -135,6 +136,22 @@ class BarbershopCatalogInline(TabularInline):
     readonly_fields = ('image_thumb',)
 
 
+class BarbershopWebSettingsInline(TabularInline):
+    model = BarbershopWebSettings
+    extra = 0
+    max_num = 1
+    can_delete = False
+    tab = True
+    fields = (
+        "theme_color",
+        "heading_font",
+        "body_font",
+        "hero_style",
+        "services_style",
+        "map_style",
+    )
+
+
 class BarbershopAppealInline(TabularInline):
     model = BarbershopAppeal
     extra = 0
@@ -198,11 +215,11 @@ class BarbershopAdmin(ModelAdmin):
         HasImagesFilter,
         HasSocialMediaFilter,
     )
-    search_fields = ("name", "city", "district", "address", "phone_number", "description")
+    search_fields = ("name", "slug", "city", "district", "address", "phone_number", "description")
     date_hierarchy = "created_at"
     list_select_related = ("subscription",)
     list_per_page = 50
-    inlines = [BarbershopAppealInline, BarbershopImageInline, BarbershopCatalogInline]
+    inlines = [BarbershopWebSettingsInline, BarbershopAppealInline, BarbershopImageInline, BarbershopCatalogInline]
     actions = ["verify_barbershops", "unverify_barbershops", "approve_barbershops", "reject_barbershops", "resubmit_for_review"]
     change_form_template = "admin/barbers/barbershop/change_form.html"
     change_list_template = "admin/barbers/barbershop/change_list.html"
@@ -260,7 +277,7 @@ class BarbershopAdmin(ModelAdmin):
 
     fieldsets = (
         ("📋 Temel Bilgiler", {
-            "fields": ("name", "gender", "system_type", "is_verified", "is_approved"),
+            "fields": ("name", "slug", "gender", "system_type", "is_verified", "is_approved"),
             "classes": ("wide",)
         }),
         ("📍 Konum Bilgileri", {
