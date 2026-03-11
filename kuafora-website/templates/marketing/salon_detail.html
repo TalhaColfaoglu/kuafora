@@ -63,7 +63,7 @@
   .salon-hero-overlay {
     position: absolute;
     inset: 0;
-    background: linear-gradient(180deg, rgba(10, 12, 15, 0.25), rgba(10, 12, 15, 0.75));
+    background: linear-gradient(180deg, rgba(0, 0, 0, 0.35), rgba(0, 0, 0, 0.75) 40%, rgba(0, 0, 0, 0.88) 100%);
   }
   .salon-hero-content {
     position: absolute;
@@ -81,14 +81,14 @@
     gap: 8px;
     border-radius: 999px;
     padding: 10px 14px;
-    background: rgba(0,0,0,0.4);
-    border: 1px solid rgba(255,255,255,0.25);
+    background: rgba(0,0,0,0.6);
+    border: 1px solid rgba(255,255,255,0.3);
     backdrop-filter: blur(8px);
     font-size: 12px;
     font-weight: 700;
     letter-spacing: 0.02em;
     color: #fff;
-    text-shadow: 0 1px 2px rgba(0,0,0,0.4);
+    text-shadow: 0 1px 2px rgba(0,0,0,0.6);
   }
   .salon-heading {
     margin: 0;
@@ -98,15 +98,15 @@
     letter-spacing: -0.05em;
     max-width: 10ch;
     color: #fff;
-    text-shadow: 0 2px 4px rgba(0,0,0,0.5), 0 4px 16px rgba(0,0,0,0.4);
+    text-shadow: 0 1px 2px rgba(0,0,0,0.8), 0 2px 8px rgba(0,0,0,0.7), 0 4px 20px rgba(0,0,0,0.6);
   }
   .salon-subtitle {
     margin: 0;
     max-width: 56ch;
     font-size: 16px;
     line-height: 1.7;
-    color: rgba(255,255,255,0.95);
-    text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+    color: #fff;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.8), 0 2px 6px rgba(0,0,0,0.6);
   }
   .salon-grid {
     display: grid;
@@ -703,6 +703,8 @@
             <div class="map-frame">
               {% if maptiler_static_url %}
                 <img src="{{ maptiler_static_url }}" alt="{{ shop.name }} konum haritası" style="width:100%;height:100%;object-fit:cover;display:block;">
+              {% elif osm_embed_url %}
+                <iframe src="{{ osm_embed_url }}" width="100%" height="380" style="border:0;display:block;" allowfullscreen loading="lazy" referrerpolicy="no-referrer-when-downgrade" title="{{ shop.name }} konum haritası"></iframe>
               {% else %}
                 <div style="padding: 28px;">
                   <p>Harita önizlemesi şu anda kullanılamıyor. Konumu Google Maps üzerinden açabilirsiniz.</p>
@@ -715,9 +717,11 @@
                 <div id="salon-map"></div>
               {% elif maptiler_static_url %}
                 <img src="{{ maptiler_static_url }}" alt="{{ shop.name }} konum haritası" style="width:100%;height:100%;object-fit:cover;display:block;">
+              {% elif osm_embed_url %}
+                <iframe src="{{ osm_embed_url }}" width="100%" height="380" style="border:0;display:block;" allowfullscreen loading="lazy" referrerpolicy="no-referrer-when-downgrade" title="{{ shop.name }} konum haritası"></iframe>
               {% else %}
                 <div style="padding: 28px;">
-                  <p>{% if shop_links.google_maps %}Harita önizlemesi kullanılamıyor.{% else %}Konum verisi mevcut değil.{% endif %}</p>
+                  <p>{% if shop_links.google_maps %}Harita önizlemesi kullanılamıyor. Konumu Google Maps üzerinden açabilirsiniz.{% else %}Konum verisi mevcut değil.{% endif %}</p>
                 </div>
               {% endif %}
             </div>

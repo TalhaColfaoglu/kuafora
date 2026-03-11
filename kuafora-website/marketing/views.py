@@ -111,6 +111,14 @@ def _maptiler_static_url(lat, lng) -> str | None:
     return f"https://api.maptiler.com/maps/streets/static/{lng},{lat},14/1200x520.png?key={key}"
 
 
+def _osm_embed_url(lat: float, lng: float, delta: float = 0.008) -> str:
+    """OpenStreetMap embed iframe URL (MapTiler yoksa fallback)."""
+    min_lat, max_lat = lat - delta, lat + delta
+    min_lng, max_lng = lng - delta, lng + delta
+    bbox = f"{min_lng},{min_lat},{max_lng},{max_lat}"
+    return f"https://www.openstreetmap.org/export/embed.html?bbox={bbox}&layer=mapnik&marker={lat},{lng}"
+
+
 def _normalize_google_maps_url(raw: str | None) -> str | None:
     """Google Maps linkini tıklanabilir URL'ye çevirir."""
     if not raw or not (s := str(raw).strip()):
@@ -300,6 +308,7 @@ def salon_detail(request, slug):
             "body_font_css": theme_context["body_font_css"],
             "maptiler_key": (getattr(settings, "MAPTILER_API_KEY", "") or "").strip(),
             "maptiler_static_url": _maptiler_static_url(lat, lng),
+            "osm_embed_url": _osm_embed_url(lat, lng) if lat is not None and lng is not None else None,
             "lat": lat,
             "lng": lng,
             "page_description": description or fallback_description,
