@@ -552,37 +552,7 @@
     {% if shop.web_settings.hero_style == 'minimal' %}
       <section class="salon-minimal-hero">
         <div class="salon-minimal-copy">
-          <div class="salon-badges">
-            <span class="salon-badge">{{ shop.district }}{% if shop.city %}, {{ shop.city }}{% endif %}</span>
-            <span class="salon-badge">{{ shop.system_type|default:"info" }}</span>
-          </div>
           <h1 class="salon-heading">{{ shop.name }}</h1>
-          <p class="salon-subtitle">{{ page_description }}</p>
-          <div class="salon-hero-meta">
-            <div class="salon-hero-stat">
-              <span>Puan</span>
-              <strong>{{ shop.rating_avg|default:"0.0" }}</strong>
-            </div>
-            <div class="salon-hero-stat">
-              <span>Yorum</span>
-              <strong>{{ shop.total_reviews|default:0 }}</strong>
-            </div>
-            <div class="salon-hero-stat">
-              <span>Favori</span>
-              <strong>{{ shop.favorites_count|default:0 }}</strong>
-            </div>
-          </div>
-          <div class="salon-actions">
-            {% if shop_links.google_maps %}
-              <a class="salon-action-btn primary" href="{{ shop_links.google_maps }}" target="_blank" rel="noopener">Haritada Aç</a>
-            {% endif %}
-            {% if shop.phone_number %}
-              <a class="salon-action-btn" href="tel:{{ shop.phone_number }}">Ara</a>
-            {% endif %}
-            {% if shop_links.whatsapp %}
-              <a class="salon-action-btn" href="{{ shop_links.whatsapp }}" target="_blank" rel="noopener">WhatsApp</a>
-            {% endif %}
-          </div>
         </div>
         <div class="salon-minimal-media">
           {% if shop.main_image %}
@@ -592,23 +562,7 @@
       </section>
     {% elif shop.web_settings.hero_style == 'gallery_slider' %}
       <section class="salon-card">
-        <div class="salon-badges">
-          <span class="salon-badge" style="background: var(--salon-accent-soft); color: var(--salon-accent); border-color: transparent;">{{ shop.district }}{% if shop.city %}, {{ shop.city }}{% endif %}</span>
-          <span class="salon-badge" style="background: var(--salon-accent-soft); color: var(--salon-accent); border-color: transparent;">{{ shop.total_reviews|default:0 }} değerlendirme</span>
-        </div>
         <h1 class="salon-heading" style="color: var(--salon-text); max-width: 8ch; margin-top: 18px;">{{ shop.name }}</h1>
-        <p class="salon-subtitle" style="color: var(--salon-muted);">{{ page_description }}</p>
-        <div class="salon-actions" style="margin-top: 20px;">
-          {% if shop_links.google_maps %}
-            <a class="salon-action-btn primary" href="{{ shop_links.google_maps }}" target="_blank" rel="noopener">Haritada Aç</a>
-          {% endif %}
-          {% if shop.phone_number %}
-            <a class="salon-action-btn" href="tel:{{ shop.phone_number }}">Telefon</a>
-          {% endif %}
-          {% if shop_links.whatsapp %}
-            <a class="salon-action-btn" href="{{ shop_links.whatsapp }}" target="_blank" rel="noopener">WhatsApp</a>
-          {% endif %}
-        </div>
         <div class="salon-gallery-strip" style="margin-top: 24px;">
           {% if shop.main_image %}
             <img src="{{ shop.main_image }}" alt="{{ shop.name }}">
@@ -625,38 +579,7 @@
         {% endif %}
         <div class="salon-hero-overlay"></div>
         <div class="salon-hero-content">
-          <div class="salon-badges">
-            <span class="salon-badge">{{ shop.district }}{% if shop.city %}, {{ shop.city }}{% endif %}</span>
-            <span class="salon-badge">★ {{ shop.rating_avg|default:"0.0" }}</span>
-            <span class="salon-badge">{{ shop.total_reviews|default:0 }} değerlendirme</span>
-          </div>
           <h1 class="salon-heading">{{ shop.name }}</h1>
-          <p class="salon-subtitle">{{ page_description }}</p>
-          <div class="salon-actions" style="margin-top: 0;">
-            {% if shop_links.google_maps %}
-              <a class="salon-action-btn primary" href="{{ shop_links.google_maps }}" target="_blank" rel="noopener">Google Maps'te Aç</a>
-            {% endif %}
-            {% if shop.phone_number %}
-              <a class="salon-action-btn" href="tel:{{ shop.phone_number }}">Telefon</a>
-            {% endif %}
-            {% if shop_links.whatsapp %}
-              <a class="salon-action-btn" href="{{ shop_links.whatsapp }}" target="_blank" rel="noopener">WhatsApp</a>
-            {% endif %}
-          </div>
-          <div class="salon-hero-meta">
-            <div class="salon-hero-stat">
-              <span>Değerlendirme</span>
-              <strong>{{ shop.rating_avg|default:"0.0" }}</strong>
-            </div>
-            <div class="salon-hero-stat">
-              <span>Yorum</span>
-              <strong>{{ shop.total_reviews|default:0 }}</strong>
-            </div>
-            <div class="salon-hero-stat">
-              <span>Favori</span>
-              <strong>{{ shop.favorites_count|default:0 }}</strong>
-            </div>
-          </div>
         </div>
       </section>
     {% endif %}
